@@ -12,6 +12,11 @@ import AdminDashboard from './pages/admin/AdminDashboard';
 import POSPanel from './pages/pos/POSPanel';
 import AdminRoute from './components/AdminRoute';
 import StaffRoute from './components/StaffRoute';
+import AboutUs from './pages/AboutUs';
+import ContactUs from './pages/ContactUs';
+import PrivacyPolicy from './pages/PrivacyPolicy';
+import TermsConditions from './pages/TermsConditions';
+import RefundPolicy from './pages/RefundPolicy';
 import OfferPopup from './components/OfferPopup';
 import './App.css';
 
@@ -33,6 +38,11 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/verify-email" element={<VerifyEmail />} />
           <Route path="/profile" element={<UserProfile />} />
+          <Route path="/about" element={<AboutUs />} />
+          <Route path="/contact" element={<ContactUs />} />
+          <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+          <Route path="/terms" element={<TermsConditions />} />
+          <Route path="/refund-policy" element={<RefundPolicy />} />
           {/* Admin Routes - Protected securely */}
           <Route path="/admin/*" element={
             <AdminRoute>

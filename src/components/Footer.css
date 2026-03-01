@@ -1,0 +1,173 @@
+.footer {
+    background-color: #333333;
+    --text-main: #ffffff;
+    --text-muted: #dddddd;
+    padding-top: 50px;
+    border-top: none;
+    margin-top: auto;
+    color: var(--text-main);
+}
+
+.footer-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px 40px;
+    width: 100%;
+    box-sizing: border-box;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 30px;
+}
+
+.footer-section h3,
+.footer-section h4 {
+    color: var(--primary);
+    margin-bottom: 20px;
+    font-size: 1.5rem;
+}
+
+.footer-section h4 {
+    font-size: 1.2rem;
+    color: var(--text-main);
+}
+
+.footer-section p {
+    color: var(--text-muted);
+    line-height: 1.8;
+    font-size: 0.95rem;
+}
+
+.footer-section ul {
+    list-style: none;
+    padding: 0;
+}
+
+.footer-section ul li {
+    margin-bottom: 12px;
+    color: var(--text-muted);
+}
+
+.footer-section ul li i {
+    color: var(--primary);
+    margin-right: 10px;
+    width: 15px;
+}
+
+.footer-section ul li a {
+    color: var(--text-muted);
+    text-decoration: none;
+    transition: var(--transition);
+}
+
+.footer-section ul li a:hover {
+    color: var(--primary);
+    padding-left: 5px;
+}
+
+.social-links {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+}
+
+/* Instagram icon */
+.instagram-custom-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    transition: transform .25s ease;
+}
+
+.instagram-custom-link img {
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
+    display: block;
+    background: transparent;
+}
+
+/* hover animation */
+.instagram-custom-link:hover {
+    transform: scale(1.08);
+}
+
+.fssai-badge {
+    display: inline-block;
+    background-color: transparent;
+    border: 1px solid var(--primary);
+    color: var(--primary);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    margin-top: 10px;
+    margin-bottom: 10px;
+}
+
+.veg-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: var(--success);
+    font-weight: 800;
+    font-size: 0.9rem;
+}
+
+.veg-dot {
+    width: 12px;
+    height: 12px;
+    border: 2px solid var(--success);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 2px;
+    background-clip: content-box;
+    padding: 2px;
+    background-color: var(--success);
+}
+
+.mt-2 {
+    margin-top: 20px;
+}
+
+/* Delivery Partner Premium Buttons */
+.delivery-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.95rem;
+    padding: 10px 18px;
+    border-radius: 14px;
+    color: #ffffff !important;
+    text-decoration: none;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: transform 0.25s ease-out, box-shadow 0.25s ease-out;
+    margin-bottom: 5px;
+}
+
+.delivery-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+    opacity: 1;
+}
+
+.delivery-zomato {
+    background-color: #E23744;
+}
+
+.delivery-swiggy {
+    background-color: #FC8019;
+}
+
+.delivery-magicpin {
+    background-color: #E20056;
+}
+
+.footer-bottom {
+    text-align: center;
+    padding: 20px;
+    background-color: rgba(0, 0, 0, 0.2);
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}

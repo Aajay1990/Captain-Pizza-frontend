@@ -1,0 +1,497 @@
+﻿/* POS Premium Captain Red & White Design System */
+:root {
+    --pos-primary: #B71C1C;
+    /* Deep Captain Red */
+    --pos-primary-light: #E53935;
+    --pos-secondary: #ffffff;
+    --pos-accent: #2e7d32;
+    /* Success green */
+    --pos-bg: #f8f9fa;
+    --pos-card-bg: #ffffff;
+    --pos-text: #263238;
+    --pos-text-muted: #607d8b;
+    --pos-border: #e0e0e0;
+    --pos-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    --pos-radius: 16px;
+}
+
+/* Dark Mode Overrides (Optional but keeping consistent with Red focus) */
+.pos-container.dark-mode {
+    --pos-bg: #1a1a1a;
+    --pos-card-bg: #2d2d2d;
+    --pos-text: #eceff1;
+    --pos-text-muted: #b0bec5;
+    --pos-border: #424242;
+    --pos-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+.pos-main-wrapper {
+    margin: 0;
+    padding: 0;
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden;
+    font-family: 'Outfit', sans-serif;
+    background-color: var(--pos-bg);
+    color: var(--pos-text);
+    display: flex;
+    flex-direction: column;
+}
+
+.pos-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.pos-main {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
+/* Header */
+.pos-header {
+    height: 70px;
+    background: var(--pos-card-bg);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 30px;
+    border-bottom: 2px solid var(--pos-primary);
+    z-index: 100;
+    box-shadow: var(--pos-shadow);
+}
+
+.pos-brand {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.pos-logo {
+    height: 45px;
+    object-fit: contain;
+}
+
+.pos-brand span {
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: var(--pos-text);
+    letter-spacing: -0.5px;
+}
+
+.pos-brand strong {
+    color: var(--pos-primary);
+}
+
+.pos-search {
+    position: relative;
+    flex: 0 1 400px;
+}
+
+.pos-search i {
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--pos-primary);
+}
+
+.pos-search input {
+    width: 100%;
+    padding: 12px 15px 12px 45px;
+    border-radius: 12px;
+    border: 1px solid var(--pos-border);
+    background: var(--pos-bg);
+    font-size: 0.95rem;
+    outline: none;
+    transition: all 0.2s;
+}
+
+.pos-search input:focus {
+    border-color: var(--pos-primary);
+    box-shadow: 0 0 0 3px rgba(183, 28, 28, 0.1);
+}
+
+.pos-top-right {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.pos-clock {
+    font-weight: 700;
+    color: var(--pos-primary);
+    background: rgba(183, 28, 28, 0.05);
+    padding: 8px 15px;
+    border-radius: 10px;
+}
+
+/* Sidebar */
+.pos-sidebar {
+    width: 110px;
+    background: var(--pos-card-bg);
+    border-right: 1px solid var(--pos-border);
+    display: flex;
+    flex-direction: column;
+    padding: 20px 0;
+    gap: 10px;
+}
+
+.pos-cat-btn {
+    background: none;
+    border: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: 0.2s;
+    padding: 15px 5px;
+    color: var(--pos-text-muted);
+}
+
+.cat-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 12px;
+    background: var(--pos-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3rem;
+    transition: 0.2s;
+}
+
+.pos-cat-btn.active .cat-icon {
+    background: var(--pos-primary);
+    color: white;
+    transform: scale(1.05);
+}
+
+.pos-cat-btn span {
+    font-size: 0.75rem;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.pos-cat-btn.active span {
+    color: var(--pos-primary);
+}
+
+/* Grid & Items */
+.pos-grid-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--pos-bg);
+}
+
+.pos-grid-header {
+    padding: 20px 25px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.pos-grid-header h3 {
+    margin: 0;
+    font-size: 1.2rem;
+    font-weight: 800;
+    color: var(--pos-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.btn-refresh {
+    background: white;
+    border: 1px solid var(--pos-border);
+    color: var(--pos-primary);
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-refresh:hover {
+    background: var(--pos-primary);
+    color: white;
+    transform: rotate(180deg);
+}
+
+.pos-grid {
+    flex: 1;
+    padding: 15px 25px 25px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    grid-auto-rows: 130px;
+    gap: 15px;
+    overflow-y: auto;
+}
+
+.pos-text-card {
+    background: var(--pos-card-bg);
+    border-radius: var(--pos-radius);
+    padding: 15px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.04);
+    transition: 0.15s;
+    border: 2px solid transparent;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    cursor: pointer;
+    user-select: none;
+}
+
+.pos-text-card:active {
+    transform: scale(0.96);
+}
+
+.pos-text-card:hover {
+    border-color: var(--pos-primary);
+    box-shadow: var(--pos-shadow);
+}
+
+.pos-text-name {
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: var(--pos-text);
+    line-height: 1.3;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.pos-text-bottom {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+}
+
+.pos-text-price {
+    font-size: 1.15rem;
+    font-weight: 900;
+    color: var(--pos-primary);
+}
+
+.pos-tag {
+    font-size: 0.7rem;
+    font-weight: 800;
+    background: rgba(183, 28, 28, 0.1);
+    color: var(--pos-primary);
+    padding: 3px 10px;
+    border-radius: 20px;
+    text-transform: uppercase;
+}
+
+/* Billing Panel */
+.pos-billing {
+    width: 380px;
+    background: var(--pos-card-bg);
+    border-left: 1px solid var(--pos-border);
+    display: flex;
+    flex-direction: column;
+    box-shadow: -10px 0 30px rgba(0, 0, 0, 0.03);
+}
+
+.billing-cart-items {
+    flex: 1;
+    padding: 25px;
+    overflow-y: auto;
+}
+
+.pos-cart-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 0;
+    border-bottom: 1px dashed var(--pos-border);
+}
+
+.cart-item-name {
+    font-weight: 800;
+    color: var(--pos-text);
+}
+
+.cart-item-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--pos-bg);
+    padding: 5px 10px;
+    border-radius: 10px;
+}
+
+.cart-item-controls button {
+    background: none;
+    border: none;
+    font-weight: 900;
+    color: var(--pos-primary);
+    cursor: pointer;
+    padding: 0 5px;
+}
+
+/* Summary & Checkout */
+.billing-summary {
+    padding: 20px 25px;
+    background: var(--pos-bg);
+}
+
+.total-row {
+    font-size: 1.6rem;
+    font-weight: 900;
+    color: var(--pos-primary);
+    border-top: 2px solid var(--pos-primary);
+    padding-top: 15px;
+}
+
+.btn-complete-order {
+    height: 65px;
+    margin: 15px 25px 25px;
+    border-radius: 15px;
+    background: var(--pos-primary);
+    color: white;
+    border: none;
+    font-size: 1.3rem;
+    font-weight: 900;
+    cursor: pointer;
+    box-shadow: 0 10px 25px rgba(183, 28, 28, 0.3);
+}
+
+.btn-complete-order:hover {
+    background: var(--pos-primary-light);
+    transform: translateY(-2px);
+}
+
+/* Modal */
+.pos-modal-overlay {
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(5px);
+}
+
+.pos-modal {
+    background: var(--pos-card-bg);
+    padding: 35px;
+    border-radius: 25px;
+    width: 450px;
+}
+
+.pos-modal h3 {
+    color: var(--pos-primary);
+    font-weight: 900;
+    font-size: 1.8rem;
+}
+
+.size-selector button.active {
+    background: var(--pos-primary);
+    color: white;
+}
+
+.toppings-selector {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+    margin-top: 5px;
+}
+
+.topping-option {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 15px;
+    background: var(--pos-bg);
+    border: 1px solid var(--pos-border);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.topping-option:hover {
+    border-color: var(--pos-primary);
+}
+
+.topping-option.active {
+    background: rgba(183, 28, 28, 0.05);
+    border-color: var(--pos-primary);
+}
+
+.topping-name {
+    font-weight: 700;
+    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.topping-name i {
+    color: var(--pos-accent);
+}
+
+.topping-price {
+    font-weight: 800;
+    color: var(--pos-primary);
+}
+
+.pos-modal-actions {
+    margin-top: 30px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.modal-total-preview {
+    background: var(--pos-bg);
+    padding: 15px;
+    border-radius: 12px;
+    text-align: right;
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: var(--pos-text-muted);
+}
+
+.modal-total-preview span {
+    color: var(--pos-primary);
+    font-size: 1.5rem;
+    font-weight: 900;
+    margin-left: 10px;
+}
+
+.action-btns {
+    display: flex;
+    gap: 15px;
+}
+
+.action-btns button {
+    flex: 1;
+    height: 55px;
+    border-radius: 12px;
+    font-weight: 800;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.btn-cancel {
+    background: #eeeeee;
+    border: none;
+    color: #666;
+}
+
+.btn-add {
+    background: var(--pos-primary);
+    border: none;
+    color: white;
+    box-shadow: 0 4px 15px rgba(183, 28, 28, 0.2);
+}
+
+.btn-add:hover {
+    background: var(--pos-primary-light);
+    transform: translateY(-2px);
+}

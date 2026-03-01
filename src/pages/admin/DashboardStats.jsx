@@ -1,0 +1,125 @@
+import React, { useState, useEffect, useContext } from 'react';
+import { AuthContext } from '../../context/AuthContext';
+
+const DashboardStats = () => {
+    const { token } = useContext(AuthContext);
+    const [stats, setStats] = useState({
+        totalRevenue: 0,
+        totalOrders: 0,
+        cancelledOrders: 0,
+        completeOrders: 0,
+        activeCoupons: 0,
+        popularItems: [],
+        staffSummary: []
+    });
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchDashboardData = async () => {
+            try {
+                const res = await fetch('https://pizza-backend-api-a5mm.onrender.com/api/admin/dashboard', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await res.json();
+                if (data.success) {
+                    setStats(data.data);
+                }
+            } catch (error) {
+                console.error("Failed to fetch dashboard stats", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchDashboardData();
+    }, []);
+
+    const statCards = [
+        { id: 1, title: 'Total Revenue', value: `₹${stats.totalRevenue.toLocaleString()}`, icon: 'fas fa-rupee-sign', color: '#10b981' },
+        { id: 2, title: 'Total Orders', value: stats.totalOrders, icon: 'fas fa-shopping-bag', color: '#3b82f6' },
+        { id: 3, title: 'Complete Orders', value: stats.completeOrders, icon: 'fas fa-check-circle', color: '#8b5cf6' },
+        { id: 4, title: 'Cancelled Orders', value: stats.cancelledOrders, icon: 'fas fa-times-circle', color: '#ef4444' },
+        { id: 5, title: 'Active Coupons', value: stats.activeCoupons, icon: 'fas fa-percent', color: '#f59e0b' }
+    ];
+
+    if (loading) {
+        return <div className="placeholder-pane">Loading live dashboard metrics...</div>;
+    }
+
+    return (
+        <div className="dashboard-stats">
+            <h3 className="section-title">Store Overview (<span style={{ color: 'var(--primary)' }}>Real-time Sync</span>)</h3>
+            <div className="stats-grid">
+                {statCards.map(stat => (
+                    <div key={stat.id} className="stat-card">
+                        <div className="stat-icon" style={{ backgroundColor: `${stat.color}15`, color: stat.color }}>
+                            <i className={stat.icon}></i>
+                        </div>
+                        <div className="stat-details">
+                            <h4>{stat.title}</h4>
+                            <p>{stat.value}</p>
+                        </div>
+                    </div>
+                ))}
+            </div>
+
+            <div className="recent-activity">
+                <h3 className="section-title">Sales Intel & Performance</h3>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                    <div className="activity-list card" style={{ padding: '20px', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'flex-start' }}>
+                        <h4 style={{ marginTop: 0, color: 'var(--primary)' }}><i className="fas fa-fire"></i> Best Sellers</h4>
+                        {(!stats.popularItems || stats.popularItems.length === 0) ? (
+                            <p style={{ color: 'var(--text-muted)' }}>Not enough data to calculate best sellers yet.</p>
+                        ) : (
+                            <ul style={{ width: '100%', paddingLeft: 0, listStyle: 'none', margin: 0 }}>
+                                {stats.popularItems.map((item, id) => (
+                                    <li key={id} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px dotted #ccc' }}>
+                                        <strong>{item.name}</strong>
+                                        <span style={{ color: 'green', fontWeight: 'bold' }}>{item.sold} sold</span>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                    </div>
+
+                    <div className="activity-list card" style={{ padding: '20px', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'flex-start' }}>
+                        <h4 style={{ marginTop: 0, color: 'var(--primary)' }}><i className="fas fa-users-cog"></i> Staff Tracking</h4>
+                        {(!stats.staffSummary || stats.staffSummary.length === 0) ? (
+                            <p style={{ color: 'var(--text-muted)' }}>No staff sales data recorded yet.</p>
+                        ) : (
+                            <div style={{ width: '100%' }}>
+                                <table style={{ width: '100%', fontSize: '0.9rem', textAlign: 'left', borderCollapse: 'collapse' }}>
+                                    <thead>
+                                        <tr style={{ borderBottom: '1px solid #eee' }}>
+                                            <th style={{ padding: '8px 0' }}>Staff Member</th>
+                                            <th>Orders</th>
+                                            <th>Revenue</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {stats.staffSummary.map((staff, idx) => (
+                                            <tr key={idx} style={{ borderBottom: '1px solid #f9f9f9' }}>
+                                                <td style={{ padding: '8px 0' }}>{staff.name}</td>
+                                                <td>{staff.orderCount}</td>
+                                                <td style={{ fontWeight: 'bold' }}>₹{staff.revenue}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                <div className="card" style={{ padding: '20px', marginTop: '20px' }}>
+                    <p style={{ color: 'var(--text-muted)', margin: 0 }}>
+                        Currently, revenue and best-seller calculations are sourced from all Orders set to the "Delivered" status.<br />
+                        <b>Pro Tip:</b> Use the POS Panel for fast walk-in orders to sync staff performance in real-time.
+                    </p>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+export default DashboardStats;

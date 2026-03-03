@@ -4,7 +4,7 @@ import './POSPanel.css';
 import logo from '../../assets/logo.png';
 
 const POSPanel = () => {
-    const { user, token, logoutAuth } = useContext(AuthContext);
+    const { user, api, logoutAuth } = useContext(AuthContext);
     const [menuItems, setMenuItems] = useState([]);
     const [categories, setCategories] = useState([]);
     const [activeCategory, setActiveCategory] = useState('All');
@@ -47,14 +47,14 @@ const POSPanel = () => {
     const [activeToppingCat, setActiveToppingCat] = useState('All');
 
     const TOPPINGS_CONFIG = [
-        { id: 'onion', name: 'Onion', category: 'Onion', prices: { medium: 35, large: 45 } },
-        { id: 'capsicum', name: 'Capsicum', category: 'Capsicum', prices: { medium: 35, large: 45 } },
-        { id: 'tomato', name: 'Tomato', category: 'Tomato', prices: { medium: 35, large: 45 } },
-        { id: 'corn', name: 'Sweet Corn', category: 'Corn', prices: { medium: 35, large: 45 } },
-        { id: 'cheese', name: 'Extra Cheese', category: 'Other', prices: { medium: 60, large: 90 } },
-        { id: 'burst', name: 'Cheese Burst', category: 'Other', prices: { medium: 60, large: 90 } }
+        { id: 'onion', name: 'Onion Topping', category: 'Toppings', prices: { small: 25, medium: 35, large: 45 } },
+        { id: 'capsicum', name: 'Capsicum Topping', category: 'Toppings', prices: { small: 25, medium: 35, large: 45 } },
+        { id: 'tomato', name: 'Tomato Topping', category: 'Toppings', prices: { small: 25, medium: 35, large: 45 } },
+        { id: 'corn', name: 'Sweet Corn Topping', category: 'Toppings', prices: { small: 25, medium: 35, large: 45 } },
+        { id: 'cheese', name: 'Extra Cheese', category: 'Extra', prices: { small: 40, medium: 60, large: 90 } },
+        { id: 'burst', name: 'Cheese Burst', category: 'Extra', prices: { small: 50, medium: 60, large: 90 } }
     ];
-    const TOPPING_CATS = ['All', 'Onion', 'Corn', 'Tomato', 'Capsicum', 'Other'];
+    const TOPPING_CATS = ['All', 'Toppings', 'Extra'];
     const handleCategoryClick = (cat) => {
         setActiveCategory(cat);
     };
@@ -132,15 +132,8 @@ const POSPanel = () => {
         };
 
         try {
-            const res = await fetch('https://pizza-backend-api-a5mm.onrender.com/api/orders', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`
-                },
-                body: JSON.stringify(orderData)
-            });
-            const data = await res.json();
+            const res = await api.post('/api/orders', orderData);
+            const data = res.data;
             if (data.success) {
                 printReceipt(data.data);
                 // Reset cart
@@ -196,8 +189,8 @@ const POSPanel = () => {
 
     const fetchMenu = async () => {
         try {
-            const res = await fetch('https://pizza-backend-api-a5mm.onrender.com/api/menu?all=true');
-            const data = await res.json();
+            const res = await api.get('/api/menu?all=true');
+            const data = res.data;
             console.log('POS Menu Data:', data);
             if (data.success) {
                 setMenuItems(data.data);
@@ -481,7 +474,7 @@ const POSPanel = () => {
                                 className="btn-complete-order"
                                 onClick={handleCheckout}
                             >
-                                Complete Order (F9)
+                                Make Checkout (F9)
                             </button>
                         </aside>
                     </>
@@ -495,9 +488,9 @@ const POSPanel = () => {
                         <h3>Customize: {selectedItem.name}</h3>
 
                         <div className="pos-modal-section">
-                            <label>Size:</label>
+                            <label>Product Size:</label>
                             <div className="size-selector">
-                                {Object.keys(selectedItem.prices || {}).filter(sz => sz !== 'small').map(sz => (
+                                {Object.keys(selectedItem.prices || {}).map(sz => (
                                     <button
                                         key={sz}
                                         className={selectedSize === sz ? 'active' : ''}
@@ -511,47 +504,62 @@ const POSPanel = () => {
                         </div>
 
                         <div className="pos-modal-section">
-                            <label>Extra Toppings Category:</label>
-                            <div className="topping-cats-strip" style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '10px' }}>
-                                {TOPPING_CATS.map(tc => (
-                                    <button
-                                        key={tc}
-                                        className={`tc-btn ${activeToppingCat === tc ? 'active' : ''}`}
-                                        onClick={() => setActiveToppingCat(tc)}
-                                        style={{
-                                            padding: '8px 16px',
-                                            borderRadius: '20px',
-                                            border: '1px solid var(--pos-border)',
-                                            background: activeToppingCat === tc ? 'var(--pos-primary)' : 'var(--pos-bg)',
-                                            color: activeToppingCat === tc ? 'white' : 'var(--pos-text)',
-                                            fontSize: '0.8rem',
-                                            fontWeight: 'bold',
-                                            cursor: 'pointer',
-                                            whiteSpace: 'nowrap'
-                                        }}
-                                    >
-                                        {tc}
-                                    </button>
-                                ))}
-                            </div>
-                            <label style={{ marginTop: '10px' }}>Select Toppings:</label>
-                            <div className="toppings-selector" style={{ maxHeight: '150px', overflowY: 'auto' }}>
-                                {TOPPINGS_CONFIG.filter(t => activeToppingCat === 'All' || t.category === activeToppingCat).map(t => (
+                            <label>Topping Type (Select Veggies):</label>
+                            <div className="toppings-list-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '10px' }}>
+                                {TOPPINGS_CONFIG.filter(t => t.category === 'Toppings').map(t => (
                                     <div
                                         key={t.id}
-                                        className={`topping-option ${selectedToppings.includes(t.id) ? 'active' : ''}`}
+                                        className={`pos-topping-unit ${selectedToppings.includes(t.id) ? 'active' : ''}`}
                                         onClick={() => toggleTopping(t.id)}
+                                        style={{
+                                            padding: '12px',
+                                            borderRadius: '12px',
+                                            border: '1px solid var(--pos-border)',
+                                            background: selectedToppings.includes(t.id) ? 'rgba(183,28,28,0.05)' : 'white',
+                                            transition: '0.2s',
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            justifyContent: 'space-between',
+                                            alignItems: 'center'
+                                        }}
                                     >
-                                        <div className="topping-name">
-                                            {selectedToppings.includes(t.id) && <i className="fas fa-check-circle"></i>}
+                                        <div style={{ fontSize: '0.85rem', fontWeight: '700' }}>
+                                            {selectedToppings.includes(t.id) && <i className="fas fa-check-circle" style={{ color: 'var(--pos-primary)', marginRight: '5px' }}></i>}
+                                            {t.name.replace(' Topping', '')}
+                                        </div>
+                                        <div style={{ fontSize: '0.8rem', color: 'var(--pos-primary)', fontWeight: 'bold' }}>+₹{t.prices[selectedSize]}</div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <label style={{ marginTop: '20px', display: 'block' }}>Extra Add-ons:</label>
+                            <div className="toppings-list-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '10px' }}>
+                                {TOPPINGS_CONFIG.filter(t => t.category === 'Extra').map(t => (
+                                    <div
+                                        key={t.id}
+                                        className={`pos-topping-unit ${selectedToppings.includes(t.id) ? 'active' : ''}`}
+                                        onClick={() => toggleTopping(t.id)}
+                                        style={{
+                                            padding: '12px',
+                                            borderRadius: '12px',
+                                            border: '1px solid var(--pos-border)',
+                                            background: selectedToppings.includes(t.id) ? 'rgba(183,28,28,0.05)' : 'white',
+                                            transition: '0.2s',
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            justifyContent: 'space-between',
+                                            alignItems: 'center'
+                                        }}
+                                    >
+                                        <div style={{ fontSize: '0.85rem', fontWeight: '700' }}>
+                                            {selectedToppings.includes(t.id) && <i className="fas fa-check-circle" style={{ color: 'var(--pos-primary)', marginRight: '5px' }}></i>}
                                             {t.name}
                                         </div>
-                                        <div className="topping-price">+₹{t.prices[selectedSize] || 0}</div>
+                                        <div style={{ fontSize: '0.8rem', color: 'var(--pos-primary)', fontWeight: 'bold' }}>+₹{t.prices[selectedSize]}</div>
                                     </div>
                                 ))}
                             </div>
                         </div>
-
                         <div className="pos-modal-section quantity-section">
                             <label>Quantity:</label>
                             <div className="pos-qty-controls">

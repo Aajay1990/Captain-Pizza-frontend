@@ -10,7 +10,10 @@ const Order = () => {
 
     const ADDONS_CONFIG = [
         { name: 'Ketchup x10', isToggle: true, prices: { default: 10 } },
-        { name: 'Veg Topping', isToggle: false, prices: { small: 25, medium: 35, large: 45 } },
+        { name: 'Onion Topping', isToggle: false, prices: { small: 25, medium: 35, large: 45 } },
+        { name: 'Capsicum Topping', isToggle: false, prices: { small: 25, medium: 35, large: 45 } },
+        { name: 'Tomato Topping', isToggle: false, prices: { small: 25, medium: 35, large: 45 } },
+        { name: 'Sweet Corn Topping', isToggle: false, prices: { small: 25, medium: 35, large: 45 } },
         { name: 'Extra Cheese', isToggle: false, prices: { small: 40, medium: 60, large: 90 } },
         { name: 'Cheese Burst', isToggle: false, prices: { small: 50, medium: 60, large: 90 } }
     ];
@@ -273,8 +276,32 @@ const Order = () => {
                                         <h4 style={{ margin: 0, fontSize: '1.1rem', color: '#333' }}>{index + 1}. {item.name}</h4>
                                     </div>
                                     <div className="item-addons-list">
-                                        <p style={{ color: '#555', fontSize: '0.95rem', marginBottom: '12px', fontWeight: 'bold' }}>Add-ons</p>
-                                        {ADDONS_CONFIG.map((addon, i) => {
+                                        <p style={{ color: '#555', fontSize: '0.95rem', marginBottom: '12px', fontWeight: 'bold' }}>Topping Type</p>
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '20px' }}>
+                                            {ADDONS_CONFIG.filter(a => a.name.includes('Topping')).map((addon, i) => {
+                                                const selectedSizeForThisAddon = item.toppings?.find(t => t.baseName === addon.name)?.size;
+                                                return (
+                                                    <div key={i} style={{ padding: '12px', backgroundColor: 'rgba(0,0,0,0.02)', borderRadius: '8px', border: '1px solid rgba(0,0,0,0.05)' }}>
+                                                        <div style={{ fontWeight: '600', marginBottom: '8px', fontSize: '0.85rem' }}>{addon.name.replace(' Topping', '')}</div>
+                                                        <div style={{ display: 'flex', gap: '4px' }}>
+                                                            {['small', 'medium', 'large'].map(sz => {
+                                                                const price = addon.prices[sz];
+                                                                const isSelected = selectedSizeForThisAddon === sz;
+                                                                return (
+                                                                    <button key={sz} type="button" onClick={() => toggleAddonSML(item.cartItemId, addon.name, sz, price)}
+                                                                        style={{ flex: 1, padding: '6px 2px', fontSize: '0.7rem', borderRadius: '4px', backgroundColor: isSelected ? 'var(--primary)' : '#fff', color: isSelected ? 'white' : '#444', border: `1px solid ${isSelected ? 'var(--primary)' : '#ddd'}`, cursor: 'pointer' }}>
+                                                                        {sz.charAt(0).toUpperCase()} (+₹{price})
+                                                                    </button>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+
+                                        <p style={{ color: '#555', fontSize: '0.95rem', marginBottom: '12px', fontWeight: 'bold' }}>Extra Add-ons</p>
+                                        {ADDONS_CONFIG.filter(a => !a.name.includes('Topping')).map((addon, i) => {
                                             if (addon.isToggle) {
                                                 const isSelected = item.toppings?.some(t => t.baseName === addon.name);
                                                 return (

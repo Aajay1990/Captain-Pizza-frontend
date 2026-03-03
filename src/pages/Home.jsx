@@ -10,16 +10,20 @@ import qrCode from '../assets/qr code.png';
 import pizzaImg1 from '../assets/MERGHERITA.png'; // Using existing asset for trending
 import pizzaImg2 from '../assets/FARM HOUSE.png';
 import pizzaImg3 from '../assets/ONION& JALAPENO.png';
-import heroPizza from '../assets/hero-pizza.png';
+import heroPizza from '../assets/hero-user-pizza.jpg';
+import onionImg from '../assets/ONION.png';
+import tomatoImg from '../assets/TOMATO.png';
 import logo from '../assets/logo.png';
 import { CartContext } from '../context/CartContext';
 import ReviewEcosystem from '../components/ReviewEcosystem';
 
 const Home = () => {
-    const { addToCart } = useContext(CartContext);
+    const { addToCart, cartCount } = useContext(CartContext);
     const [showPopup, setShowPopup] = useState(false);
     const [timeLeft, setTimeLeft] = useState(24 * 60 * 60); // 24 hours in seconds
     const [isLoading, setIsLoading] = useState(true);
+    const [seasonalOffer, setSeasonalOffer] = useState({ enabled: 'false', title: '', desc: '', coupon: '', new_user_discount: 20 });
+    const [deliveryInfo, setDeliveryInfo] = useState({ charge: 40, threshold: 300 });
 
     const sliderRef = useRef(null);
 
@@ -40,15 +44,23 @@ const Home = () => {
     }, []);
 
     useEffect(() => {
-        // Smart First Order Popup Logic
-        const hasVisited = localStorage.getItem('hasVisitedCaptainPizza');
-        if (!hasVisited) {
-            const timer = setTimeout(() => {
-                setShowPopup(true);
-                localStorage.setItem('hasVisitedCaptainPizza', 'true');
-            }, 3000); // show after 3 seconds
-            return () => clearTimeout(timer);
-        }
+        const checkPopup = async () => {
+            try {
+                const res = await fetch('https://pizza-backend-api-a5mm.onrender.com/api/admin/settings/show_welcome_popup');
+                const data = await res.json();
+                if (data.success && data.data?.value === 'false') return;
+
+                const hasVisited = localStorage.getItem('hasVisitedCaptainPizza');
+                if (!hasVisited) {
+                    const timer = setTimeout(() => {
+                        setShowPopup(true);
+                        localStorage.setItem('hasVisitedCaptainPizza', 'true');
+                    }, 3000); // show after 3 seconds
+                    return () => clearTimeout(timer);
+                }
+            } catch (e) { }
+        };
+        checkPopup();
     }, []);
 
     // Infinite Auto-Scroll Logic for Offers & Testimonials
@@ -85,6 +97,34 @@ const Home = () => {
 
         const cleanupSlider = setupAutoScroll(sliderRef);
 
+        const fetchHomeSettings = async () => {
+            try {
+                // 1. Fetch General Settings
+                const resSettings = await fetch('https://pizza-backend-api-a5mm.onrender.com/api/admin/settings');
+                const dataSettings = await resSettings.json();
+                if (dataSettings.success) {
+                    const findVal = (key, def) => dataSettings.data.find(s => s.key === key)?.value || def;
+                    setSeasonalOffer(prev => ({
+                        ...prev,
+                        new_user_discount: findVal('new_user_discount', 20)
+                    }));
+                    setDeliveryInfo({
+                        charge: findVal('delivery_charge', 40),
+                        threshold: findVal('free_delivery_min_order', 300),
+                        radius: findVal('delivery_max_distance_km', 3)
+                    });
+                }
+
+                // 2. Fetch Active Seasonal Offers
+                const resOffers = await fetch('https://pizza-backend-api-a5mm.onrender.com/api/offers/active');
+                const dataOffers = await resOffers.json();
+                if (dataOffers.success) {
+                    setActiveOffers(dataOffers.data);
+                }
+            } catch (e) { console.error(e); }
+        };
+        fetchHomeSettings();
+
         return () => {
             if (cleanupSlider) cleanupSlider();
         };
@@ -118,7 +158,11 @@ const Home = () => {
                     <section className="hero-section animate-fade-in">
                         <div className="hero-content">
                             <div className="hot-deal-badge animate-bounce-soft">
-                                🔥 <span style={{ fontWeight: 'bold' }}>Today's Hot Deal</span> - Free Delivery on ₹300+
+                                🔥 <span style={{ fontWeight: 'bold' }}>
+                                    {activeOffers.length > 0
+                                        ? `${activeOffers[0].title}: ${activeOffers[0].description} ${activeOffers[0].couponCode ? `(Code: ${activeOffers[0].couponCode})` : ''}`
+                                        : `Free Delivery on ₹${deliveryInfo.threshold}+`}
+                                </span>
                             </div>
                             <h1 className="hero-title">
                                 <span className="text-gradient">Hot, Fresh &</span><br /> Delicious Pizza
@@ -248,7 +292,8 @@ const Home = () => {
                                 <div className="offer-content glass-bottom">
                                     <span className="urgency-tag gold-badge">NEW USER</span>
                                     <h3>First Order Magic</h3>
-                                    <p>Get 20% OFF instantly</p>
+                                    <p>Get {seasonalOffer.new_user_discount || 20}% OFF instantly</p>
+                                    <p style={{ fontSize: '0.8rem', marginTop: '5px', opacity: 0.9 }}>Code: WELCOME{seasonalOffer.new_user_discount || 20}</p>
 
                                     <Link to="/menu" className="offer-btn gold-btn" style={{ textDecoration: 'none', textAlign: 'center', marginTop: 'auto', display: 'block', padding: '8px 0' }}>
                                         Claim Now
@@ -397,7 +442,7 @@ const Home = () => {
                             <span className="badge-item"><i className="fas fa-box"></i> Safe Packaging</span>
                         </div>
                         <h2 className="delivery-heading">Free Home Delivery</h2>
-                        <p className="delivery-subheading">On all orders above ₹300</p>
+                        <p className="delivery-subheading">Within 3KM on all orders above ₹{deliveryInfo.threshold}</p>
                         <div className="contact-info">
                             <a href="tel:9220367325" className="contact-pill"><i className="fas fa-phone-alt"></i> 9220367325</a>
                         </div>
@@ -406,7 +451,7 @@ const Home = () => {
                         <div className="qr-wrapper">
                             <img src={qrCode} alt="Scan for Location" className="premium-qr" />
                         </div>
-                        <p className="qr-text">
+                        <p className="qr-text" style={{ fontSize: '0.9rem', marginTop: '15px' }}>
                             <i className="fas fa-map-marker-alt" style={{ color: 'var(--primary)' }}></i> F-11 Main Road Dayalpur, Delhi
                         </p>
                     </div>
@@ -423,20 +468,15 @@ const Home = () => {
                             <button className="popup-close" onClick={() => setShowPopup(false)}>×</button>
                             <div className="popup-icon">🎁</div>
                             <h2>Welcome to Captain Pizza!</h2>
-                            <p>Get <strong>20% OFF</strong> on your first order. Sign up now & treat yourself to the freshest pizzas in town!</p>
+                            <p>Get <strong>{seasonalOffer.new_user_discount || 20}% OFF</strong> on your first order. Use code <strong>WELCOME{seasonalOffer.new_user_discount || 20}</strong> & treat yourself!</p>
                             <Link to="/login" className="btn-primary popup-btn">Claim Offer & Login</Link>
                         </div>
                     </div>
                 )}
 
-                {/* Mobile Conversion Boosters */}
                 <div className="mobile-sticky-bar">
                     <Link to="/menu" className="mobile-order-btn">Start Ordering Now 🍕</Link>
                 </div>
-
-                <a href="https://wa.me/919220367325" target="_blank" rel="noopener noreferrer" className="floating-whatsapp animate-pulse-whatsapp">
-                    <i className="fab fa-whatsapp"></i>
-                </a>
 
             </div>
         </>

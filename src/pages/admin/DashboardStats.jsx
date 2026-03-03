@@ -7,6 +7,7 @@ const DashboardStats = () => {
         totalRevenue: 0,
         totalOrders: 0,
         cancelledOrders: 0,
+        totalUsers: 0,
         completeOrders: 0,
         activeCoupons: 0,
         popularItems: [],
@@ -37,9 +38,10 @@ const DashboardStats = () => {
     const statCards = [
         { id: 1, title: 'Total Revenue', value: `₹${stats.totalRevenue.toLocaleString()}`, icon: 'fas fa-rupee-sign', color: '#10b981' },
         { id: 2, title: 'Total Orders', value: stats.totalOrders, icon: 'fas fa-shopping-bag', color: '#3b82f6' },
-        { id: 3, title: 'Complete Orders', value: stats.completeOrders, icon: 'fas fa-check-circle', color: '#8b5cf6' },
-        { id: 4, title: 'Cancelled Orders', value: stats.cancelledOrders, icon: 'fas fa-times-circle', color: '#ef4444' },
-        { id: 5, title: 'Active Coupons', value: stats.activeCoupons, icon: 'fas fa-percent', color: '#f59e0b' }
+        { id: 3, title: 'Total Users', value: stats.totalUsers || 0, icon: 'fas fa-users', color: '#6366f1' },
+        { id: 4, title: 'Complete Orders', value: stats.completeOrders, icon: 'fas fa-check-circle', color: '#8b5cf6' },
+        { id: 5, title: 'Cancelled Orders', value: stats.cancelledOrders, icon: 'fas fa-times-circle', color: '#ef4444' },
+        { id: 6, title: 'Active Coupons', value: stats.activeCoupons, icon: 'fas fa-percent', color: '#f59e0b' }
     ];
 
     if (loading) {

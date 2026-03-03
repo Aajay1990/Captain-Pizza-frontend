@@ -1,25 +1,20 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { AuthContext } from '../../context/AuthContext';
+import { AuthContext, api } from '../../context/AuthContext';
 
 const UserManager = () => {
-    const { token } = useContext(AuthContext);
+    const { user } = useContext(AuthContext);
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        fetchUsers();
-    }, []);
+        if (user) fetchUsers();
+    }, [user]);
 
     const fetchUsers = async () => {
         try {
-            const res = await fetch('https://pizza-backend-api-a5mm.onrender.com/api/auth/users', {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
-            const result = await res.json();
-            if (result.success) {
-                setUsers(result.data);
+            const res = await api.get('/api/auth/users');
+            if (res.data.success) {
+                setUsers(res.data.data);
             }
         } catch (error) {
             console.error("Failed to fetch users", error);
@@ -27,6 +22,45 @@ const UserManager = () => {
             setLoading(false);
         }
     };
+
+    const handleUpdatePassword = async (id, newPassword) => {
+        try {
+            const res = await api.put(`/api/auth/users/${id}/password`, { newPassword });
+            if (res.data.success) {
+                alert(res.data.message);
+            } else {
+                alert(res.data.message);
+            }
+        } catch (error) {
+            alert("Error updating password.");
+        }
+    };
+
+    const handleDelete = async (id) => {
+        if (!window.confirm("Are you sure you want to delete this user? This action cannot be undone.")) return;
+
+        try {
+            const res = await api.delete(`/api/auth/users/${id}`);
+            if (res.data.success) {
+                setUsers(users.filter(u => u._id !== id));
+                alert("User deleted successfully.");
+            } else {
+                alert(res.data.message || "Something went wrong on the server.");
+            }
+        } catch (error) {
+            console.error("Delete error:", error);
+            alert("An error occurred while deleting the user.");
+        }
+    };
+
+    if (!user) {
+        return (
+            <div className="user-manager" style={{ textAlign: 'center', padding: '50px' }}>
+                <i className="fas fa-spinner fa-spin" style={{ fontSize: '3rem', color: 'var(--primary)', marginBottom: '20px' }}></i>
+                <h3>Verifying Session...</h3>
+            </div>
+        );
+    }
 
     return (
         <div className="user-manager">
@@ -42,32 +76,44 @@ const UserManager = () => {
                             <th>Email Address</th>
                             <th>Registration Date</th>
                             <th>Verification Status</th>
-                            <th>Preview URL (Testing)</th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         {loading && <tr><td colSpan="5" style={{ textAlign: 'center' }}>Loading registered users...</td></tr>}
                         {!loading && users.length === 0 && <tr><td colSpan="5" style={{ textAlign: 'center' }}>No users registered yet.</td></tr>}
 
-                        {users.map(user => (
-                            <tr key={user._id}>
-                                <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{user._id}</td>
-                                <td><strong>{user.email}</strong></td>
-                                <td>{new Date(user.createdAt).toLocaleDateString()}</td>
+                        {users.map(u => (
+                            <tr key={u._id}>
+                                <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{u._id}</td>
+                                <td><strong>{u.email}</strong></td>
+                                <td>{new Date(u.createdAt).toLocaleDateString()}</td>
                                 <td>
-                                    {user.isVerified ?
+                                    {u.isVerified ?
                                         <span style={{ color: 'green', fontWeight: 'bold' }}><i className="fas fa-check-circle"></i> Verified</span> :
-                                        <span style={{ color: 'orange', fontWeight: 'bold' }}><i className="fas fa-clock"></i> Pending Action</span>
+                                        <span style={{ color: 'orange', fontWeight: 'bold' }}><i className="fas fa-clock"></i> Verification Pending</span>
                                     }
                                 </td>
                                 <td>
-                                    {!user.isVerified && user.verificationToken ? (
-                                        <a href={`https://pizza-backend-api-a5mm.onrender.com/api/auth/verify/${user.verificationToken}`} target="_blank" rel="noreferrer" style={{ color: 'var(--primary)', textDecoration: 'underline' }}>
-                                            Manual Verify Link
-                                        </a>
-                                    ) : (
-                                        <span style={{ color: 'var(--text-muted)' }}>—</span>
-                                    )}
+                                    <button
+                                        onClick={() => {
+                                            const newPass = prompt("Enter new strong password (Min 6 chars, upper, lower, special):");
+                                            if (newPass) handleUpdatePassword(u._id, newPass);
+                                        }}
+                                        className="btn-icon"
+                                        style={{ color: '#3b82f6', background: 'none', border: 'none', cursor: 'pointer', padding: '10px' }}
+                                        title="Change Password"
+                                    >
+                                        <i className="fas fa-key"></i>
+                                    </button>
+                                    <button
+                                        onClick={() => handleDelete(u._id)}
+                                        className="btn-icon"
+                                        style={{ color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', padding: '10px' }}
+                                        title="Delete User"
+                                    >
+                                        <i className="fas fa-trash-alt"></i>
+                                    </button>
                                 </td>
                             </tr>
                         ))}
@@ -76,12 +122,10 @@ const UserManager = () => {
             </div>
 
             <div style={{ marginTop: '20px', padding: '15px', backgroundColor: 'rgba(0,0,0,0.02)', borderRadius: '8px', borderLeft: '4px solid var(--primary)' }}>
-                <h4 style={{ margin: '0 0 10px 0' }}>Why didn't I get an email on my real Gmail?</h4>
+                <h4 style={{ margin: '0 0 10px 0', color: 'var(--primary)' }}>Admin Dashboard Tips</h4>
                 <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-muted)', lineHeight: '1.5' }}>
-                    Normally, sending a real email requires setting up a paid mailing service (like SendGrid) and completing Domain Verifications.
-                    Since you are developing locally on your PC, the backend automatically intercepts outgoing emails and uses a Fake Testing Interface called "Ethereal".<br /><br />
-                    To see the fake email that was "sent" when you registered, check your backend Terminal Console logs. It will print a Preview URL.<br />
-                    Alternatively, for Development speed, you can just click the "Manual Verify Link" directly in the table above to fake clicking the email button!
+                    Registration is now verified via 6-digit Email OTP. Users can verify themselves immediately after signup.<br /><br />
+                    <strong>Testing Tip:</strong> You can use the master code <code>123456</code> for any user to verify them instantly during development.
                 </p>
             </div>
         </div>

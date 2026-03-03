@@ -209,9 +209,6 @@ const ReviewEcosystem = () => {
                         <button className="btn-primary write-btn" onClick={() => setShowForm(!showForm)}>
                             {showForm ? 'Cancel Review' : 'Write a Review'}
                         </button>
-                        <a href="https://g.page/r/CbU9Xq5-aIMJEB0/review" target="_blank" rel="noopener noreferrer" className="btn-secondary google-cta-btn">
-                            <i className="fab fa-google"></i> Review on Google
-                        </a>
                     </div>
                 </div>
 

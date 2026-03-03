@@ -158,8 +158,8 @@ export const menuData = {
         { id: "bv11", name: "Watermelon", price: 75, image: img_bv11 },
         { id: "bv12", name: "Lemon Ice Tea", price: 75, image: img_bv12 },
     ],
-    cheapMeals: [
-        { id: "cm1", name: "Buy 1 Get 1 FREE", desc: "On Medium & Large Pizza (Wednesdays & Fridays only)", price: 340, image: offerImg1 },
+    specialOffers: [
+        { id: "cm1", name: "Buy 1 Get 1 FREE", desc: "Choose 1 from Deluxe Veg (Med/Large) & Get 1 from Supreme Veg (Med/Large) Free!", price: 340, image: offerImg1 },
         { id: "cm2", name: "Super Value Friends Meal", desc: "1 Aloo Tikki Burger + Small French Fries + Coke (250ml)", price: 100, image: offerImg2 },
         { id: "cm3", name: "Family Combo", desc: "1 Medium Pizza + 2 Burgers + Coke (250ml)", price: 340, image: offerImg3 },
     ]

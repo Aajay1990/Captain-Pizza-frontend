@@ -1,67 +1,77 @@
 import React, { createContext, useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import axios from 'axios';
+
+// Professional axios instance
+export const api = axios.create({
+    baseURL: 'https://pizza-backend-api-a5mm.onrender.com', // Replace with your permanent Render URL
+    withCredentials: true // MANDATORY for cookies
+});
 
 export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-    const location = useLocation();
     const navigate = useNavigate();
 
-    const [user, setUser] = useState(null);
-    const [token, setToken] = useState(null);
+    // Hybrid Persistence: Load user from localStorage immediately to show UI, 
+    // but verify with Cookie in background for security.
+    const [user, setUser] = useState(() => {
+        const savedUser = localStorage.getItem('captain_pizza_user');
+        return savedUser ? JSON.parse(savedUser) : null;
+    });
 
-    // Context changes based on route
-    const getStoragePrefix = (path) => {
-        if (path.startsWith('/admin')) return 'admin_';
-        if (path.startsWith('/pos')) return 'staff_';
-        return 'customer_';
-    };
-
-    const currentPrefix = getStoragePrefix(location.pathname);
+    const [authLoading, setAuthLoading] = useState(true);
 
     useEffect(() => {
-        const storage = currentPrefix === 'customer_' ? localStorage : sessionStorage;
-        const storedUser = storage.getItem(`${currentPrefix}user`);
-        const storedToken = storage.getItem(`${currentPrefix}token`);
-        setUser(storedUser ? JSON.parse(storedUser) : null);
-        setToken(storedToken || null);
-    }, [currentPrefix]);
+        const verifySession = async () => {
+            try {
+                // Background verification with HttpOnly cookie
+                const res = await api.get('/api/auth/me');
+                if (res.data.success) {
+                    setUser(res.data.user);
+                    localStorage.setItem('captain_pizza_user', JSON.stringify(res.data.user));
+                }
+            } catch (err) {
+                console.log("Session verification failed. Clearing local data.");
+                setUser(null);
+                localStorage.removeItem('captain_pizza_user');
+            } finally {
+                setAuthLoading(false);
+            }
+        };
 
-    // Helper functions to manage the auth state globally
-    const loginAuth = (userData, authToken) => {
-        let prefix = 'customer_';
-        let targetRoute = '/';
-        if (userData.role === 'admin') { prefix = 'admin_'; targetRoute = '/admin'; }
-        else if (userData.role === 'staff') { prefix = 'staff_'; targetRoute = '/pos'; }
+        verifySession();
+    }, []);
 
-        const storage = prefix === 'customer_' ? localStorage : sessionStorage;
-        storage.setItem(`${prefix}token`, authToken);
-        storage.setItem(`${prefix}user`, JSON.stringify(userData));
-
-        setToken(authToken);
+    const loginAuth = (userData) => {
         setUser(userData);
+        localStorage.setItem('captain_pizza_user', JSON.stringify(userData));
 
-        // Smooth transition
-        navigate(targetRoute);
+        // Redirect logic
+        if (userData.role === 'admin') navigate('/admin');
+        else if (userData.role === 'staff' || userData.role === 'pos') navigate('/pos');
+        else navigate('/');
+    };
+
+    const logoutAuth = async () => {
+        try {
+            await api.post('/api/auth/logout');
+        } catch (err) {
+            console.error("Server logout error", err);
+        } finally {
+            setUser(null);
+            localStorage.removeItem('captain_pizza_user');
+            navigate('/login');
+        }
     };
 
     const refreshUser = (userData) => {
-        const storage = currentPrefix === 'customer_' ? localStorage : sessionStorage;
-        storage.setItem(`${currentPrefix}user`, JSON.stringify(userData));
         setUser(userData);
-    };
-
-    const logoutAuth = () => {
-        const storage = currentPrefix === 'customer_' ? localStorage : sessionStorage;
-        storage.removeItem(`${currentPrefix}token`);
-        storage.removeItem(`${currentPrefix}user`);
-        setToken(null);
-        setUser(null);
-        navigate('/login');
+        localStorage.setItem('captain_pizza_user', JSON.stringify(userData));
     };
 
     return (
-        <AuthContext.Provider value={{ user, token, loginAuth, logoutAuth, refreshUser }}>
+        <AuthContext.Provider value={{ user, authLoading, loginAuth, logoutAuth, refreshUser }}>
             {children}
         </AuthContext.Provider>
     );

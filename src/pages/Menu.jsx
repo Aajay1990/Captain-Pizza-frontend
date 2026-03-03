@@ -32,7 +32,18 @@ const Menu = () => {
         if (dbItems.length > 0) {
             const mergeArr = (arr, catType, subCatType = null) => {
                 const updatedStatic = arr.map(staticItem => {
-                    const live = dbItems.find(dbItem => dbItem.name === staticItem.name && (dbItem.category === catType || catType === 'pizza'));
+                    const live = dbItems.find(dbItem => {
+                        if (!dbItem.category) return false;
+                        const dbCatLower = dbItem.category.toLowerCase().replace(/\s+/g, '');
+                        const targetCatLower = catType.toLowerCase().replace(/\s+/g, '');
+
+                        const isMatch = dbItem.name === staticItem.name &&
+                            (dbCatLower === targetCatLower ||
+                                (catType === 'specialOffer' && (dbCatLower === 'cheapmeal' || dbCatLower === 'cheapmeals')) ||
+                                catType === 'pizza');
+                        return isMatch;
+                    });
+
                     if (live) {
                         const hasCustomImage = live.image && typeof live.image === 'string' && (live.image.startsWith('http') || live.image.startsWith('data:') || live.image.startsWith('/'));
                         return {
@@ -47,11 +58,16 @@ const Menu = () => {
                     return staticItem;
                 });
 
-                // Add completely NEW items that exist in dbItems but NOT in static arr
                 const newLiveItems = dbItems.filter(dbItem => {
-                    if (dbItem.category !== catType) return false;
-                    if (subCatType && dbItem.subCategory !== subCatType) return false;
+                    if (!dbItem.category) return false;
+                    const dbCatLower = dbItem.category.toLowerCase().replace(/\s+/g, '');
+                    const targetCatLower = catType.toLowerCase().replace(/\s+/g, '');
 
+                    const isTarget = (dbCatLower === targetCatLower) ||
+                        (catType === 'specialOffer' && (dbCatLower === 'cheapmeal' || dbCatLower === 'cheapmeals'));
+
+                    if (!isTarget) return false;
+                    if (subCatType && dbItem.subCategory !== subCatType) return false;
                     const staticExists = arr.find(sItem => sItem.name === dbItem.name);
                     return !staticExists;
                 }).map(dbItem => {
@@ -71,13 +87,12 @@ const Menu = () => {
 
             const pizzasMapped = menuData.pizzas.map(cat => {
                 let tItems = mergeArr(cat.items, 'pizza', cat.category);
-                // Remove duplicates by name just in case
                 const uniquePizzas = Array.from(new Map(tItems.map(item => [item.name, item])).values());
                 return { ...cat, items: uniquePizzas };
             });
 
             mergedData = {
-                cheapMeals: mergeArr(menuData.cheapMeals, 'cheapMeal'),
+                specialOffers: mergeArr(menuData.specialOffers, 'specialOffer'),
                 burgers: mergeArr(menuData.burgers, 'burger'),
                 wraps: mergeArr(menuData.wraps, 'wrap'),
                 sandwiches: mergeArr(menuData.sandwiches, 'sandwich'),
@@ -86,9 +101,16 @@ const Menu = () => {
                 pizzas: pizzasMapped
             };
 
-            // Custom non-default Categories 
-            const defaultCats = ['cheapMeal', 'burger', 'wrap', 'sandwich', 'side', 'beverage', 'pizza'];
-            const customItemsDB = dbItems.filter(item => !defaultCats.includes(item.category) && item.isAvailable !== false);
+            const promoCatTokens = ['specialoffer', 'cheapmeal', 'cheapmeals'];
+            const defaultCatTokens = ['burger', 'wrap', 'sandwich', 'side', 'beverage', 'pizza'];
+
+            const customItemsDB = dbItems.filter(item => {
+                if (!item.category) return false;
+                const itemCatLower = item.category.toLowerCase().replace(/\s+/g, '');
+                const isPromo = promoCatTokens.includes(itemCatLower);
+                const isDefault = defaultCatTokens.includes(itemCatLower);
+                return !isPromo && !isDefault && item.isAvailable !== false;
+            });
 
             const customGroups = {};
             customItemsDB.forEach(item => {
@@ -113,7 +135,7 @@ const Menu = () => {
         }
 
         return [
-            { id: 'cheapMeals', title: 'CHEAP MEALS', type: 'other', data: mergedData.cheapMeals },
+            { id: 'specialOffers', title: 'Best Seller Pizza Offer', type: 'other', data: mergedData.specialOffers },
             { id: 'pizzas-header', title: 'PIZZAS', type: 'header' },
             ...mergedData.pizzas.map(p => ({ id: p.id, title: p.category, type: 'pizza', data: p })),
             { id: 'burgers', title: 'Burgers', type: 'other', data: mergedData.burgers },
@@ -123,7 +145,6 @@ const Menu = () => {
             { id: 'beverages', title: 'Shakes & Mocktails', type: 'other', data: mergedData.beverages },
             ...customCategories
         ].filter(cat => cat.type === 'header' || (cat.data && cat.data.length > 0) || (cat.data && cat.data.items && cat.data.items.length > 0));
-        // filter out empty categories
     }, [dbItems]);
 
     // Scroll Spy Effect

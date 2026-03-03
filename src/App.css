@@ -3,3 +3,110 @@
   display: flex;
   flex-direction: column;
 }
+
+/* Global Floating Buttons Styles */
+.floating-whatsapp {
+    position: fixed;
+    bottom: 25px;
+    right: 25px;
+    background: #25D366;
+    color: white;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 2rem;
+    box-shadow: 0 4px 15px rgba(37, 211, 102, 0.4);
+    z-index: 10001; /* High z-index to stay above content */
+    text-decoration: none;
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.floating-whatsapp:hover {
+    transform: scale(1.1);
+}
+
+.animate-pulse-whatsapp {
+    animation: pulseWA 2s infinite;
+}
+
+@keyframes pulseWA {
+    0% {
+        box-shadow: 0 0 0 0 rgba(37, 211, 102, 0.7);
+    }
+    70% {
+        box-shadow: 0 0 0 15px rgba(37, 211, 102, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(37, 211, 102, 0);
+    }
+}
+
+/* Floating Cart Bucket Styling (Global) */
+.floating-cart-bucket {
+    position: fixed;
+    right: 25px;
+    bottom: 100px; /* Positioned above WhatsApp */
+    width: 65px;
+    height: 65px;
+    background: linear-gradient(135deg, #ff416c, #ff4b2b);
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: white;
+    text-decoration: none;
+    z-index: 10000;
+    box-shadow: 0 10px 25px rgba(255, 65, 108, 0.4);
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.floating-cart-bucket:hover {
+    transform: scale(1.1) rotate(5deg);
+}
+
+.cart-bucket-icon {
+    font-size: 1.8rem;
+}
+
+.cart-bucket-count {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background: white;
+    color: #ff416c;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 0.85rem;
+    font-weight: 800;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+@media (max-width: 768px) {
+    .floating-whatsapp {
+        bottom: 20px;
+        right: 20px;
+        width: 55px;
+        height: 55px;
+        font-size: 1.8rem;
+    }
+
+    .floating-cart-bucket {
+        bottom: 85px; /* Above WhatsApp on mobile */
+        right: 20px;
+        width: 55px;
+        height: 55px;
+    }
+}
+
+/* Fixed display even while scrolling */
+.floating-whatsapp, .floating-cart-bucket {
+    pointer-events: auto;
+    visibility: visible;
+}

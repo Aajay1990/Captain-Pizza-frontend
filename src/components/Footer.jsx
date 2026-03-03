@@ -63,7 +63,6 @@ const Footer = () => {
                     <div className="delivery-partners" style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center', marginTop: '10px' }}>
                         <a href="https://www.zomato.com/ncr/captain-pizza-1-karawal-nagar-new-delhi/order" target="_blank" rel="noopener noreferrer" className="delivery-btn delivery-zomato">Zomato</a>
                         <a href="https://www.swiggy.com/city/delhi/captain-pizza-dilshad-gardens-karawal-nagar-rest1299975" target="_blank" rel="noopener noreferrer" className="delivery-btn delivery-swiggy">Swiggy</a>
-                        <a href="https://magicpin.in/New-Delhi/Karawal-Nagar/Restaurant/Captain-Pizza/store/1727a28/?utm_source=aroundyou&srsltid=AfmBOorW8-P5uUE8Gi5A6NhYrCZjh0QPTkjKLJGYH9gWjAhqB-hK3Cdm" target="_blank" rel="noopener noreferrer" className="delivery-btn delivery-magicpin">Magicpin</a>
                     </div>
                 </div>
             </div>

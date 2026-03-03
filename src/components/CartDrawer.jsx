@@ -72,6 +72,16 @@ const CartDrawer = () => {
                             <span>Subtotal:</span>
                             <span>₹{calculateTotal()}</span>
                         </div>
+                        {bogoDiscount > 0 && (
+                            <div className="drawer-subtotal bogo-promo" style={{ color: '#b71c1c', fontWeight: 'bold' }}>
+                                <span>BOGO Discount:</span>
+                                <span>-₹{bogoDiscount}</span>
+                            </div>
+                        )}
+                        <div className="drawer-subtotal grand-total" style={{ borderTop: '1px solid #eee', paddingTop: '10px', marginTop: '10px', fontWeight: 'bold', fontSize: '1.2rem' }}>
+                            <span>Total:</span>
+                            <span>₹{calculateTotal() - bogoDiscount}</span>
+                        </div>
                         <button className="btn-primary checkout-btn-drawer" onClick={handleCheckout}>
                             Proceed to Checkout
                         </button>

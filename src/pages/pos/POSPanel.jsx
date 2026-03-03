@@ -19,6 +19,7 @@ const POSPanel = () => {
         'All': 'fas fa-th-large',
         'pizza': 'fas fa-pizza-slice',
         'burger': 'fas fa-hamburger',
+        'specialOffer': 'fas fa-star',
         'sides': 'fas fa-pepper-hot',
         'drinks': 'fas fa-glass-whiskey',
         'desserts': 'fas fa-ice-cream'
@@ -33,23 +34,27 @@ const POSPanel = () => {
     // Cart & Billing State
     const [cart, setCart] = useState([]);
     const [discount, setDiscount] = useState(0);
-    const [taxRate] = useState(0.05); // 5% flat tax default
+    const [taxRate] = useState(0); // Tax removed as requested
     const [paymentMethod, setPaymentMethod] = useState('');
     const [customerName, setCustomerName] = useState('');
     const [customerPhone, setCustomerPhone] = useState('');
 
     // Modal state for Customization
     const [selectedItem, setSelectedItem] = useState(null);
-    const [selectedSize, setSelectedSize] = useState('regular');
+    const [selectedSize, setSelectedSize] = useState('medium');
     const [itemQuantity, setItemQuantity] = useState(1);
     const [selectedToppings, setSelectedToppings] = useState([]);
+    const [activeToppingCat, setActiveToppingCat] = useState('All');
 
     const TOPPINGS_CONFIG = [
-        { id: 'veg', name: 'Veg Topping', prices: { small: 25, medium: 35, large: 45 } },
-        { id: 'cheese', name: 'Extra Cheese', prices: { small: 40, medium: 60, large: 90 } },
-        { id: 'burst', name: 'Cheese Burst', prices: { small: 50, medium: 60, large: 90 } }
+        { id: 'onion', name: 'Onion', category: 'Onion', prices: { medium: 35, large: 45 } },
+        { id: 'capsicum', name: 'Capsicum', category: 'Capsicum', prices: { medium: 35, large: 45 } },
+        { id: 'tomato', name: 'Tomato', category: 'Tomato', prices: { medium: 35, large: 45 } },
+        { id: 'corn', name: 'Sweet Corn', category: 'Corn', prices: { medium: 35, large: 45 } },
+        { id: 'cheese', name: 'Extra Cheese', category: 'Other', prices: { medium: 60, large: 90 } },
+        { id: 'burst', name: 'Cheese Burst', category: 'Other', prices: { medium: 60, large: 90 } }
     ];
-
+    const TOPPING_CATS = ['All', 'Onion', 'Corn', 'Tomato', 'Capsicum', 'Other'];
     const handleCategoryClick = (cat) => {
         setActiveCategory(cat);
     };
@@ -86,7 +91,6 @@ const POSPanel = () => {
                     `).join('')}
                     <div class="line"></div>
                     <div class="item"><span>Subtotal</span><span>₹${order.subTotal.toFixed(2)}</span></div>
-                    <div class="item"><span>Tax</span><span>₹${order.tax.toFixed(2)}</span></div>
                     ${order.discount ? `<div class="item"><span>Discount</span><span>-₹${order.discount}</span></div>` : ''}
                     <div class="total">TOTAL: ₹${order.totalAmount.toFixed(2)}</div>
                     <div class="line"></div>
@@ -198,7 +202,10 @@ const POSPanel = () => {
             if (data.success) {
                 setMenuItems(data.data);
                 const rawCats = data.data.map(item => (item.category || '').trim());
-                const uniqueCats = ['All', ...new Set(rawCats.map(c => c.charAt(0).toUpperCase() + c.slice(1).toLowerCase()))];
+                const uniqueCats = ['All', ...new Set(rawCats.map(c => {
+                    const mapped = (c === 'specialOffer' || c === 'cheapMeal' || c === 'cheapmeal') ? 'Best Seller Pizza Offer' : c;
+                    return mapped.charAt(0).toUpperCase() + mapped.slice(1).toLowerCase();
+                }))];
                 console.log('POS Unique Categories:', uniqueCats);
                 setCategories(uniqueCats);
             }
@@ -221,7 +228,14 @@ const POSPanel = () => {
             return matchesSearch && item.isAvailable !== false;
         }
 
-        if (activeCat !== 'all' && itemCat !== activeCat) return false;
+        if (activeCat !== 'all') {
+            const isPromoCat = activeCat === 'best seller pizza offer';
+            if (isPromoCat) {
+                if (itemCat !== 'specialoffer' && itemCat !== 'cheapmeal') return false;
+            } else {
+                if (itemCat !== activeCat) return false;
+            }
+        }
         return item.isAvailable !== false;
     });
 
@@ -237,6 +251,7 @@ const POSPanel = () => {
             setSelectedSize('medium'); // Default
             setItemQuantity(1);
             setSelectedToppings([]);
+            setActiveToppingCat('All');
         } else {
             // Direct Add
             const newItem = {
@@ -393,76 +408,80 @@ const POSPanel = () => {
 
                         {/* Right Billing Panel */}
                         <aside className="pos-billing">
-                            <div className={`billing-cart-items ${isVibrating ? 'animate-vibrate-soft' : ''}`}>
-                                <h3 style={{ marginBottom: '15px' }}>Current Order</h3>
-                                {cart.length === 0 ? <p style={{ color: '#888' }}>Cart is empty.</p> : null}
-                                {cart.map(c => (
-                                    <div key={c.id} className="pos-cart-item">
-                                        <div className="cart-item-info">
-                                            <div className="cart-item-name">{c.name} {c.size !== 'regular' ? `(${c.size})` : ''}</div>
-                                            {c.toppings && c.toppings.length > 0 && (
-                                                <div className="cart-item-toppings" style={{ fontSize: '0.8rem', color: '#666', marginTop: '2px' }}>
-                                                    + {c.toppings.join(', ')}
-                                                </div>
-                                            )}
-                                            <div className="cart-item-price">₹{c.price * c.quantity}</div>
+                            <div className="billing-scroll-container">
+                                <div className={`billing-cart-items ${isVibrating ? 'animate-vibrate-soft' : ''}`}>
+                                    <h3 style={{ marginBottom: '15px' }}>Current Order</h3>
+                                    {cart.length === 0 ? <p style={{ color: '#888' }}>Cart is empty.</p> : null}
+                                    {cart.map(c => (
+                                        <div key={c.id} className="pos-cart-item">
+                                            <div className="cart-item-info">
+                                                <div className="cart-item-name">{c.name} {c.size !== 'regular' ? `(${c.size})` : ''}</div>
+                                                {c.toppings && c.toppings.length > 0 && (
+                                                    <div className="cart-item-toppings" style={{ fontSize: '0.8rem', color: '#666', marginTop: '2px' }}>
+                                                        + {c.toppings.join(', ')}
+                                                    </div>
+                                                )}
+                                                <div className="cart-item-price">₹{c.price * c.quantity}</div>
+                                            </div>
+                                            <div className="cart-item-controls">
+                                                <button onClick={() => decrementQuantity(c.id)}>-</button>
+                                                <span>{c.quantity}</span>
+                                                <button onClick={() => incrementQuantity(c.id)}>+</button>
+                                                <button className="del-btn" onClick={() => removeItem(c.id)}>x</button>
+                                            </div>
                                         </div>
-                                        <div className="cart-item-controls">
-                                            <button onClick={() => decrementQuantity(c.id)}>-</button>
-                                            <span>{c.quantity}</span>
-                                            <button onClick={() => incrementQuantity(c.id)}>+</button>
-                                            <button className="del-btn" onClick={() => removeItem(c.id)}>x</button>
-                                        </div>
+                                    ))}
+                                </div>
+
+                                <div className="billing-summary">
+                                    <div className="summary-row total-row" style={{ borderTop: 'none', paddingTop: '0' }}>
+                                        <span>Subtotal</span>
+                                        <span>₹{subTotal.toFixed(2)}</span>
                                     </div>
-                                ))}
-                            </div>
+                                    <div className="summary-row discount-row">
+                                        <span>Discount</span>
+                                        <input
+                                            type="number"
+                                            value={discount === 0 ? '' : discount}
+                                            onChange={(e) => setDiscount(Number(e.target.value))}
+                                            placeholder="0"
+                                        />
+                                    </div>
+                                    <div className="summary-row total-row">
+                                        <span>Grand Total</span>
+                                        <span>₹{finalTotal > 0 ? finalTotal.toFixed(2) : 0}</span>
+                                    </div>
+                                </div>
 
-                            <div className="billing-summary">
-                                <div className="summary-row">
-                                    <span>Subtotal</span>
-                                    <span>₹{subTotal.toFixed(2)}</span>
+                                <div className="billing-customer">
+                                    <div className="customer-field">
+                                        <label>Customer Name</label>
+                                        <input type="text" placeholder="e.g. Rahul Kumar" value={customerName} onChange={e => setCustomerName(e.target.value)} />
+                                    </div>
+                                    <div className="customer-field">
+                                        <label>Phone Number</label>
+                                        <input type="text" placeholder="e.g. 98XXXXXXXX" value={customerPhone} onChange={e => setCustomerPhone(e.target.value)} />
+                                    </div>
                                 </div>
-                                <div className="summary-row">
-                                    <span>Tax (5%)</span>
-                                    <span>₹{taxAmount.toFixed(2)}</span>
-                                </div>
-                                <div className="summary-row discount-row">
-                                    <span>Discount</span>
-                                    <input
-                                        type="number"
-                                        value={discount === 0 ? '' : discount}
-                                        onChange={(e) => setDiscount(Number(e.target.value))}
-                                        placeholder="0"
-                                    />
-                                </div>
-                                <div className="summary-row total-row">
-                                    <span>Total</span>
-                                    <span>₹{finalTotal > 0 ? finalTotal.toFixed(2) : 0}</span>
-                                </div>
-                            </div>
 
-                            <div className="billing-customer">
-                                <input type="text" placeholder="Customer Name" value={customerName} onChange={e => setCustomerName(e.target.value)} />
-                                <input type="text" placeholder="Phone Number" value={customerPhone} onChange={e => setCustomerPhone(e.target.value)} />
-                            </div>
-
-                            <div className="payment-methods">
-                                {['cash', 'upi', 'card'].map(pm => (
-                                    <button
-                                        key={pm}
-                                        className={`pm-btn ${paymentMethod === pm ? 'active' : ''}`}
-                                        onClick={() => setPaymentMethod(pm)}
-                                    >
-                                        {pm.toUpperCase()}
+                                <div className="payment-methods">
+                                    <button className={`pm-btn pm-cash ${paymentMethod === 'cash' ? 'active' : ''}`} onClick={() => setPaymentMethod('cash')}>
+                                        <i className="fas fa-money-bill-wave"></i> CASH
                                     </button>
-                                ))}
+                                    <button className={`pm-btn pm-upi ${paymentMethod === 'upi' ? 'active' : ''}`} onClick={() => setPaymentMethod('upi')}>
+                                        <i className="fas fa-mobile-alt"></i> UPI
+                                    </button>
+                                    <button className={`pm-btn pm-card ${paymentMethod === 'card' ? 'active' : ''}`} onClick={() => setPaymentMethod('card')}>
+                                        <i className="fas fa-credit-card"></i> CARD
+                                    </button>
+                                </div>
                             </div>
 
                             <button
                                 className="btn-complete-order"
                                 onClick={handleCheckout}
                             >
-                                Complete Order
+                                Complete Order (F9)
                             </button>
                         </aside>
                     </>
@@ -478,22 +497,46 @@ const POSPanel = () => {
                         <div className="pos-modal-section">
                             <label>Size:</label>
                             <div className="size-selector">
-                                {Object.keys(selectedItem.prices || {}).map(sz => (
+                                {Object.keys(selectedItem.prices || {}).filter(sz => sz !== 'small').map(sz => (
                                     <button
                                         key={sz}
                                         className={selectedSize === sz ? 'active' : ''}
                                         onClick={() => setSelectedSize(sz)}
                                     >
-                                        {sz.toUpperCase()} (₹{selectedItem.prices[sz]})
+                                        <div className="size-label">{sz.toUpperCase()}</div>
+                                        <div className="size-price">₹{selectedItem.prices[sz]}</div>
                                     </button>
                                 ))}
                             </div>
                         </div>
 
                         <div className="pos-modal-section">
-                            <label>Extra Toppings:</label>
-                            <div className="toppings-selector">
-                                {TOPPINGS_CONFIG.map(t => (
+                            <label>Extra Toppings Category:</label>
+                            <div className="topping-cats-strip" style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '10px' }}>
+                                {TOPPING_CATS.map(tc => (
+                                    <button
+                                        key={tc}
+                                        className={`tc-btn ${activeToppingCat === tc ? 'active' : ''}`}
+                                        onClick={() => setActiveToppingCat(tc)}
+                                        style={{
+                                            padding: '8px 16px',
+                                            borderRadius: '20px',
+                                            border: '1px solid var(--pos-border)',
+                                            background: activeToppingCat === tc ? 'var(--pos-primary)' : 'var(--pos-bg)',
+                                            color: activeToppingCat === tc ? 'white' : 'var(--pos-text)',
+                                            fontSize: '0.8rem',
+                                            fontWeight: 'bold',
+                                            cursor: 'pointer',
+                                            whiteSpace: 'nowrap'
+                                        }}
+                                    >
+                                        {tc}
+                                    </button>
+                                ))}
+                            </div>
+                            <label style={{ marginTop: '10px' }}>Select Toppings:</label>
+                            <div className="toppings-selector" style={{ maxHeight: '150px', overflowY: 'auto' }}>
+                                {TOPPINGS_CONFIG.filter(t => activeToppingCat === 'All' || t.category === activeToppingCat).map(t => (
                                     <div
                                         key={t.id}
                                         className={`topping-option ${selectedToppings.includes(t.id) ? 'active' : ''}`}

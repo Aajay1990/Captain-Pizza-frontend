@@ -264,6 +264,7 @@
     color: var(--pos-text);
     line-height: 1.3;
     display: -webkit-box;
+    line-clamp: 3;
     -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
@@ -299,12 +300,18 @@
     display: flex;
     flex-direction: column;
     box-shadow: -10px 0 30px rgba(0, 0, 0, 0.03);
+    height: 100%;
+}
+
+.billing-scroll-container {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
 }
 
 .billing-cart-items {
-    flex: 1;
     padding: 25px;
-    overflow-y: auto;
 }
 
 .pos-cart-item {
@@ -340,8 +347,27 @@
 
 /* Summary & Checkout */
 .billing-summary {
-    padding: 20px 25px;
+    padding: 15px 25px;
     background: var(--pos-bg);
+}
+
+.summary-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    font-weight: 700;
+    color: var(--pos-text-muted);
+}
+
+.summary-row input {
+    width: 80px;
+    padding: 5px;
+    border-radius: 8px;
+    border: 1px solid var(--pos-border);
+    text-align: right;
+    font-weight: 800;
+    color: var(--pos-primary);
+    outline: none;
 }
 
 .total-row {
@@ -350,6 +376,88 @@
     color: var(--pos-primary);
     border-top: 2px solid var(--pos-primary);
     padding-top: 15px;
+    margin-top: 5px;
+}
+
+.billing-customer {
+    padding: 15px 25px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.customer-field {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.customer-field label {
+    font-size: 0.75rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    color: var(--pos-text-muted);
+    letter-spacing: 0.5px;
+}
+
+.billing-customer input {
+    width: 100%;
+    padding: 12px 15px;
+    border-radius: 12px;
+    border: 1px solid var(--pos-border);
+    font-size: 0.95rem;
+    background: var(--pos-bg);
+    outline: none;
+    transition: 0.2s;
+}
+
+.billing-customer input:focus {
+    border-color: var(--pos-primary);
+}
+
+.payment-methods {
+    padding: 10px 25px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+}
+
+.pm-btn {
+    height: 60px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    background: white;
+    border: 1px solid var(--pos-border);
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: 900;
+    cursor: pointer;
+    transition: 0.2s;
+    color: var(--pos-text-muted);
+}
+
+.pm-btn i {
+    font-size: 1.2rem;
+}
+
+.pm-btn:hover {
+    border-color: var(--pos-primary);
+    color: var(--pos-primary);
+    background: rgba(183, 28, 28, 0.05);
+}
+
+.pm-btn.active {
+    background: var(--pos-primary);
+    color: white;
+    border-color: var(--pos-primary);
+    box-shadow: 0 4px 15px rgba(183, 28, 28, 0.2);
+}
+
+.pm-btn.active i {
+    color: white;
 }
 
 .btn-complete-order {

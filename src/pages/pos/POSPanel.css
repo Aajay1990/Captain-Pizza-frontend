@@ -15,15 +15,7 @@
     --pos-radius: 16px;
 }
 
-/* Dark Mode Overrides (Optional but keeping consistent with Red focus) */
-.pos-container.dark-mode {
-    --pos-bg: #1a1a1a;
-    --pos-card-bg: #2d2d2d;
-    --pos-text: #eceff1;
-    --pos-text-muted: #b0bec5;
-    --pos-border: #424242;
-    --pos-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
-}
+
 
 .pos-main-wrapper {
     margin: 0;

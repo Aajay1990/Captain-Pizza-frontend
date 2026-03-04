@@ -12,7 +12,7 @@ const POSPanel = () => {
     const [isVibrating, setIsVibrating] = useState(false);
     const [currentTime, setCurrentTime] = useState(new Date().toLocaleTimeString());
     const [loading, setLoading] = useState(true);
-    const [isDarkMode, setIsDarkMode] = useState(true); // Default to Dark for premium feel
+    const [isDarkMode, setIsDarkMode] = useState(false); // Default to Light as per user request
 
     // Category Icons Mapping
     const catIcons = {

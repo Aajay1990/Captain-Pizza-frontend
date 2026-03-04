@@ -9,21 +9,33 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    z-index: 9999;
+    z-index: 99999;
+    animation: popBgFade 0.3s ease;
+}
+
+@keyframes popBgFade {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
 }
 
 .popup-content {
     background: #fff;
     width: 350px;
+    max-width: 95vw;
     padding: 0;
     border-radius: 20px;
     position: relative;
     overflow: hidden;
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
-    animation: popupFadeIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-shadow: 0 20px 60px rgba(183, 28, 28, 0.4);
+    animation: popupZoomIn 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
-@keyframes popupFadeIn {
+@keyframes popupZoomIn {
     from {
         transform: scale(0.5);
         opacity: 0;
@@ -39,18 +51,29 @@
     position: absolute;
     top: 10px;
     right: 15px;
-    background: none;
+    background: rgba(255, 255, 255, 0.25);
     border: none;
-    font-size: 24px;
+    font-size: 22px;
     color: #fff;
     cursor: pointer;
     z-index: 10;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+}
+
+.close-btn:hover {
+    background: rgba(255, 255, 255, 0.45);
 }
 
 .popup-inner {
-    padding: 40px 20px;
+    padding: 40px 25px 30px;
     text-align: center;
-    background: linear-gradient(135deg, #B71C1C 0%, #E53935 100%);
+    background: linear-gradient(135deg, #B71C1C 0%, #E53935 60%, #FF6F00 100%);
     color: #fff;
 }
 
@@ -64,68 +87,99 @@
     text-transform: uppercase;
     display: inline-block;
     margin-bottom: 15px;
+    letter-spacing: 0.5px;
 }
 
-h2 {
-    margin: 0;
-    font-size: 28px;
+.popup-inner h2 {
+    margin: 0 0 5px;
+    font-size: 26px;
     font-weight: 900;
-    letter-spacing: -1px;
+    letter-spacing: -0.5px;
+    color: #fff;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
 }
 
 .discount-circle {
-    width: 120px;
-    height: 120px;
+    width: 110px;
+    height: 110px;
     background: #fff;
     color: #B71C1C;
     border-radius: 50%;
-    margin: 20px auto;
+    margin: 18px auto;
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.25);
 }
 
 .percent {
-    font-size: 40px;
+    font-size: 38px;
     font-weight: 900;
     line-height: 1;
 }
 
 .off {
-    font-size: 18px;
+    font-size: 16px;
     font-weight: 800;
 }
 
-p {
-    margin: 15px 0;
+.coupon-reveal-box {
+    margin: 12px 0;
+    padding: 10px;
+    background: rgba(255, 255, 255, 0.18);
+    border-radius: 8px;
+    border: 1px dashed rgba(255, 255, 255, 0.7);
+}
+
+.coupon-reveal-box p {
+    margin: 0 0 4px;
+    font-size: 0.8rem;
     font-weight: 600;
-    font-size: 16px;
+    opacity: 0.85;
+    color: #fff;
+}
+
+.coupon-reveal-box strong {
+    font-size: 1.35rem;
+    letter-spacing: 2px;
+    color: #FFD600;
+}
+
+.popup-tagline {
+    color: rgba(255, 255, 255, 0.92);
+    font-size: 0.95rem;
+    margin: 8px 0;
+    font-weight: 600;
 }
 
 .claim-btn {
     background: #fff;
     color: #B71C1C;
     border: none;
-    padding: 12px 30px;
-    border-radius: 10px;
+    padding: 13px 30px;
+    border-radius: 12px;
     font-weight: 900;
-    font-size: 16px;
+    font-size: 1rem;
     text-transform: uppercase;
     cursor: pointer;
     transition: 0.3s;
-    width: 80%;
+    width: 85%;
+    margin-top: 5px;
+    letter-spacing: 0.5px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
 }
 
 .claim-btn:hover {
-    transform: scale(1.05);
+    transform: scale(1.05) translateY(-2px);
     background: #FFD600;
     color: #000;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.25);
 }
 
 .terms {
-    font-size: 10px;
-    opacity: 0.7;
-    margin-bottom: 0;
+    font-size: 0.7rem;
+    opacity: 0.65;
+    margin-top: 10px;
+    color: #fff;
 }

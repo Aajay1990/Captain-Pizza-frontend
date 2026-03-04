@@ -10,27 +10,30 @@ const OfferPopup = () => {
     const { user } = useContext(AuthContext);
 
     useEffect(() => {
-        // If user is logged in and has already used the offer, or is staff/admin, don't show it
+        // Admin/staff/users who already used the offer → skip
         if (user && (user.hasUsedWelcomeOffer || user.role === 'admin' || user.role === 'staff')) {
             return;
         }
+
+        // Show at most ONCE per browser session (prevents double popup)
+        if (sessionStorage.getItem('welcome_popup_shown')) return;
 
         fetchSettings();
     }, [user]);
 
     const fetchSettings = async () => {
         try {
-            // Check visibility first
             const visRes = await fetch('https://pizza-backend-api-a5mm.onrender.com/api/admin/settings/show_welcome_popup');
             const visData = await visRes.json();
             if (visData.success && visData.data?.value === 'false') return;
 
-            // Get discount
             const res = await fetch('https://pizza-backend-api-a5mm.onrender.com/api/admin/settings/new_user_discount');
             const data = await res.json();
             if (data.success && data.data) {
                 setDiscount(data.data.value);
             }
+            // Mark shown for this session
+            sessionStorage.setItem('welcome_popup_shown', '1');
             setIsOpen(true);
         } catch (error) {
             console.log("OfferPopup settings fail", error);
@@ -45,23 +48,23 @@ const OfferPopup = () => {
     if (!isOpen) return null;
 
     return (
-        <div className="popup-overlay animate-fade-in">
-            <div className="popup-content animate-zoom-in">
+        <div className="popup-overlay">
+            <div className="popup-content">
                 <button className="close-btn" onClick={() => setIsOpen(false)}>&times;</button>
                 <div className="popup-inner">
-                    <span className="badge neon-pulse">First Order Offer</span>
-                    <h2 style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.3)' }}>Hungry? Save Big!</h2>
+                    <span className="badge">🔥 First Order Offer</span>
+                    <h2>Hungry? Save Big!</h2>
                     <div className="discount-circle">
                         <span className="percent">{discount}%</span>
                         <span className="off">OFF</span>
                     </div>
-                    <div className="coupon-reveal-box" style={{ margin: '15px 0', padding: '10px', background: 'rgba(255,255,255,0.2)', borderRadius: '8px', border: '1px dashed #fff' }}>
-                        <p style={{ margin: '0 0 5px 0', fontSize: '0.8rem', opacity: 0.9 }}>USE COUPON CODE:</p>
-                        <strong style={{ fontSize: '1.4rem', letterSpacing: '2px' }}>WELCOME{discount}</strong>
+                    <div className="coupon-reveal-box">
+                        <p>USE COUPON CODE:</p>
+                        <strong>WELCOME{discount}</strong>
                     </div>
-                    <p style={{ color: '#ffffff', opacity: 0.9 }}>On your first order today!</p>
-                    <button className="claim-btn premium-btn" onClick={handleClaim}>ORDER NOW</button>
-                    <p className="terms" style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.75rem', marginTop: '10px' }}>*T&C Apply. Applicable on minimum order of ₹300.</p>
+                    <p className="popup-tagline">On your first order today!</p>
+                    <button className="claim-btn" onClick={handleClaim}>ORDER NOW</button>
+                    <p className="terms">*T&C Apply. Applicable on minimum order of ₹300.</p>
                 </div>
             </div>
         </div>

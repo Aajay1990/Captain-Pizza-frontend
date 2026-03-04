@@ -12,7 +12,10 @@ const POSPanel = () => {
     const [isVibrating, setIsVibrating] = useState(false);
     const [currentTime, setCurrentTime] = useState(new Date().toLocaleTimeString());
     const [loading, setLoading] = useState(true);
-    const [isDarkMode, setIsDarkMode] = useState(false); // Default to Light as per user request
+    const [isDarkMode, setIsDarkMode] = useState(false);
+    const [activeView, setActiveView] = useState('menu'); // 'menu' | 'orders'
+    const [orderHistory, setOrderHistory] = useState([]);
+    const [ordersLoading, setOrdersLoading] = useState(false);
 
     // Category Icons Mapping
     const catIcons = {
@@ -213,6 +216,26 @@ const POSPanel = () => {
         fetchMenu();
     }, []);
 
+    const fetchOrderHistory = async () => {
+        setOrdersLoading(true);
+        try {
+            const res = await fetch('https://pizza-backend-api-a5mm.onrender.com/api/orders', {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            const data = await res.json();
+            if (data.success) setOrderHistory(data.data);
+        } catch (e) {
+            console.error('Order history fetch failed', e);
+        } finally {
+            setOrdersLoading(false);
+        }
+    };
+
+    const handleViewChange = (view) => {
+        setActiveView(view);
+        if (view === 'orders') fetchOrderHistory();
+    };
+
     const fetchMenu = async () => {
         try {
             const res = await fetch('https://pizza-backend-api-a5mm.onrender.com/api/menu?all=true');
@@ -404,6 +427,15 @@ const POSPanel = () => {
                         <i className="far fa-clock"></i> {currentTime}
                     </div>
                     <div className="pos-staff-info" style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                        {/* Order History Toggle */}
+                        <button
+                            onClick={() => handleViewChange(activeView === 'orders' ? 'menu' : 'orders')}
+                            style={{ background: activeView === 'orders' ? 'var(--pos-primary)' : 'rgba(183,28,28,0.1)', color: activeView === 'orders' ? 'white' : 'var(--pos-primary)', border: 'none', padding: '8px 15px', borderRadius: '10px', cursor: 'pointer', fontWeight: '700', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '6px' }}
+                            title="Toggle Order History"
+                        >
+                            <i className={`fas fa-${activeView === 'orders' ? 'pizza-slice' : 'receipt'}`}></i>
+                            {activeView === 'orders' ? 'Menu' : 'Orders'}
+                        </button>
                         <button className="theme-toggle" onClick={() => setIsDarkMode(!isDarkMode)} style={{ background: 'none', border: 'none', color: 'var(--pos-text)', fontSize: '1.2rem', cursor: 'pointer' }}>
                             {isDarkMode ? <i className="fas fa-sun"></i> : <i className="fas fa-moon"></i>}
                         </button>
@@ -425,6 +457,59 @@ const POSPanel = () => {
                 {loading ? (
                     <div style={{ display: 'flex', flex: 1, justifyContent: 'center', alignItems: 'center', fontSize: '2rem', color: 'var(--pos-primary)' }}>
                         <i className="fas fa-spinner fa-spin"></i> &nbsp; Loading Menu...
+                    </div>
+                ) : activeView === 'orders' ? (
+                    // === ORDER HISTORY VIEW ===
+                    <div style={{ flex: 1, overflowY: 'auto', padding: '25px', background: 'var(--pos-bg)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                            <h2 style={{ margin: 0, color: 'var(--pos-text)' }}>POS Order History</h2>
+                            <button onClick={fetchOrderHistory} className="btn-refresh"><i className="fas fa-sync-alt"></i> Refresh</button>
+                        </div>
+                        {ordersLoading ? (
+                            <div style={{ textAlign: 'center', padding: '60px', fontSize: '1.5rem', color: 'var(--pos-primary)' }}>
+                                <i className="fas fa-spinner fa-spin"></i> Loading...
+                            </div>
+                        ) : orderHistory.length === 0 ? (
+                            <div style={{ textAlign: 'center', padding: '60px', color: 'var(--pos-text-muted)' }}>No orders found.</div>
+                        ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                                {orderHistory.map(order => (
+                                    <div key={order._id} style={{
+                                        background: 'var(--pos-card-bg)',
+                                        borderRadius: '12px',
+                                        padding: '18px 22px',
+                                        boxShadow: 'var(--pos-shadow)',
+                                        border: '1px solid var(--pos-border)'
+                                    }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                            <strong style={{ color: 'var(--pos-primary)', fontSize: '1rem' }}>#{order._id.slice(-6).toUpperCase()}</strong>
+                                            <span style={{
+                                                background: order.status === 'delivered' ? '#e8f5e9' : order.status === 'cancelled' ? '#ffebee' : '#fff8e1',
+                                                color: order.status === 'delivered' ? '#2e7d32' : order.status === 'cancelled' ? '#c62828' : '#e65100',
+                                                padding: '3px 10px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: '700'
+                                            }}>{order.status.toUpperCase()}</span>
+                                        </div>
+                                        <div style={{ fontSize: '0.85rem', color: 'var(--pos-text-muted)', marginBottom: '6px' }}>
+                                            {new Date(order.createdAt).toLocaleString()} &nbsp;|&nbsp; {order.orderType?.toUpperCase()} &nbsp;|&nbsp; {order.paymentMethod?.toUpperCase()}
+                                        </div>
+                                        <div style={{ fontSize: '0.9rem', marginBottom: '6px' }}>
+                                            <strong>Customer:</strong> {order.customerInfo?.name} ({order.customerInfo?.phone})
+                                        </div>
+                                        <div style={{ borderTop: '1px dashed var(--pos-border)', paddingTop: '8px', fontSize: '0.85rem' }}>
+                                            {order.orderItems.map((item, i) => (
+                                                <div key={i} style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                    <span>{item.quantity}x {item.name} {item.size && item.size !== 'regular' ? `(${item.size})` : ''}</span>
+                                                    <span style={{ color: 'var(--pos-primary)', fontWeight: '700' }}>₹{item.price * item.quantity}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '10px' }}>
+                                            <strong style={{ fontSize: '1.1rem', color: 'var(--pos-primary)' }}>Total: ₹{order.totalAmount?.toFixed(2)}</strong>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 ) : (
                     <>
@@ -551,7 +636,7 @@ const POSPanel = () => {
 
             {/* Customization Modal */}
             {selectedItem && (
-                <div className="pos-modal-overlay">
+                <div className="pos-modal-overlay" style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
                     <div className="pos-modal" style={{ maxHeight: '90vh', width: '600px', display: 'flex', flexDirection: 'column' }}>
                         <div className="pos-modal-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '15px', borderBottom: '1px solid #eee' }}>
                             <h3 style={{ margin: 0, color: 'var(--pos-primary)' }}>Customize: {selectedItem.name}</h3>

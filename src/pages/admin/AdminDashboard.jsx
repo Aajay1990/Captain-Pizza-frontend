@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Routes, Route, Link, useLocation } from 'react-router-dom';
+import React, { useState, useEffect, useContext } from 'react';
+import { Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
 import './AdminDashboard.css';
 import DashboardStats from './DashboardStats';
 import MenuManager from './MenuManager';
@@ -10,12 +10,20 @@ import ReviewManager from './ReviewManager';
 import SettingsManager from './SettingsManager';
 import OfferManager from './OfferManager';
 import { AuthContext } from '../../context/AuthContext';
-import { useContext } from 'react';
 
 const AdminDashboard = () => {
     const location = useLocation();
-    const { token, loginAuth, logoutAuth } = useContext(AuthContext);
+    const { user, authLoading, logoutAuth } = useContext(AuthContext);
+    const navigate = useNavigate();
 
+    useEffect(() => {
+        if (!authLoading && (!user || user.role !== 'admin')) {
+            navigate('/login');
+        }
+    }, [user, authLoading, navigate]);
+
+    if (authLoading) return <div className="admin-loading">Checking permissions...</div>;
+    if (!user || user.role !== 'admin') return null;
 
     // We can extract the final part of path to know active tab, e.g. /admin/menu maps to 'menu'
     const currentTab = location.pathname.split('/').pop();

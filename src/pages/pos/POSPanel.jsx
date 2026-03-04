@@ -290,7 +290,7 @@ const POSPanel = () => {
             price: finalItemPrice,
             quantity: itemQuantity,
             size: selectedSize,
-            toppings: selectedToppings.map(tId => allAddons.find(c => c.id === tId).name)
+            toppings: selectedToppings.map(tId => allAddons.find(c => c.id === tId)?.name).filter(Boolean)
         };
         setCart([...cart, newItem]);
         setSelectedItem(null);

@@ -263,19 +263,39 @@ const SettingsManager = () => {
                         </div>
                     </div>
 
+                </div>
+
+                {/* Contact & Support */}
+                <div className="settings-section-card contact-card">
+                    <div className="section-card-header">
+                        <i className="fas fa-headset"></i> Store Contact & WhatsApp
+                    </div>
+
                     <div className="setting-row">
                         <div className="setting-info">
-                            <strong>Floating Popup Status</strong>
-                            <p>Show welcome offer to new visitors.</p>
+                            <strong>Admin WhatsApp Number</strong>
+                            <p>Order details will be sent here (Format: 91XXXXXXXXXX).</p>
                         </div>
-                        <select
-                            className="premium-select"
-                            value={getSettingValue('show_welcome_popup', 'true')}
-                            onChange={(e) => handleUpdate('show_welcome_popup', e.target.value)}
-                        >
-                            <option value="true">Visible</option>
-                            <option value="false">Hidden</option>
-                        </select>
+                        <input
+                            className="premium-input-text"
+                            placeholder="e.g. 919220367325"
+                            defaultValue={getSettingValue('admin_whatsapp_number', '919220367325')}
+                            onBlur={(e) => handleUpdate('admin_whatsapp_number', e.target.value.replace(/\D/g, ''))}
+                        />
+                    </div>
+
+                    <div className="setting-row">
+                        <div className="setting-info">
+                            <strong>Store Contact Email</strong>
+                            <p>Used for support and order notifications.</p>
+                        </div>
+                        <input
+                            className="premium-input-text"
+                            type="email"
+                            placeholder="e.g. support@captainpizza.com"
+                            defaultValue={getSettingValue('store_contact_email', 'admin@captainpizza.com')}
+                            onBlur={(e) => handleUpdate('store_contact_email', e.target.value)}
+                        />
                     </div>
                 </div>
             </div>

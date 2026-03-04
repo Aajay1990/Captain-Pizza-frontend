@@ -5,6 +5,7 @@ import './CustomizationModal.css';
 
 const TOPPING_CATEGORIES = {
     veg: {
+        id: 'veg',
         name: 'Veg Toppings',
         items: [
             { id: 'tomato', name: 'Tomato', prices: { small: 25, medium: 35, large: 45 } },
@@ -13,10 +14,17 @@ const TOPPING_CATEGORIES = {
             { id: 'capsicum', name: 'Capsicum', prices: { small: 25, medium: 35, large: 45 } }
         ]
     },
-    premium: {
-        name: 'Premium Add-ons',
+    cheese: {
+        id: 'cheese_addon',
+        name: 'Extra Cheese',
         items: [
-            { id: 'cheese', name: 'Extra Cheese Topping', prices: { small: 40, medium: 60, large: 90 } },
+            { id: 'cheese', name: 'Extra Cheese Topping', prices: { small: 40, medium: 60, large: 90 } }
+        ]
+    },
+    burst: {
+        id: 'cheese_burst',
+        name: 'Cheese Burst',
+        items: [
             { id: 'burst', name: 'Cheese Burst', prices: { small: 50, medium: 60, large: 90 } }
         ]
     }
@@ -31,10 +39,11 @@ const CustomizationModal = ({ item, onClose, onAddToCart }) => {
 
     const [selectedSize, setSelectedSize] = useState('medium');
     const [selectedToppings, setSelectedToppings] = useState([]);
+    const [activeToppingCat, setActiveToppingCat] = useState('veg');
     const [totalPrice, setTotalPrice] = useState(0);
 
     // Flatten toppings for easy search
-    const ALL_TOPPINGS = [...TOPPING_CATEGORIES.veg.items, ...TOPPING_CATEGORIES.premium.items];
+    const ALL_TOPPINGS = [...TOPPING_CATEGORIES.veg.items, ...TOPPING_CATEGORIES.cheese.items, ...TOPPING_CATEGORIES.burst.items];
 
     // Lock body scroll
     useEffect(() => {
@@ -76,8 +85,8 @@ const CustomizationModal = ({ item, onClose, onAddToCart }) => {
 
         const selectedToppingObjects = selectedToppings.map(id => {
             const t = ALL_TOPPINGS.find(topp => topp.id === id);
-            return { name: t.name, price: t.prices[selectedSize], baseName: t.name, size: selectedSize };
-        });
+            return t ? { name: t.name, price: t.prices[selectedSize], baseName: t.name, size: selectedSize } : null;
+        }).filter(Boolean);
 
         onAddToCart({
             ...item,
@@ -121,11 +130,34 @@ const CustomizationModal = ({ item, onClose, onAddToCart }) => {
                         </div>
                     )}
 
-                    {Object.keys(TOPPING_CATEGORIES).map(catKey => (
-                        <div className="custom-section" key={catKey}>
-                            <h4>{TOPPING_CATEGORIES[catKey].name}</h4>
+                    {isPizza && (
+                        <div className="custom-section">
+                            <h4>2. Choose Toppings Category</h4>
+                            <div className="topping-cat-switcher" style={{ display: 'flex', gap: '5px', marginBottom: '15px' }}>
+                                {Object.keys(TOPPING_CATEGORIES).map(catKey => (
+                                    <button
+                                        key={catKey}
+                                        className={`cat-tab-btn ${activeToppingCat === catKey ? 'active' : ''}`}
+                                        onClick={() => setActiveToppingCat(catKey)}
+                                        style={{
+                                            flex: 1,
+                                            padding: '10px 5px',
+                                            borderRadius: '8px',
+                                            border: '1px solid #ddd',
+                                            fontSize: '0.8rem',
+                                            fontWeight: 'bold',
+                                            background: activeToppingCat === catKey ? 'var(--primary)' : 'white',
+                                            color: activeToppingCat === catKey ? 'white' : '#444',
+                                            cursor: 'pointer'
+                                        }}
+                                    >
+                                        {TOPPING_CATEGORIES[catKey].name.split(' ')[0].toUpperCase()}
+                                    </button>
+                                ))}
+                            </div>
+
                             <div className="toppings-list">
-                                {TOPPING_CATEGORIES[catKey].items.map(topping => {
+                                {TOPPING_CATEGORIES[activeToppingCat].items.map(topping => {
                                     const tPrice = topping.prices[selectedSize];
                                     return (
                                         <label key={topping.id} className={`topping-checkbox-card ${selectedToppings.includes(topping.id) ? 'checked' : ''}`}>
@@ -144,7 +176,7 @@ const CustomizationModal = ({ item, onClose, onAddToCart }) => {
                                 })}
                             </div>
                         </div>
-                    ))}
+                    )}
                 </div>
 
                 <div className="modal-footer">

@@ -29,6 +29,7 @@ const Order = () => {
     const [isApplying, setIsApplying] = useState(false);
     const [orderPlacing, setOrderPlacing] = useState(false);
     const [deliverySettings, setDeliverySettings] = useState({ charge: 40, threshold: 300 });
+    const [adminWhatsApp, setAdminWhatsApp] = useState('919220367325');
 
     // Enforce Login
     useEffect(() => {
@@ -53,6 +54,7 @@ const Order = () => {
                         charge: findVal('delivery_charge', 40),
                         threshold: findVal('free_delivery_min_order', 300)
                     });
+                    setAdminWhatsApp(findVal('admin_whatsapp_number', '919220367325'));
                 }
             } catch (e) { console.error(e); }
         };
@@ -102,7 +104,7 @@ const Order = () => {
     };
 
     const redirectToWhatsApp = (orderDataResp, paymentId) => {
-        const adminPhone = "919220367325"; // Admin phone number for WhatsApp
+        const adminPhone = adminWhatsApp; // Admin phone number for WhatsApp
         let text = `🍕 *NEW ORDER FROM CAPTAIN PIZZA* 🍕\n`;
         text += `━━━━━━━━━━━━━━━━━━━━\n`;
         text += `🆔 *Order ID:* #${orderDataResp._id.slice(-6).toUpperCase()}\n`;

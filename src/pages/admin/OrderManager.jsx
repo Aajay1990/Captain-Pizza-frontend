@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { api } from '../../context/AuthContext';
 
 const CookingTimer = ({ createdAt, status }) => {
     const [timeLeft, setTimeLeft] = useState('');
@@ -55,13 +56,12 @@ const OrderManager = () => {
 
     const fetchOrders = async () => {
         try {
-            const res = await fetch('https://pizza-backend-api-a5mm.onrender.com/api/orders');
-            const data = await res.json();
-            if (data.success) {
-                setOrders(data.data);
+            const res = await api.get('/api/orders');
+            if (res.data.success) {
+                setOrders(res.data.data);
             }
         } catch (error) {
-            console.error(error);
+            console.error("Fetch orders failed", error);
         } finally {
             setLoading(false);
         }
@@ -69,20 +69,14 @@ const OrderManager = () => {
 
     const handleStatusChange = async (id, newStatus) => {
         try {
-            const res = await fetch(`https://pizza-backend-api-a5mm.onrender.com/api/orders/${id}/status`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ status: newStatus })
-            });
-
-            const data = await res.json();
-            if (data.success) {
+            const res = await api.put(`/api/orders/${id}/status`, { status: newStatus });
+            if (res.data.success) {
                 // Instantly update UI without heavy refetch
                 setOrders(orders.map(o => o._id === id ? { ...o, status: newStatus } : o));
             }
         } catch (error) {
-            alert('Error updating status');
-            console.error(error);
+            alert(`Error updating status: ${error.response?.data?.message || 'Server error'}`);
+            console.error("Update status failed", error);
         }
     };
 

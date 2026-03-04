@@ -25,6 +25,8 @@ const Home = () => {
     const [seasonalOffer, setSeasonalOffer] = useState({ enabled: 'false', title: '', desc: '', coupon: '', new_user_discount: 20 });
     const [deliveryInfo, setDeliveryInfo] = useState({ charge: 40, threshold: 300 });
 
+    const [activeOffers, setActiveOffers] = useState([]);
+
     const sliderRef = useRef(null);
 
     useEffect(() => {
@@ -99,29 +101,39 @@ const Home = () => {
 
         const fetchHomeSettings = async () => {
             try {
-                // 1. Fetch General Settings
-                const resSettings = await fetch('https://pizza-backend-api-a5mm.onrender.com/api/admin/settings');
-                const dataSettings = await resSettings.json();
-                if (dataSettings.success) {
-                    const findVal = (key, def) => dataSettings.data.find(s => s.key === key)?.value || def;
-                    setSeasonalOffer(prev => ({
-                        ...prev,
+                // Fetch basic settings
+                const res = await fetch('https://pizza-backend-api-a5mm.onrender.com/api/admin/settings');
+                const data = await res.json();
+
+                // Fetch dynamic active offers
+                const offerRes = await fetch('https://pizza-backend-api-a5mm.onrender.com/api/offers/active');
+                const offerData = await offerRes.json();
+
+                if (offerData.success && offerData.data.length > 0) {
+                    setActiveOffers(offerData.data);
+                }
+
+                if (data.success) {
+                    const findVal = (key, def) => data.data.find(s => s.key === key)?.value || def;
+
+                    // Use the newly fetched dynamic banner if available, else fallback to settings
+                    const hasDynamicOffers = offerData.success && offerData.data.length > 0;
+                    const primaryOffer = hasDynamicOffers ? offerData.data[0] : null;
+
+                    setSeasonalOffer({
+                        enabled: hasDynamicOffers ? 'true' : findVal('seasonal_offer_enabled', 'false'),
+                        title: primaryOffer ? primaryOffer.title : findVal('seasonal_offer_title', 'Special Offer'),
+                        desc: primaryOffer ? primaryOffer.description : findVal('seasonal_offer_desc', 'Grab your favorite pizzas!'),
+                        coupon: primaryOffer ? primaryOffer._id : findVal('seasonal_offer_coupon', 'SPECIAL15'), // use ID or specific code if added later
                         new_user_discount: findVal('new_user_discount', 20)
-                    }));
+                    });
                     setDeliveryInfo({
                         charge: findVal('delivery_charge', 40),
                         threshold: findVal('free_delivery_min_order', 300),
                         radius: findVal('delivery_max_distance_km', 3)
                     });
                 }
-
-                // 2. Fetch Active Seasonal Offers
-                const resOffers = await fetch('https://pizza-backend-api-a5mm.onrender.com/api/offers/active');
-                const dataOffers = await resOffers.json();
-                if (dataOffers.success) {
-                    setActiveOffers(dataOffers.data);
-                }
-            } catch (e) { console.error(e); }
+            } catch (e) { console.error("Error fetching home configs:", e); }
         };
         fetchHomeSettings();
 
@@ -153,15 +165,23 @@ const Home = () => {
             )}
 
             <div className={`home-container ${!isLoading ? 'page-fade-in-smooth' : 'hidden-initially'}`}>
+
+                {/* Delivery Special Offer Marquee */}
+                <div className="delivery-marquee" style={{ background: 'var(--primary)', color: 'white', padding: '8px 0', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                    <div style={{ display: 'inline-block', animation: 'marquee 15s linear infinite', fontWeight: 'bold', fontSize: '1rem' }}>
+                        🎉 SPECIAL OFFER: 3 KM FREE DELIVERY ON MINIMUM ORDER OF ₹300! 🚚 ORDER NOW!
+                    </div>
+                </div>
+
                 {/* Hero Section */}
                 <div className="hero-wrapper">
                     <section className="hero-section animate-fade-in">
                         <div className="hero-content">
                             <div className="hot-deal-badge animate-bounce-soft">
                                 🔥 <span style={{ fontWeight: 'bold' }}>
-                                    {activeOffers.length > 0
-                                        ? `${activeOffers[0].title}: ${activeOffers[0].description} ${activeOffers[0].couponCode ? `(Code: ${activeOffers[0].couponCode})` : ''}`
-                                        : `Free Delivery on ₹${deliveryInfo.threshold}+`}
+                                    {seasonalOffer.enabled === 'true'
+                                        ? `${seasonalOffer.title}: ${seasonalOffer.desc}`
+                                        : `Special Offer: 3KM Free Delivery (Min ₹300)`}
                                 </span>
                             </div>
                             <h1 className="hero-title">

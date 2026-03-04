@@ -7,7 +7,7 @@ const UserManager = () => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        if (user) fetchUsers();
+        if (user && user.role === 'admin') fetchUsers();
     }, [user]);
 
     const fetchUsers = async () => {
@@ -40,24 +40,27 @@ const UserManager = () => {
         if (!window.confirm("Are you sure you want to delete this user? This action cannot be undone.")) return;
 
         try {
+            console.log("Attempting to delete user:", id);
             const res = await api.delete(`/api/auth/users/${id}`);
+
             if (res.data.success) {
                 setUsers(users.filter(u => u._id !== id));
                 alert("User deleted successfully.");
             } else {
-                alert(res.data.message || "Something went wrong on the server.");
+                alert(`Error: ${res.data.message || "Something went wrong on the server."}`);
             }
         } catch (error) {
             console.error("Delete error:", error);
-            alert("An error occurred while deleting the user.");
+            alert("An error occurred while deleting the user. Check the console.");
         }
     };
 
     if (!user) {
         return (
             <div className="user-manager" style={{ textAlign: 'center', padding: '50px' }}>
-                <i className="fas fa-spinner fa-spin" style={{ fontSize: '3rem', color: 'var(--primary)', marginBottom: '20px' }}></i>
-                <h3>Verifying Session...</h3>
+                <i className="fas fa-lock" style={{ fontSize: '3rem', color: 'var(--primary)', marginBottom: '20px' }}></i>
+                <h3>Authentication Required</h3>
+                <p>Please wait while we verify your session...</p>
             </div>
         );
     }
@@ -83,13 +86,13 @@ const UserManager = () => {
                         {loading && <tr><td colSpan="5" style={{ textAlign: 'center' }}>Loading registered users...</td></tr>}
                         {!loading && users.length === 0 && <tr><td colSpan="5" style={{ textAlign: 'center' }}>No users registered yet.</td></tr>}
 
-                        {users.map(u => (
-                            <tr key={u._id}>
-                                <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{u._id}</td>
-                                <td><strong>{u.email}</strong></td>
-                                <td>{new Date(u.createdAt).toLocaleDateString()}</td>
+                        {users.map(user => (
+                            <tr key={user._id}>
+                                <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{user._id}</td>
+                                <td><strong>{user.email}</strong></td>
+                                <td>{new Date(user.createdAt).toLocaleDateString()}</td>
                                 <td>
-                                    {u.isVerified ?
+                                    {user.isVerified ?
                                         <span style={{ color: 'green', fontWeight: 'bold' }}><i className="fas fa-check-circle"></i> Verified</span> :
                                         <span style={{ color: 'orange', fontWeight: 'bold' }}><i className="fas fa-clock"></i> Verification Pending</span>
                                     }
@@ -98,7 +101,7 @@ const UserManager = () => {
                                     <button
                                         onClick={() => {
                                             const newPass = prompt("Enter new strong password (Min 6 chars, upper, lower, special):");
-                                            if (newPass) handleUpdatePassword(u._id, newPass);
+                                            if (newPass) handleUpdatePassword(user._id, newPass);
                                         }}
                                         className="btn-icon"
                                         style={{ color: '#3b82f6', background: 'none', border: 'none', cursor: 'pointer', padding: '10px' }}
@@ -107,7 +110,7 @@ const UserManager = () => {
                                         <i className="fas fa-key"></i>
                                     </button>
                                     <button
-                                        onClick={() => handleDelete(u._id)}
+                                        onClick={() => handleDelete(user._id)}
                                         className="btn-icon"
                                         style={{ color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', padding: '10px' }}
                                         title="Delete User"

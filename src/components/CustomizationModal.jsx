@@ -1,20 +1,40 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { AuthContext } from '../context/AuthContext';
 import './CustomizationModal.css';
 
-const MOCK_TOPPINGS = [
-    { id: 't1', name: 'Extra Veg Options', prices: { small: 25, medium: 35, large: 45 } },
-    { id: 't2', name: 'Extra Cheese', prices: { small: 40, medium: 60, large: 90 } },
-    { id: 't3', name: 'Cheese Burst', prices: { small: 50, medium: 60, large: 90 } },
-    { id: 't4', name: 'Paneer Topping', prices: { small: 30, medium: 40, large: 60 } }
-];
+const TOPPING_CATEGORIES = {
+    veg: {
+        name: 'Veg Toppings',
+        items: [
+            { id: 'tomato', name: 'Tomato', prices: { small: 25, medium: 35, large: 45 } },
+            { id: 'corn', name: 'Sweet Corn', prices: { small: 25, medium: 35, large: 45 } },
+            { id: 'onion', name: 'Onion', prices: { small: 25, medium: 35, large: 45 } },
+            { id: 'capsicum', name: 'Capsicum', prices: { small: 25, medium: 35, large: 45 } }
+        ]
+    },
+    premium: {
+        name: 'Premium Add-ons',
+        items: [
+            { id: 'cheese', name: 'Extra Cheese Topping', prices: { small: 40, medium: 60, large: 90 } },
+            { id: 'burst', name: 'Cheese Burst', prices: { small: 50, medium: 60, large: 90 } }
+        ]
+    }
+};
 
 const CustomizationModal = ({ item, onClose, onAddToCart }) => {
-    // Determine if item has sizes
-    const isPizza = item.price && typeof item.price === 'object';
+    const { user } = useContext(AuthContext);
+    const navigate = useNavigate();
 
-    const [selectedSize, setSelectedSize] = useState(isPizza ? 'small' : null);
+    // Determine if item has sizes
+    const isPizza = item.category === 'pizza' || (item.price && typeof item.price === 'object');
+
+    const [selectedSize, setSelectedSize] = useState('medium');
     const [selectedToppings, setSelectedToppings] = useState([]);
     const [totalPrice, setTotalPrice] = useState(0);
+
+    // Flatten toppings for easy search
+    const ALL_TOPPINGS = [...TOPPING_CATEGORIES.veg.items, ...TOPPING_CATEGORIES.premium.items];
 
     // Lock body scroll
     useEffect(() => {
@@ -25,17 +45,13 @@ const CustomizationModal = ({ item, onClose, onAddToCart }) => {
     }, []);
 
     useEffect(() => {
-        let basePrice = isPizza ? (item.price[selectedSize] || item.price.small || 0) : Number(item.price);
+        let basePrice = isPizza ? (item.price[selectedSize] || 0) : Number(item.price);
         let toppingsPrice = 0;
 
         selectedToppings.forEach(tId => {
-            const topping = MOCK_TOPPINGS.find(t => t.id === tId);
+            const topping = ALL_TOPPINGS.find(t => t.id === tId);
             if (topping) {
-                if (isPizza) {
-                    toppingsPrice += topping.prices[selectedSize];
-                } else {
-                    toppingsPrice += topping.prices.medium; // default to medium price for non-pizza
-                }
+                toppingsPrice += topping.prices[selectedSize] || topping.prices.medium || 0;
             }
         });
 
@@ -51,18 +67,26 @@ const CustomizationModal = ({ item, onClose, onAddToCart }) => {
     };
 
     const handleAdd = () => {
+        if (!user) {
+            alert("Please login to customize and add to cart!");
+            onClose();
+            navigate('/login');
+            return;
+        }
+
         const selectedToppingObjects = selectedToppings.map(id => {
-            const t = MOCK_TOPPINGS.find(topp => topp.id === id);
-            const price = isPizza ? t.prices[selectedSize] : t.prices.medium;
-            return { name: t.name, price };
+            const t = ALL_TOPPINGS.find(topp => topp.id === id);
+            return { name: t.name, price: t.prices[selectedSize], baseName: t.name, size: selectedSize };
         });
 
         onAddToCart({
             ...item,
-            selectedSize: selectedSize || undefined,
+            id: item._id || item.id,
+            selectedSize: selectedSize,
             toppings: selectedToppingObjects,
             price: totalPrice,
-            cartId: `${item.id}-${selectedSize || 'reg'}-${selectedToppings.sort().join('-')}` // Unique CART item ID!
+            totalPrice: totalPrice,
+            cartItemId: Date.now()
         });
         onClose();
     };
@@ -97,28 +121,30 @@ const CustomizationModal = ({ item, onClose, onAddToCart }) => {
                         </div>
                     )}
 
-                    <div className="custom-section">
-                        <h4>Add Extra Toppings</h4>
-                        <div className="toppings-list">
-                            {MOCK_TOPPINGS.map(topping => {
-                                const tPrice = isPizza ? topping.prices[selectedSize] : topping.prices.medium;
-                                return (
-                                    <label key={topping.id} className={`topping-checkbox-card ${selectedToppings.includes(topping.id) ? 'checked' : ''}`}>
-                                        <div className="topping-left">
-                                            <input
-                                                type="checkbox"
-                                                checked={selectedToppings.includes(topping.id)}
-                                                onChange={() => handleToppingToggle(topping.id)}
-                                            />
-                                            <span className="custom-checkbox"></span>
-                                            <span className="topping-name">{topping.name}</span>
-                                        </div>
-                                        <div className="topping-price">+₹{tPrice}</div>
-                                    </label>
-                                )
-                            })}
+                    {Object.keys(TOPPING_CATEGORIES).map(catKey => (
+                        <div className="custom-section" key={catKey}>
+                            <h4>{TOPPING_CATEGORIES[catKey].name}</h4>
+                            <div className="toppings-list">
+                                {TOPPING_CATEGORIES[catKey].items.map(topping => {
+                                    const tPrice = topping.prices[selectedSize];
+                                    return (
+                                        <label key={topping.id} className={`topping-checkbox-card ${selectedToppings.includes(topping.id) ? 'checked' : ''}`}>
+                                            <div className="topping-left">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedToppings.includes(topping.id)}
+                                                    onChange={() => handleToppingToggle(topping.id)}
+                                                />
+                                                <span className="custom-checkbox"></span>
+                                                <span className="topping-name">{topping.name}</span>
+                                            </div>
+                                            <div className="topping-price">+₹{tPrice}</div>
+                                        </label>
+                                    )
+                                })}
+                            </div>
                         </div>
-                    </div>
+                    ))}
                 </div>
 
                 <div className="modal-footer">
@@ -128,6 +154,9 @@ const CustomizationModal = ({ item, onClose, onAddToCart }) => {
                     </div>
                     <button className="btn btn-primary add-custom-btn" onClick={handleAdd}>
                         Add to Cart <span className="cart-icon">🛒</span>
+                    </button>
+                    <button className="btn btn-secondary" onClick={onClose} style={{ marginLeft: '10px' }}>
+                        Go Back
                     </button>
                 </div>
             </div>

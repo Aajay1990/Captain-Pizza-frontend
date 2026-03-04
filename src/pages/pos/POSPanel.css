@@ -471,6 +471,7 @@
     font-weight: 900;
     cursor: pointer;
     box-shadow: 0 10px 25px rgba(183, 28, 28, 0.3);
+    flex-shrink: 0;
 }
 
 .btn-complete-order:hover {

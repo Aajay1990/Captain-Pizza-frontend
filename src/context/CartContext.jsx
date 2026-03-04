@@ -121,50 +121,12 @@ export const CartProvider = ({ children }) => {
         }));
     };
 
-    const bogoDiscount = React.useMemo(() => {
-        let discount = 0;
-
-        const calculateGroupBOGO = (items) => {
-            // Flat list of items (accounting for quantity)
-            const flatItems = [];
-            items.forEach(item => {
-                for (let i = 0; i < item.quantity; i++) {
-                    flatItems.push(item);
-                }
-            });
-
-            // Sort by price descending
-            flatItems.sort((a, b) => b.price - a.price);
-
-            // Every 2nd item is free (index 1, 3, 5...)
-            for (let i = 1; i < flatItems.length; i += 2) {
-                discount += flatItems[i].price;
-            }
-        };
-
-        const deluxeVegPizzas = cartItems.filter(item =>
-            item.category === 'pizza' &&
-            item.subCategory === 'Deluxe Veg' &&
-            (item.selectedSize === 'medium' || item.selectedSize === 'large')
-        );
-        calculateGroupBOGO(deluxeVegPizzas);
-
-        const supremeVegPizzas = cartItems.filter(item =>
-            item.category === 'pizza' &&
-            item.subCategory === 'Supreme Veg' &&
-            (item.selectedSize === 'medium' || item.selectedSize === 'large')
-        );
-        calculateGroupBOGO(supremeVegPizzas);
-
-        return discount;
-    }, [cartItems]);
-
     const cartCount = cartItems.reduce((acc, item) => acc + item.quantity, 0);
 
     const clearCart = () => setCartItems([]);
 
     return (
-        <CartContext.Provider value={{ cartItems, addToCart, updateQuantity, toggleAddon, toggleAddonSML, cartCount, clearCart, isCartOpen, setIsCartOpen, isIconAnimating, bogoDiscount }}>
+        <CartContext.Provider value={{ cartItems, addToCart, updateQuantity, toggleAddon, toggleAddonSML, cartCount, clearCart, isCartOpen, setIsCartOpen, isIconAnimating }}>
             {children}
         </CartContext.Provider>
     );

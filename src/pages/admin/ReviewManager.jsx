@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { AuthContext, api } from '../../context/AuthContext';
+import { AuthContext } from '../../context/AuthContext';
+import axios from 'axios';
 
 const ReviewManager = () => {
-    const { user } = useContext(AuthContext);
+    const { token } = useContext(AuthContext);
     const [reviews, setReviews] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -13,7 +14,7 @@ const ReviewManager = () => {
     const fetchReviews = async () => {
         try {
             setLoading(true);
-            const res = await api.get('/api/reviews');
+            const res = await axios.get('https://pizza-backend-api-a5mm.onrender.com/api/reviews');
             if (res.data.success) {
                 setReviews(res.data.websiteData.reviews || []);
             }
@@ -28,7 +29,9 @@ const ReviewManager = () => {
         if (!window.confirm("Are you sure you want to delete this review?")) return;
 
         try {
-            const res = await api.delete(`/api/reviews/${id}`);
+            const res = await axios.delete(`https://pizza-backend-api-a5mm.onrender.com/api/reviews/${id}`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
             if (res.data.success) {
                 setReviews(reviews.filter(r => r._id !== id));
             }
@@ -38,7 +41,6 @@ const ReviewManager = () => {
         }
     };
 
-    if (!user || user.role !== 'admin') return <div>Access Denied</div>;
     if (loading) return <div>Loading reviews...</div>;
 
     return (

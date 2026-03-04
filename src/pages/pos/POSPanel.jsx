@@ -4,7 +4,7 @@ import './POSPanel.css';
 import logo from '../../assets/logo.png';
 
 const POSPanel = () => {
-    const { user, api, logoutAuth } = useContext(AuthContext);
+    const { user, token, logoutAuth } = useContext(AuthContext);
     const [menuItems, setMenuItems] = useState([]);
     const [categories, setCategories] = useState([]);
     const [activeCategory, setActiveCategory] = useState('All');
@@ -19,7 +19,6 @@ const POSPanel = () => {
         'All': 'fas fa-th-large',
         'pizza': 'fas fa-pizza-slice',
         'burger': 'fas fa-hamburger',
-        'specialOffer': 'fas fa-star',
         'sides': 'fas fa-pepper-hot',
         'drinks': 'fas fa-glass-whiskey',
         'desserts': 'fas fa-ice-cream'
@@ -41,20 +40,23 @@ const POSPanel = () => {
 
     // Modal state for Customization
     const [selectedItem, setSelectedItem] = useState(null);
-    const [selectedSize, setSelectedSize] = useState('medium');
+    const [selectedSize, setSelectedSize] = useState('regular');
     const [itemQuantity, setItemQuantity] = useState(1);
     const [selectedToppings, setSelectedToppings] = useState([]);
-    const [activeToppingCat, setActiveToppingCat] = useState('All');
+    const [toppingCategory, setToppingCategory] = useState(null);
 
     const TOPPINGS_CONFIG = [
-        { id: 'onion', name: 'Onion Topping', category: 'Toppings', prices: { small: 25, medium: 35, large: 45 } },
-        { id: 'capsicum', name: 'Capsicum Topping', category: 'Toppings', prices: { small: 25, medium: 35, large: 45 } },
-        { id: 'tomato', name: 'Tomato Topping', category: 'Toppings', prices: { small: 25, medium: 35, large: 45 } },
-        { id: 'corn', name: 'Sweet Corn Topping', category: 'Toppings', prices: { small: 25, medium: 35, large: 45 } },
-        { id: 'cheese', name: 'Extra Cheese', category: 'Extra', prices: { small: 40, medium: 60, large: 90 } },
-        { id: 'burst', name: 'Cheese Burst', category: 'Extra', prices: { small: 50, medium: 60, large: 90 } }
+        { id: 'tomato', name: 'Tomato', prices: { small: 25, medium: 35, large: 45 } },
+        { id: 'corn', name: 'Sweet Corn', prices: { small: 25, medium: 35, large: 45 } },
+        { id: 'onion', name: 'Onion', prices: { small: 25, medium: 35, large: 45 } },
+        { id: 'capsicum', name: 'Capsicum', prices: { small: 25, medium: 35, large: 45 } }
     ];
-    const TOPPING_CATS = ['All', 'Toppings', 'Extra'];
+
+    const EXTRA_ADDONS = [
+        { id: 'cheese', name: 'Extra Cheese Topping', prices: { small: 40, medium: 60, large: 90 } },
+        { id: 'burst', name: 'Cheese Burst', prices: { small: 50, medium: 60, large: 90 } }
+    ];
+
     const handleCategoryClick = (cat) => {
         setActiveCategory(cat);
     };
@@ -88,6 +90,7 @@ const POSPanel = () => {
                             <span>${i.quantity}x ${i.name} ${i.size !== 'regular' ? `(${i.size})` : ''}</span>
                             <span>₹${i.price * i.quantity}</span>
                         </div>
+                        ${i.toppings && i.toppings.length > 0 ? `<div style="font-size: 0.8rem; text-align: left; padding-left: 20px;">+ ${i.toppings.join(', ')}</div>` : ''}
                     `).join('')}
                     <div class="line"></div>
                     <div class="item"><span>Subtotal</span><span>₹${order.subTotal.toFixed(2)}</span></div>
@@ -104,6 +107,14 @@ const POSPanel = () => {
         receiptWindow.document.close();
     };
 
+    const makeObjectId = (id) => {
+        const idStr = String(id);
+        if (/^[a-fA-F0-9]{24}$/.test(idStr)) return idStr;
+        let hexKey = "";
+        for (let i = 0; i < idStr.length; i++) hexKey += idStr.charCodeAt(i).toString(16);
+        return hexKey.padEnd(24, '0').slice(0, 24);
+    };
+
     const handleCheckout = async () => {
         if (cart.length === 0) return alert("Cart is empty");
         if (!paymentMethod) return alert("Please select a payment method");
@@ -114,7 +125,7 @@ const POSPanel = () => {
                 phone: customerPhone || '0000000000'
             },
             orderItems: cart.map(c => ({
-                menuItem: c.menuItemId,
+                menuItem: makeObjectId(c.menuItemId),
                 name: c.name,
                 quantity: c.quantity,
                 size: c.size,
@@ -132,8 +143,15 @@ const POSPanel = () => {
         };
 
         try {
-            const res = await api.post('/api/orders', orderData);
-            const data = res.data;
+            const res = await fetch('https://pizza-backend-api-a5mm.onrender.com/api/orders', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`
+                },
+                body: JSON.stringify(orderData)
+            });
+            const data = await res.json();
             if (data.success) {
                 printReceipt(data.data);
                 // Reset cart
@@ -143,7 +161,7 @@ const POSPanel = () => {
                 setDiscount(0);
                 setPaymentMethod('');
             } else {
-                alert("Failed to process order.");
+                alert(`Failed to process order: ${data.message || 'Unknown error'}`);
             }
         } catch (error) {
             console.error("Checkout error:", error);
@@ -189,16 +207,13 @@ const POSPanel = () => {
 
     const fetchMenu = async () => {
         try {
-            const res = await api.get('/api/menu?all=true');
-            const data = res.data;
+            const res = await fetch('https://pizza-backend-api-a5mm.onrender.com/api/menu?all=true');
+            const data = await res.json();
             console.log('POS Menu Data:', data);
             if (data.success) {
                 setMenuItems(data.data);
                 const rawCats = data.data.map(item => (item.category || '').trim());
-                const uniqueCats = ['All', ...new Set(rawCats.map(c => {
-                    const mapped = (c === 'specialOffer' || c === 'cheapMeal' || c === 'cheapmeal') ? 'Best Seller Pizza Offer' : c;
-                    return mapped.charAt(0).toUpperCase() + mapped.slice(1).toLowerCase();
-                }))];
+                const uniqueCats = ['All', ...new Set(rawCats.map(c => c.charAt(0).toUpperCase() + c.slice(1).toLowerCase()))];
                 console.log('POS Unique Categories:', uniqueCats);
                 setCategories(uniqueCats);
             }
@@ -221,14 +236,7 @@ const POSPanel = () => {
             return matchesSearch && item.isAvailable !== false;
         }
 
-        if (activeCat !== 'all') {
-            const isPromoCat = activeCat === 'best seller pizza offer';
-            if (isPromoCat) {
-                if (itemCat !== 'specialoffer' && itemCat !== 'cheapmeal') return false;
-            } else {
-                if (itemCat !== activeCat) return false;
-            }
-        }
+        if (activeCat !== 'all' && itemCat !== activeCat) return false;
         return item.isAvailable !== false;
     });
 
@@ -244,7 +252,7 @@ const POSPanel = () => {
             setSelectedSize('medium'); // Default
             setItemQuantity(1);
             setSelectedToppings([]);
-            setActiveToppingCat('All');
+            setToppingCategory('Veg Topping');
         } else {
             // Direct Add
             const newItem = {
@@ -265,8 +273,9 @@ const POSPanel = () => {
         let basePrice = selectedItem.prices ? selectedItem.prices[selectedSize] : selectedItem.price;
 
         let toppingsPrice = 0;
+        const allAddons = [...TOPPINGS_CONFIG, ...EXTRA_ADDONS];
         selectedToppings.forEach(tId => {
-            const config = TOPPINGS_CONFIG.find(c => c.id === tId);
+            const config = allAddons.find(c => c.id === tId);
             if (config && config.prices[selectedSize]) {
                 toppingsPrice += config.prices[selectedSize];
             }
@@ -281,7 +290,7 @@ const POSPanel = () => {
             price: finalItemPrice,
             quantity: itemQuantity,
             size: selectedSize,
-            toppings: selectedToppings.map(tId => TOPPINGS_CONFIG.find(c => c.id === tId).name)
+            toppings: selectedToppings.map(tId => allAddons.find(c => c.id === tId).name)
         };
         setCart([...cart, newItem]);
         setSelectedItem(null);
@@ -474,7 +483,7 @@ const POSPanel = () => {
                                 className="btn-complete-order"
                                 onClick={handleCheckout}
                             >
-                                Make Checkout (F9)
+                                Complete Order (F9)
                             </button>
                         </aside>
                     </>
@@ -484,98 +493,166 @@ const POSPanel = () => {
             {/* Customization Modal */}
             {selectedItem && (
                 <div className="pos-modal-overlay">
-                    <div className="pos-modal">
-                        <h3>Customize: {selectedItem.name}</h3>
-
-                        <div className="pos-modal-section">
-                            <label>Product Size:</label>
-                            <div className="size-selector">
-                                {Object.keys(selectedItem.prices || {}).map(sz => (
-                                    <button
-                                        key={sz}
-                                        className={selectedSize === sz ? 'active' : ''}
-                                        onClick={() => setSelectedSize(sz)}
-                                    >
-                                        <div className="size-label">{sz.toUpperCase()}</div>
-                                        <div className="size-price">₹{selectedItem.prices[sz]}</div>
-                                    </button>
-                                ))}
-                            </div>
+                    <div className="pos-modal" style={{ maxHeight: '90vh', width: '600px', display: 'flex', flexDirection: 'column' }}>
+                        <div className="pos-modal-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '15px', borderBottom: '1px solid #eee' }}>
+                            <h3 style={{ margin: 0, color: 'var(--pos-primary)' }}>Customize: {selectedItem.name}</h3>
+                            <button onClick={() => setSelectedItem(null)} style={{ background: 'transparent', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#888' }}>&times;</button>
                         </div>
 
-                        <div className="pos-modal-section">
-                            <label>Topping Type (Select Veggies):</label>
-                            <div className="toppings-list-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '10px' }}>
-                                {TOPPINGS_CONFIG.filter(t => t.category === 'Toppings').map(t => (
-                                    <div
-                                        key={t.id}
-                                        className={`pos-topping-unit ${selectedToppings.includes(t.id) ? 'active' : ''}`}
-                                        onClick={() => toggleTopping(t.id)}
-                                        style={{
-                                            padding: '12px',
-                                            borderRadius: '12px',
-                                            border: '1px solid var(--pos-border)',
-                                            background: selectedToppings.includes(t.id) ? 'rgba(183,28,28,0.05)' : 'white',
-                                            transition: '0.2s',
-                                            cursor: 'pointer',
-                                            display: 'flex',
-                                            justifyContent: 'space-between',
-                                            alignItems: 'center'
-                                        }}
-                                    >
-                                        <div style={{ fontSize: '0.85rem', fontWeight: '700' }}>
-                                            {selectedToppings.includes(t.id) && <i className="fas fa-check-circle" style={{ color: 'var(--pos-primary)', marginRight: '5px' }}></i>}
-                                            {t.name.replace(' Topping', '')}
+                        <div className="pos-modal-body" style={{ overflowY: 'auto', padding: '20px 0', flex: 1 }}>
+                            <div className="pos-modal-section">
+                                <label style={{ display: 'block', marginBottom: '10px', fontWeight: 'bold' }}>1. Choose Size:</label>
+                                <div className="size-selector" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
+                                    {['small', 'medium', 'large'].map(sz => {
+                                        if (!selectedItem.prices || !selectedItem.prices[sz]) return null;
+                                        return (
+                                            <div
+                                                key={sz}
+                                                className={`size-option ${selectedSize === sz ? 'active' : ''}`}
+                                                style={{
+                                                    padding: '15px',
+                                                    border: `2px solid ${selectedSize === sz ? 'var(--pos-primary)' : '#ddd'}`,
+                                                    borderRadius: '10px',
+                                                    textAlign: 'center',
+                                                    cursor: 'pointer',
+                                                    background: selectedSize === sz ? 'rgba(183,28,28,0.05)' : '#fff'
+                                                }}
+                                                onClick={() => setSelectedSize(sz)}
+                                            >
+                                                <div style={{ fontWeight: 'bold', textTransform: 'capitalize', fontSize: '1.1rem' }}>{sz}</div>
+                                                <div style={{ color: 'var(--pos-primary)', marginTop: '5px' }}>₹{selectedItem.prices[sz]}</div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            <div className="pos-modal-section" style={{ marginTop: '25px' }}>
+                                <label style={{ display: 'block', marginBottom: '10px', fontWeight: 'bold' }}>2. Topping Category:</label>
+                                <div className="topping-category-switcher" style={{ display: 'flex', gap: '5px', marginBottom: '15px', borderBottom: '1px solid #eee' }}>
+                                    {['Veg Topping', 'Extra Cheese Topping', 'Cheese Burst'].map(cat => (
+                                        <button
+                                            key={cat}
+                                            onClick={() => setToppingCategory(cat)}
+                                            style={{
+                                                flex: 1,
+                                                padding: '12px 5px',
+                                                border: 'none',
+                                                background: (toppingCategory === cat || (!toppingCategory && cat === 'Veg Topping')) ? 'var(--pos-primary)' : 'transparent',
+                                                color: (toppingCategory === cat || (!toppingCategory && cat === 'Veg Topping')) ? 'white' : '#444',
+                                                cursor: 'pointer',
+                                                borderRadius: '5px 5px 0 0',
+                                                fontWeight: 'bold',
+                                                transition: 'all 0.2s'
+                                            }}
+                                        >
+                                            {cat === 'Veg Topping' ? 'VEG' : cat === 'Extra Cheese Topping' ? 'CHEESE' : 'BURST'}
+                                        </button>
+                                    ))}
+                                </div>
+
+                                <div className="cat-toppings-content" style={{ minHeight: '120px', padding: '10px', background: '#f9f9f9', borderRadius: '8px' }}>
+                                    {(toppingCategory === 'Veg Topping' || !toppingCategory) && (
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }}>
+                                            {TOPPINGS_CONFIG.map(t => (
+                                                <div
+                                                    key={t.id}
+                                                    className={`topping-option ${selectedToppings.includes(t.id) ? 'active' : ''}`}
+                                                    onClick={() => toggleTopping(t.id)}
+                                                    style={{
+                                                        padding: '12px',
+                                                        border: `1px solid ${selectedToppings.includes(t.id) ? '#4caf50' : '#ddd'}`,
+                                                        borderRadius: '8px',
+                                                        display: 'flex',
+                                                        justifyContent: 'space-between',
+                                                        alignItems: 'center',
+                                                        cursor: 'pointer',
+                                                        background: selectedToppings.includes(t.id) ? '#f1f8e9' : '#fff'
+                                                    }}
+                                                >
+                                                    <span style={{ fontWeight: 'bold' }}>{t.name}</span>
+                                                    <span style={{ color: 'var(--pos-primary)' }}>+₹{t.prices[selectedSize]}</span>
+                                                </div>
+                                            ))}
                                         </div>
-                                        <div style={{ fontSize: '0.8rem', color: 'var(--pos-primary)', fontWeight: 'bold' }}>+₹{t.prices[selectedSize]}</div>
-                                    </div>
-                                ))}
-                            </div>
+                                    )}
 
-                            <label style={{ marginTop: '20px', display: 'block' }}>Extra Add-ons:</label>
-                            <div className="toppings-list-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '10px' }}>
-                                {TOPPINGS_CONFIG.filter(t => t.category === 'Extra').map(t => (
-                                    <div
-                                        key={t.id}
-                                        className={`pos-topping-unit ${selectedToppings.includes(t.id) ? 'active' : ''}`}
-                                        onClick={() => toggleTopping(t.id)}
-                                        style={{
-                                            padding: '12px',
-                                            borderRadius: '12px',
-                                            border: '1px solid var(--pos-border)',
-                                            background: selectedToppings.includes(t.id) ? 'rgba(183,28,28,0.05)' : 'white',
-                                            transition: '0.2s',
-                                            cursor: 'pointer',
-                                            display: 'flex',
-                                            justifyContent: 'space-between',
-                                            alignItems: 'center'
-                                        }}
-                                    >
-                                        <div style={{ fontSize: '0.85rem', fontWeight: '700' }}>
-                                            {selectedToppings.includes(t.id) && <i className="fas fa-check-circle" style={{ color: 'var(--pos-primary)', marginRight: '5px' }}></i>}
-                                            {t.name}
+                                    {toppingCategory === 'Extra Cheese Topping' && (
+                                        <div style={{ padding: '10px' }}>
+                                            {EXTRA_ADDONS.filter(t => t.id === 'cheese').map(t => (
+                                                <div
+                                                    key={t.id}
+                                                    className={`topping-option-large ${selectedToppings.includes(t.id) ? 'active' : ''}`}
+                                                    onClick={() => toggleTopping(t.id)}
+                                                    style={{
+                                                        padding: '20px',
+                                                        border: `2px solid ${selectedToppings.includes(t.id) ? '#ff9800' : '#ddd'}`,
+                                                        borderRadius: '10px',
+                                                        display: 'flex',
+                                                        justifyContent: 'space-between',
+                                                        alignItems: 'center',
+                                                        cursor: 'pointer',
+                                                        background: selectedToppings.includes(t.id) ? '#fff3e0' : '#fff'
+                                                    }}
+                                                >
+                                                    <div>
+                                                        <div style={{ fontWeight: 'bold', fontSize: '1.2rem' }}>{t.name}</div>
+                                                        <div style={{ fontSize: '0.9rem', color: '#666' }}>Add extra layer of gooey cheese</div>
+                                                    </div>
+                                                    <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--pos-primary)' }}>+₹{t.prices[selectedSize]}</div>
+                                                </div>
+                                            ))}
                                         </div>
-                                        <div style={{ fontSize: '0.8rem', color: 'var(--pos-primary)', fontWeight: 'bold' }}>+₹{t.prices[selectedSize]}</div>
-                                    </div>
-                                ))}
+                                    )}
+
+                                    {toppingCategory === 'Cheese Burst' && (
+                                        <div style={{ padding: '10px' }}>
+                                            {EXTRA_ADDONS.filter(t => t.id === 'burst').map(t => (
+                                                <div
+                                                    key={t.id}
+                                                    className={`topping-option-large ${selectedToppings.includes(t.id) ? 'active' : ''}`}
+                                                    onClick={() => toggleTopping(t.id)}
+                                                    style={{
+                                                        padding: '20px',
+                                                        border: `2px solid ${selectedToppings.includes(t.id) ? '#2196f3' : '#ddd'}`,
+                                                        borderRadius: '10px',
+                                                        display: 'flex',
+                                                        justifyContent: 'space-between',
+                                                        alignItems: 'center',
+                                                        cursor: 'pointer',
+                                                        background: selectedToppings.includes(t.id) ? '#e3f2fd' : '#fff'
+                                                    }}
+                                                >
+                                                    <div>
+                                                        <div style={{ fontWeight: 'bold', fontSize: '1.2rem' }}>{t.name}</div>
+                                                        <div style={{ fontSize: '0.9rem', color: '#666' }}>Liquid cheese stuffed inside the crust</div>
+                                                    </div>
+                                                    <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--pos-primary)' }}>+₹{t.prices[selectedSize]}</div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
                             </div>
-                        </div>
-                        <div className="pos-modal-section quantity-section">
-                            <label>Quantity:</label>
-                            <div className="pos-qty-controls">
-                                <button onClick={() => setItemQuantity(q => Math.max(1, q - 1))}>-</button>
-                                <span>{itemQuantity}</span>
-                                <button onClick={() => setItemQuantity(q => q + 1)}>+</button>
+
+                            <div className="pos-modal-section quantity-section" style={{ marginTop: '25px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #eee', paddingTop: '15px' }}>
+                                <label style={{ fontWeight: 'bold', margin: 0 }}>Item Quantity:</label>
+                                <div className="pos-qty-controls" style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                                    <button onClick={() => setItemQuantity(q => Math.max(1, q - 1))} style={{ width: '40px', height: '40px', borderRadius: '50%', border: 'none', background: '#eee', fontSize: '1.2rem', cursor: 'pointer' }}>-</button>
+                                    <span style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>{itemQuantity}</span>
+                                    <button onClick={() => setItemQuantity(q => q + 1)} style={{ width: '40px', height: '40px', borderRadius: '50%', border: 'none', background: 'var(--pos-primary)', color: 'white', fontSize: '1.2rem', cursor: 'pointer' }}>+</button>
+                                </div>
                             </div>
                         </div>
 
-                        <div className="pos-modal-actions">
-                            <div className="modal-total-preview">
-                                Item Total: <span>₹{((selectedItem.prices ? selectedItem.prices[selectedSize] : selectedItem.price) + selectedToppings.reduce((acc, tId) => acc + (TOPPINGS_CONFIG.find(c => c.id === tId)?.prices[selectedSize] || 0), 0)) * itemQuantity}</span>
+                        <div className="pos-modal-actions" style={{ borderTop: '1px solid #eee', paddingTop: '20px', display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                            <div className="modal-total-preview" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.2rem', fontWeight: 'bold' }}>
+                                <span>Grand Total:</span>
+                                <span>₹{((selectedItem.prices ? selectedItem.prices[selectedSize] : selectedItem.price) + selectedToppings.reduce((acc, tId) => acc + ([...TOPPINGS_CONFIG, ...EXTRA_ADDONS].find(c => c.id === tId)?.prices[selectedSize] || 0), 0)) * itemQuantity}</span>
                             </div>
-                            <div className="action-btns">
-                                <button className="btn-cancel" onClick={() => setSelectedItem(null)}>Cancel</button>
-                                <button className="btn-add" onClick={addToCartWithCustomization}>Add to Order</button>
+                            <div className="action-btns" style={{ display: 'flex', gap: '10px' }}>
+                                <button className="btn-cancel" onClick={() => setSelectedItem(null)} style={{ flex: 1, padding: '15px', border: '1px solid #ccc', borderRadius: '8px', background: '#fff', fontSize: '1.1rem', cursor: 'pointer' }}>Go Back</button>
+                                <button className="btn-add" onClick={addToCartWithCustomization} style={{ flex: 2, padding: '15px', border: 'none', borderRadius: '8px', background: 'var(--pos-primary)', color: '#fff', fontSize: '1.1rem', fontWeight: 'bold', cursor: 'pointer' }}>Add to Cart <i className="fas fa-shopping-cart"></i></button>
                             </div>
                         </div>
                     </div>

@@ -25,16 +25,16 @@ const CustomizationModal = ({ item, onClose, onAddToCart }) => {
     const isPizza = item.category === 'pizza' || (item.price && typeof item.price === 'object');
 
     const [selectedSize, setSelectedSize] = useState('medium');
-    const [selectedVegToppings, setSelectedVegToppings] = useState([]);
-    const [showVegDropdown, setShowVegDropdown] = useState(false);
+    const [selectedVegToppings, setSelectedVegToppings] = useState({});
 
-    const [extraCheese, setExtraCheese] = useState(false);
-    const [cheeseBurst, setCheeseBurst] = useState(false);
+    const [extraCheese, setExtraCheese] = useState(null);
+    const [cheeseBurst, setCheeseBurst] = useState(null);
 
     // Ketchup Addon
     const [ketchupEnabled, setKetchupEnabled] = useState(false);
     const [ketchupQty, setKetchupQty] = useState(1);
 
+    const [expandedSection, setExpandedSection] = useState('veg');
     const [totalPrice, setTotalPrice] = useState(0);
 
     // Lock body scroll
@@ -50,9 +50,11 @@ const CustomizationModal = ({ item, onClose, onAddToCart }) => {
 
         let addonsPrice = 0;
         if (isPizza) {
-            addonsPrice += selectedVegToppings.length * ADDON_PRICES.veg[selectedSize];
-            if (extraCheese) addonsPrice += ADDON_PRICES.cheese[selectedSize];
-            if (cheeseBurst) addonsPrice += ADDON_PRICES.burst[selectedSize];
+            Object.values(selectedVegToppings).forEach(size => {
+                addonsPrice += ADDON_PRICES.veg[size];
+            });
+            if (extraCheese) addonsPrice += ADDON_PRICES.cheese[extraCheese];
+            if (cheeseBurst) addonsPrice += ADDON_PRICES.burst[cheeseBurst];
             if (ketchupEnabled) addonsPrice += (ketchupQty * ADDON_PRICES.ketchup);
         }
 
@@ -60,11 +62,22 @@ const CustomizationModal = ({ item, onClose, onAddToCart }) => {
     }, [selectedSize, selectedVegToppings, extraCheese, cheeseBurst, ketchupEnabled, ketchupQty, item, isPizza]);
 
     const handleVegToggle = (id) => {
-        if (selectedVegToppings.includes(id)) {
-            setSelectedVegToppings(selectedVegToppings.filter(t => t !== id));
-        } else {
-            setSelectedVegToppings([...selectedVegToppings, id]);
-        }
+        setSelectedVegToppings(prev => {
+            const next = { ...prev };
+            if (next[id]) {
+                delete next[id]; // unselect
+            } else {
+                next[id] = selectedSize; // default to pizza size
+            }
+            return next;
+        });
+    };
+
+    const handleVegSizeChange = (id, size) => {
+        setSelectedVegToppings(prev => ({
+            ...prev,
+            [id]: size
+        }));
     };
 
     const handleAdd = () => {
@@ -77,33 +90,33 @@ const CustomizationModal = ({ item, onClose, onAddToCart }) => {
 
         const formattedToppings = [];
 
-        selectedVegToppings.forEach(id => {
+        Object.entries(selectedVegToppings).forEach(([id, size]) => {
             const toppingName = VEG_TOPPINGS.find(t => t.id === id)?.name;
             if (toppingName) {
                 formattedToppings.push({
-                    name: toppingName,
-                    price: ADDON_PRICES.veg[selectedSize],
+                    name: `${toppingName} (${size.charAt(0).toUpperCase()})`,
+                    price: ADDON_PRICES.veg[size],
                     baseName: toppingName,
-                    size: selectedSize
+                    size: size
                 });
             }
         });
 
         if (extraCheese) {
             formattedToppings.push({
-                name: 'Extra Cheese',
-                price: ADDON_PRICES.cheese[selectedSize],
+                name: `Extra Cheese (${extraCheese.charAt(0).toUpperCase()})`,
+                price: ADDON_PRICES.cheese[extraCheese],
                 baseName: 'Extra Cheese',
-                size: selectedSize
+                size: extraCheese
             });
         }
 
         if (cheeseBurst) {
             formattedToppings.push({
-                name: 'Cheese Burst Crust',
-                price: ADDON_PRICES.burst[selectedSize],
+                name: `Cheese Burst Crust (${cheeseBurst.charAt(0).toUpperCase()})`,
+                price: ADDON_PRICES.burst[cheeseBurst],
                 baseName: 'Cheese Burst Crust',
-                size: selectedSize
+                size: cheeseBurst
             });
         }
 
@@ -163,89 +176,171 @@ const CustomizationModal = ({ item, onClose, onAddToCart }) => {
                             <h4>2. Pizza Add-Ons</h4>
 
                             {/* Ketchup Add-On */}
-                            <div className="addon-card">
-                                <label className="addon-checkbox-label">
-                                    <div className="addon-info">
-                                        <input type="checkbox" checked={ketchupEnabled} onChange={(e) => setKetchupEnabled(e.target.checked)} />
-                                        <span className="custom-checkbox"></span>
+                            <div className="addon-card dropdown-card">
+                                <div className="dropdown-header" onClick={() => setExpandedSection(expandedSection === 'ketchup' ? null : 'ketchup')}>
+                                    <div>
                                         <strong>Ketchup Packets</strong>
+                                        <div className="selected-preview">
+                                            {ketchupEnabled ? `Selected (x${ketchupQty}) +₹${ketchupQty * ADDON_PRICES.ketchup}` : 'Not Selected'}
+                                        </div>
                                     </div>
-                                    <span className="addon-price-tag">+₹{ADDON_PRICES.ketchup}/ea</span>
-                                </label>
-                                {ketchupEnabled && (
-                                    <div className="addon-qty-controls">
-                                        <button onClick={() => setKetchupQty(Math.max(1, ketchupQty - 1))}>-</button>
-                                        <span>{ketchupQty}</span>
-                                        <button onClick={() => setKetchupQty(ketchupQty + 1)}>+</button>
+                                    <i className={`fas fa-chevron-${expandedSection === 'ketchup' ? 'up' : 'down'}`}></i>
+                                </div>
+                                {expandedSection === 'ketchup' && (
+                                    <div className="dropdown-list">
+                                        <div className="dropdown-item-complex">
+                                            <label className="dropdown-item-header">
+                                                <input type="checkbox" checked={ketchupEnabled} onChange={(e) => setKetchupEnabled(e.target.checked)} />
+                                                <span className="topping-name">Include Ketchup</span>
+                                            </label>
+                                            {ketchupEnabled && (
+                                                <div className="topping-size-selector" style={{ alignItems: 'center', justifyContent: 'center' }}>
+                                                    <div className="addon-qty-controls" style={{ margin: 0, padding: 0, border: 'none' }}>
+                                                        <button onClick={() => setKetchupQty(Math.max(1, ketchupQty - 1))}>-</button>
+                                                        <span style={{ color: 'black' }}>{ketchupQty}</span>
+                                                        <button onClick={() => setKetchupQty(ketchupQty + 1)}>+</button>
+                                                        <span style={{ marginLeft: '10px', fontWeight: 'bold', color: 'var(--primary)' }}>+₹{ketchupQty * ADDON_PRICES.ketchup}</span>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 )}
                             </div>
 
-                            {/* Veg Toppings Dropdown */}
+                            {/* Veg Toppings Accordion */}
                             <div className="addon-card dropdown-card">
                                 <div
                                     className="dropdown-header"
-                                    onClick={() => setShowVegDropdown(!showVegDropdown)}
+                                    onClick={() => setExpandedSection(expandedSection === 'veg' ? null : 'veg')}
                                 >
                                     <div>
                                         <strong>Veg Toppings</strong>
                                         <div className="selected-preview">
-                                            {selectedVegToppings.length > 0
-                                                ? `${selectedVegToppings.length} selected (+₹${selectedVegToppings.length * ADDON_PRICES.veg[selectedSize]})`
-                                                : 'Select Topping Type'
+                                            {Object.keys(selectedVegToppings).length > 0
+                                                ? `${Object.keys(selectedVegToppings).length} selected (+₹${Object.values(selectedVegToppings).reduce((acc, sz) => acc + ADDON_PRICES.veg[sz], 0)})`
+                                                : 'Not Selected'
                                             }
                                         </div>
                                     </div>
-                                    <i className={`fas fa-chevron-${showVegDropdown ? 'up' : 'down'}`}></i>
+                                    <i className={`fas fa-chevron-${expandedSection === 'veg' ? 'up' : 'down'}`}></i>
                                 </div>
 
-                                {showVegDropdown && (
+                                {expandedSection === 'veg' && (
                                     <div className="dropdown-list">
                                         {VEG_TOPPINGS.map(topping => (
-                                            <label key={topping.id} className="dropdown-item">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={selectedVegToppings.includes(topping.id)}
-                                                    onChange={() => handleVegToggle(topping.id)}
-                                                />
-                                                <span className="topping-name">{topping.name}</span>
-                                                <span className="topping-price">+₹{ADDON_PRICES.veg[selectedSize]}</span>
-                                            </label>
+                                            <div key={topping.id} className="dropdown-item-complex">
+                                                <label className="dropdown-item-header">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={!!selectedVegToppings[topping.id]}
+                                                        onChange={() => handleVegToggle(topping.id)}
+                                                    />
+                                                    <span className="topping-name">{topping.name}</span>
+                                                </label>
+                                                {selectedVegToppings[topping.id] && (
+                                                    <div className="topping-size-selector">
+                                                        {['small', 'medium', 'large'].map(sz => (
+                                                            <label key={sz} className="nested-size-radio">
+                                                                <input
+                                                                    type="radio"
+                                                                    name={`size-${topping.id}`}
+                                                                    checked={selectedVegToppings[topping.id] === sz}
+                                                                    onChange={() => handleVegSizeChange(topping.id, sz)}
+                                                                />
+                                                                <span>{sz.charAt(0).toUpperCase()} (+₹{ADDON_PRICES.veg[sz]})</span>
+                                                            </label>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
                                         ))}
                                     </div>
                                 )}
                             </div>
 
-                            {/* Extra Cheese toggle */}
-                            <div className="addon-card">
-                                <label className="addon-checkbox-label toggle-style">
-                                    <div className="addon-info">
+                            {/* Extra Cheese */}
+                            <div className="addon-card dropdown-card">
+                                <div className="dropdown-header" onClick={() => setExpandedSection(expandedSection === 'cheese' ? null : 'cheese')}>
+                                    <div>
                                         <strong>Extra Cheese Topping</strong>
-                                    </div>
-                                    <div className="addon-toggle-right">
-                                        <span className="addon-price-tag">+₹{ADDON_PRICES.cheese[selectedSize]}</span>
-                                        <div className="toggle-switch">
-                                            <input type="checkbox" checked={extraCheese} onChange={e => setExtraCheese(e.target.checked)} />
-                                            <span className="slider round"></span>
+                                        <div className="selected-preview">
+                                            {extraCheese ? `Selected (${extraCheese.charAt(0).toUpperCase()}) +₹${ADDON_PRICES.cheese[extraCheese]}` : 'Not Selected'}
                                         </div>
                                     </div>
-                                </label>
+                                    <i className={`fas fa-chevron-${expandedSection === 'cheese' ? 'up' : 'down'}`}></i>
+                                </div>
+                                {expandedSection === 'cheese' && (
+                                    <div className="dropdown-list">
+                                        <div className="dropdown-item-complex">
+                                            <label className="dropdown-item-header">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={!!extraCheese}
+                                                    onChange={(e) => setExtraCheese(e.target.checked ? selectedSize : null)}
+                                                />
+                                                <span className="topping-name">Add Extra Cheese</span>
+                                            </label>
+                                            {extraCheese && (
+                                                <div className="topping-size-selector">
+                                                    {['small', 'medium', 'large'].map(sz => (
+                                                        <label key={sz} className="nested-size-radio">
+                                                            <input
+                                                                type="radio"
+                                                                name="cheese-size"
+                                                                checked={extraCheese === sz}
+                                                                onChange={() => setExtraCheese(sz)}
+                                                            />
+                                                            <span>{sz.charAt(0).toUpperCase()} (+₹{ADDON_PRICES.cheese[sz]})</span>
+                                                        </label>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
 
-                            {/* Cheese Burst Crust toggle */}
-                            <div className="addon-card">
-                                <label className="addon-checkbox-label toggle-style">
-                                    <div className="addon-info">
+                            {/* Cheese Burst Crust */}
+                            <div className="addon-card dropdown-card">
+                                <div className="dropdown-header" onClick={() => setExpandedSection(expandedSection === 'burst' ? null : 'burst')}>
+                                    <div>
                                         <strong>Cheese Burst Crust</strong>
-                                    </div>
-                                    <div className="addon-toggle-right">
-                                        <span className="addon-price-tag">+₹{ADDON_PRICES.burst[selectedSize]}</span>
-                                        <div className="toggle-radio">
-                                            <input type="radio" checked={cheeseBurst} onChange={() => setCheeseBurst(!cheeseBurst)} onClick={() => setCheeseBurst(!cheeseBurst)} />
-                                            <span className="radio-circle"></span>
+                                        <div className="selected-preview">
+                                            {cheeseBurst ? `Selected (${cheeseBurst.charAt(0).toUpperCase()}) +₹${ADDON_PRICES.burst[cheeseBurst]}` : 'Not Selected'}
                                         </div>
                                     </div>
-                                </label>
+                                    <i className={`fas fa-chevron-${expandedSection === 'burst' ? 'up' : 'down'}`}></i>
+                                </div>
+                                {expandedSection === 'burst' && (
+                                    <div className="dropdown-list">
+                                        <div className="dropdown-item-complex">
+                                            <label className="dropdown-item-header">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={!!cheeseBurst}
+                                                    onChange={(e) => setCheeseBurst(e.target.checked ? selectedSize : null)}
+                                                />
+                                                <span className="topping-name">Add Cheese Burst Crust</span>
+                                            </label>
+                                            {cheeseBurst && (
+                                                <div className="topping-size-selector">
+                                                    {['small', 'medium', 'large'].map(sz => (
+                                                        <label key={sz} className="nested-size-radio">
+                                                            <input
+                                                                type="radio"
+                                                                name="burst-size"
+                                                                checked={cheeseBurst === sz}
+                                                                onChange={() => setCheeseBurst(sz)}
+                                                            />
+                                                            <span>{sz.charAt(0).toUpperCase()} (+₹{ADDON_PRICES.burst[sz]})</span>
+                                                        </label>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
 
                         </div>

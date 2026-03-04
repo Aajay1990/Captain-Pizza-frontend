@@ -44,12 +44,12 @@ const POSPanel = () => {
     const [itemQuantity, setItemQuantity] = useState(1);
 
     // Add-on State (Matching User Menu)
-    const [selectedVegToppings, setSelectedVegToppings] = useState([]);
-    const [showVegDropdown, setShowVegDropdown] = useState(false);
-    const [extraCheese, setExtraCheese] = useState(false);
-    const [cheeseBurst, setCheeseBurst] = useState(false);
+    const [selectedVegToppings, setSelectedVegToppings] = useState({});
+    const [extraCheese, setExtraCheese] = useState(null);
+    const [cheeseBurst, setCheeseBurst] = useState(null);
     const [ketchupEnabled, setKetchupEnabled] = useState(false);
     const [ketchupQty, setKetchupQty] = useState(1);
+    const [expandedSection, setExpandedSection] = useState('veg');
 
     const VEG_TOPPINGS = [
         { id: 'tomato', name: 'Tomato' },
@@ -261,12 +261,12 @@ const POSPanel = () => {
             setItemQuantity(1);
 
             // Reset addons
-            setSelectedVegToppings([]);
-            setShowVegDropdown(false);
-            setExtraCheese(false);
-            setCheeseBurst(false);
+            setSelectedVegToppings({});
+            setExtraCheese(null);
+            setCheeseBurst(null);
             setKetchupEnabled(false);
             setKetchupQty(1);
+            setExpandedSection('veg');
         } else {
             // Direct Add
             const newItem = {
@@ -290,19 +290,26 @@ const POSPanel = () => {
         const formattedToppings = [];
 
         if (selectedItem.category === 'pizza') {
-            addonsPrice += selectedVegToppings.length * ADDON_PRICES.veg[selectedSize];
-            if (extraCheese) addonsPrice += ADDON_PRICES.cheese[selectedSize];
-            if (cheeseBurst) addonsPrice += ADDON_PRICES.burst[selectedSize];
-            if (ketchupEnabled) addonsPrice += (ketchupQty * ADDON_PRICES.ketchup);
-
-            selectedVegToppings.forEach(id => {
-                const toppingName = VEG_TOPPINGS.find(t => t.id === id)?.name;
-                if (toppingName) formattedToppings.push(toppingName);
+            Object.entries(selectedVegToppings).forEach(([id, size]) => {
+                const name = VEG_TOPPINGS.find(t => t.id === id)?.name;
+                if (name) {
+                    addonsPrice += ADDON_PRICES.veg[size];
+                    formattedToppings.push(`${name} (${size.charAt(0).toUpperCase()})`);
+                }
             });
 
-            if (extraCheese) formattedToppings.push('Extra Cheese');
-            if (cheeseBurst) formattedToppings.push('Cheese Burst Crust');
-            if (ketchupEnabled) formattedToppings.push(`Ketchup Packets (x${ketchupQty})`);
+            if (extraCheese) {
+                addonsPrice += ADDON_PRICES.cheese[extraCheese];
+                formattedToppings.push(`Extra Cheese (${extraCheese.charAt(0).toUpperCase()})`);
+            }
+            if (cheeseBurst) {
+                addonsPrice += ADDON_PRICES.burst[cheeseBurst];
+                formattedToppings.push(`Cheese Burst (${cheeseBurst.charAt(0).toUpperCase()})`);
+            }
+            if (ketchupEnabled) {
+                addonsPrice += (ketchupQty * ADDON_PRICES.ketchup);
+                formattedToppings.push(`Ketchup (x${ketchupQty})`);
+            }
         }
 
         const finalItemPrice = basePrice + addonsPrice;
@@ -321,11 +328,22 @@ const POSPanel = () => {
     };
 
     const handleVegToggle = (id) => {
-        if (selectedVegToppings.includes(id)) {
-            setSelectedVegToppings(selectedVegToppings.filter(t => t !== id));
-        } else {
-            setSelectedVegToppings([...selectedVegToppings, id]);
-        }
+        setSelectedVegToppings(prev => {
+            const next = { ...prev };
+            if (next[id]) {
+                delete next[id]; // unselect
+            } else {
+                next[id] = selectedSize; // default to pizza size
+            }
+            return next;
+        });
+    };
+
+    const handleVegSizeChange = (id, size) => {
+        setSelectedVegToppings(prev => ({
+            ...prev,
+            [id]: size
+        }));
     };
 
     const calculateModalTotal = () => {
@@ -334,9 +352,11 @@ const POSPanel = () => {
         let addonsPrice = 0;
 
         if (selectedItem.category === 'pizza') {
-            addonsPrice += selectedVegToppings.length * ADDON_PRICES.veg[selectedSize];
-            if (extraCheese) addonsPrice += ADDON_PRICES.cheese[selectedSize];
-            if (cheeseBurst) addonsPrice += ADDON_PRICES.burst[selectedSize];
+            Object.values(selectedVegToppings).forEach(size => {
+                addonsPrice += ADDON_PRICES.veg[size];
+            });
+            if (extraCheese) addonsPrice += ADDON_PRICES.cheese[extraCheese];
+            if (cheeseBurst) addonsPrice += ADDON_PRICES.burst[cheeseBurst];
             if (ketchupEnabled) addonsPrice += (ketchupQty * ADDON_PRICES.ketchup);
         }
 
@@ -570,89 +590,171 @@ const POSPanel = () => {
                                 <label style={{ display: 'block', marginBottom: '10px', fontWeight: 'bold' }}>2. Pizza Add-Ons:</label>
 
                                 {/* Ketchup Add-On */}
-                                <div className="addon-card">
-                                    <label className="addon-checkbox-label">
-                                        <div className="addon-info">
-                                            <input type="checkbox" checked={ketchupEnabled} onChange={(e) => setKetchupEnabled(e.target.checked)} />
-                                            <span className="custom-checkbox"></span>
+                                <div className="addon-card dropdown-card">
+                                    <div className="dropdown-header" onClick={() => setExpandedSection(expandedSection === 'ketchup' ? null : 'ketchup')}>
+                                        <div>
                                             <strong>Ketchup Packets</strong>
+                                            <div className="selected-preview">
+                                                {ketchupEnabled ? `Selected (x${ketchupQty}) +₹${ketchupQty * ADDON_PRICES.ketchup}` : 'Not Selected'}
+                                            </div>
                                         </div>
-                                        <span className="addon-price-tag">+₹{ADDON_PRICES.ketchup}/ea</span>
-                                    </label>
-                                    {ketchupEnabled && (
-                                        <div className="addon-qty-controls">
-                                            <button onClick={() => setKetchupQty(Math.max(1, ketchupQty - 1))}>-</button>
-                                            <span>{ketchupQty}</span>
-                                            <button onClick={() => setKetchupQty(ketchupQty + 1)}>+</button>
+                                        <i className={`fas fa-chevron-${expandedSection === 'ketchup' ? 'up' : 'down'}`}></i>
+                                    </div>
+                                    {expandedSection === 'ketchup' && (
+                                        <div className="dropdown-list">
+                                            <div className="dropdown-item-complex">
+                                                <label className="dropdown-item-header">
+                                                    <input type="checkbox" checked={ketchupEnabled} onChange={(e) => setKetchupEnabled(e.target.checked)} />
+                                                    <span className="topping-name">Include Ketchup</span>
+                                                </label>
+                                                {ketchupEnabled && (
+                                                    <div className="topping-size-selector" style={{ alignItems: 'center', justifyContent: 'center' }}>
+                                                        <div className="addon-qty-controls" style={{ margin: 0, padding: 0, border: 'none' }}>
+                                                            <button onClick={() => setKetchupQty(Math.max(1, ketchupQty - 1))}>-</button>
+                                                            <span style={{ color: 'black' }}>{ketchupQty}</span>
+                                                            <button onClick={() => setKetchupQty(ketchupQty + 1)}>+</button>
+                                                            <span style={{ marginLeft: '10px', fontWeight: 'bold', color: 'var(--pos-primary)' }}>+₹{ketchupQty * ADDON_PRICES.ketchup}</span>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
                                     )}
                                 </div>
 
-                                {/* Veg Toppings Dropdown */}
+                                {/* Veg Toppings Accordion */}
                                 <div className="addon-card dropdown-card">
                                     <div
                                         className="dropdown-header"
-                                        onClick={() => setShowVegDropdown(!showVegDropdown)}
+                                        onClick={() => setExpandedSection(expandedSection === 'veg' ? null : 'veg')}
                                     >
                                         <div>
                                             <strong>Veg Toppings</strong>
                                             <div className="selected-preview">
-                                                {selectedVegToppings.length > 0
-                                                    ? `${selectedVegToppings.length} selected (+₹${selectedVegToppings.length * ADDON_PRICES.veg[selectedSize]})`
-                                                    : 'Select Topping Type'
+                                                {Object.keys(selectedVegToppings).length > 0
+                                                    ? `${Object.keys(selectedVegToppings).length} selected (+₹${Object.values(selectedVegToppings).reduce((acc, sz) => acc + ADDON_PRICES.veg[sz], 0)})`
+                                                    : 'Not Selected'
                                                 }
                                             </div>
                                         </div>
-                                        <i className={`fas fa-chevron-${showVegDropdown ? 'up' : 'down'}`}></i>
+                                        <i className={`fas fa-chevron-${expandedSection === 'veg' ? 'up' : 'down'}`}></i>
                                     </div>
 
-                                    {showVegDropdown && (
+                                    {expandedSection === 'veg' && (
                                         <div className="dropdown-list">
                                             {VEG_TOPPINGS.map(topping => (
-                                                <label key={topping.id} className="dropdown-item">
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={selectedVegToppings.includes(topping.id)}
-                                                        onChange={() => handleVegToggle(topping.id)}
-                                                    />
-                                                    <span className="topping-name">{topping.name}</span>
-                                                    <span className="topping-price">+₹{ADDON_PRICES.veg[selectedSize]}</span>
-                                                </label>
+                                                <div key={topping.id} className="dropdown-item-complex">
+                                                    <label className="dropdown-item-header">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={!!selectedVegToppings[topping.id]}
+                                                            onChange={() => handleVegToggle(topping.id)}
+                                                        />
+                                                        <span className="topping-name">{topping.name}</span>
+                                                    </label>
+                                                    {selectedVegToppings[topping.id] && (
+                                                        <div className="topping-size-selector">
+                                                            {['small', 'medium', 'large'].map(sz => (
+                                                                <label key={sz} className="nested-size-radio">
+                                                                    <input
+                                                                        type="radio"
+                                                                        name={`size-${topping.id}`}
+                                                                        checked={selectedVegToppings[topping.id] === sz}
+                                                                        onChange={() => handleVegSizeChange(topping.id, sz)}
+                                                                    />
+                                                                    <span>{sz.charAt(0).toUpperCase()} (+₹{ADDON_PRICES.veg[sz]})</span>
+                                                                </label>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </div>
                                             ))}
                                         </div>
                                     )}
                                 </div>
 
-                                {/* Extra Cheese toggle */}
-                                <div className="addon-card">
-                                    <label className="addon-checkbox-label toggle-style">
-                                        <div className="addon-info">
+                                {/* Extra Cheese */}
+                                <div className="addon-card dropdown-card">
+                                    <div className="dropdown-header" onClick={() => setExpandedSection(expandedSection === 'cheese' ? null : 'cheese')}>
+                                        <div>
                                             <strong>Extra Cheese Topping</strong>
-                                        </div>
-                                        <div className="addon-toggle-right">
-                                            <span className="addon-price-tag">+₹{ADDON_PRICES.cheese[selectedSize]}</span>
-                                            <div className="toggle-switch">
-                                                <input type="checkbox" checked={extraCheese} onChange={e => setExtraCheese(e.target.checked)} />
-                                                <span className="slider round"></span>
+                                            <div className="selected-preview">
+                                                {extraCheese ? `Selected (${extraCheese.charAt(0).toUpperCase()}) +₹${ADDON_PRICES.cheese[extraCheese]}` : 'Not Selected'}
                                             </div>
                                         </div>
-                                    </label>
+                                        <i className={`fas fa-chevron-${expandedSection === 'cheese' ? 'up' : 'down'}`}></i>
+                                    </div>
+                                    {expandedSection === 'cheese' && (
+                                        <div className="dropdown-list">
+                                            <div className="dropdown-item-complex">
+                                                <label className="dropdown-item-header">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={!!extraCheese}
+                                                        onChange={(e) => setExtraCheese(e.target.checked ? selectedSize : null)}
+                                                    />
+                                                    <span className="topping-name">Add Extra Cheese</span>
+                                                </label>
+                                                {extraCheese && (
+                                                    <div className="topping-size-selector">
+                                                        {['small', 'medium', 'large'].map(sz => (
+                                                            <label key={sz} className="nested-size-radio">
+                                                                <input
+                                                                    type="radio"
+                                                                    name="cheese-size"
+                                                                    checked={extraCheese === sz}
+                                                                    onChange={() => setExtraCheese(sz)}
+                                                                />
+                                                                <span>{sz.charAt(0).toUpperCase()} (+₹{ADDON_PRICES.cheese[sz]})</span>
+                                                            </label>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
 
-                                {/* Cheese Burst Crust toggle */}
-                                <div className="addon-card">
-                                    <label className="addon-checkbox-label toggle-style">
-                                        <div className="addon-info">
+                                {/* Cheese Burst Crust */}
+                                <div className="addon-card dropdown-card">
+                                    <div className="dropdown-header" onClick={() => setExpandedSection(expandedSection === 'burst' ? null : 'burst')}>
+                                        <div>
                                             <strong>Cheese Burst Crust</strong>
-                                        </div>
-                                        <div className="addon-toggle-right">
-                                            <span className="addon-price-tag">+₹{ADDON_PRICES.burst[selectedSize]}</span>
-                                            <div className="toggle-radio">
-                                                <input type="radio" checked={cheeseBurst} onChange={() => setCheeseBurst(!cheeseBurst)} onClick={() => setCheeseBurst(!cheeseBurst)} />
-                                                <span className="radio-circle"></span>
+                                            <div className="selected-preview">
+                                                {cheeseBurst ? `Selected (${cheeseBurst.charAt(0).toUpperCase()}) +₹${ADDON_PRICES.burst[cheeseBurst]}` : 'Not Selected'}
                                             </div>
                                         </div>
-                                    </label>
+                                        <i className={`fas fa-chevron-${expandedSection === 'burst' ? 'up' : 'down'}`}></i>
+                                    </div>
+                                    {expandedSection === 'burst' && (
+                                        <div className="dropdown-list">
+                                            <div className="dropdown-item-complex">
+                                                <label className="dropdown-item-header">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={!!cheeseBurst}
+                                                        onChange={(e) => setCheeseBurst(e.target.checked ? selectedSize : null)}
+                                                    />
+                                                    <span className="topping-name">Add Cheese Burst Crust</span>
+                                                </label>
+                                                {cheeseBurst && (
+                                                    <div className="topping-size-selector">
+                                                        {['small', 'medium', 'large'].map(sz => (
+                                                            <label key={sz} className="nested-size-radio">
+                                                                <input
+                                                                    type="radio"
+                                                                    name="burst-size"
+                                                                    checked={cheeseBurst === sz}
+                                                                    onChange={() => setCheeseBurst(sz)}
+                                                                />
+                                                                <span>{sz.charAt(0).toUpperCase()} (+₹{ADDON_PRICES.burst[sz]})</span>
+                                                            </label>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 

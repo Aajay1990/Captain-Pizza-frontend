@@ -24,22 +24,7 @@
   --nav-muted: #FFFFFF;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg-dark: #121212;
-    /* Pure dark background */
-    --bg-card: #1E1E1E;
-    /* Darker grey for cards */
-    --text-main: #F0F0F0;
-    /* White text */
-    --text-muted: #AAAAAA;
-    /* Lighter grey muted text */
-    --nav-bg: #111111;
-    /* Dark navbar for dark mode */
-    --nav-text: #FDFDFD;
-    --nav-muted: #C4C9D4;
-  }
-}
+
 
 :root {
   --shadow-sm: 0 4px 6px rgba(0, 0, 0, 0.05);

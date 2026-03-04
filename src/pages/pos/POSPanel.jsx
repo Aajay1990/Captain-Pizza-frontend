@@ -40,22 +40,30 @@ const POSPanel = () => {
 
     // Modal state for Customization
     const [selectedItem, setSelectedItem] = useState(null);
-    const [selectedSize, setSelectedSize] = useState('regular');
+    const [selectedSize, setSelectedSize] = useState('medium');
     const [itemQuantity, setItemQuantity] = useState(1);
-    const [selectedToppings, setSelectedToppings] = useState([]);
-    const [toppingCategory, setToppingCategory] = useState(null);
 
-    const TOPPINGS_CONFIG = [
-        { id: 'tomato', name: 'Tomato', prices: { small: 25, medium: 35, large: 45 } },
-        { id: 'corn', name: 'Sweet Corn', prices: { small: 25, medium: 35, large: 45 } },
-        { id: 'onion', name: 'Onion', prices: { small: 25, medium: 35, large: 45 } },
-        { id: 'capsicum', name: 'Capsicum', prices: { small: 25, medium: 35, large: 45 } }
+    // Add-on State (Matching User Menu)
+    const [selectedVegToppings, setSelectedVegToppings] = useState([]);
+    const [showVegDropdown, setShowVegDropdown] = useState(false);
+    const [extraCheese, setExtraCheese] = useState(false);
+    const [cheeseBurst, setCheeseBurst] = useState(false);
+    const [ketchupEnabled, setKetchupEnabled] = useState(false);
+    const [ketchupQty, setKetchupQty] = useState(1);
+
+    const VEG_TOPPINGS = [
+        { id: 'tomato', name: 'Tomato' },
+        { id: 'onion', name: 'Onion' },
+        { id: 'corn', name: 'Sweet Corn' },
+        { id: 'capsicum', name: 'Capsicum' }
     ];
 
-    const EXTRA_ADDONS = [
-        { id: 'cheese', name: 'Extra Cheese Topping', prices: { small: 40, medium: 60, large: 90 } },
-        { id: 'burst', name: 'Cheese Burst', prices: { small: 50, medium: 60, large: 90 } }
-    ];
+    const ADDON_PRICES = {
+        veg: { small: 25, medium: 35, large: 45 },
+        cheese: { small: 40, medium: 60, large: 90 },
+        burst: { small: 50, medium: 60, large: 90 },
+        ketchup: 1
+    };
 
     const handleCategoryClick = (cat) => {
         setActiveCategory(cat);
@@ -251,8 +259,14 @@ const POSPanel = () => {
             setSelectedItem(item);
             setSelectedSize('medium'); // Default
             setItemQuantity(1);
-            setSelectedToppings([]);
-            setToppingCategory('Veg Topping');
+
+            // Reset addons
+            setSelectedVegToppings([]);
+            setShowVegDropdown(false);
+            setExtraCheese(false);
+            setCheeseBurst(false);
+            setKetchupEnabled(false);
+            setKetchupQty(1);
         } else {
             // Direct Add
             const newItem = {
@@ -272,16 +286,26 @@ const POSPanel = () => {
         if (!selectedItem) return;
         let basePrice = selectedItem.prices ? selectedItem.prices[selectedSize] : selectedItem.price;
 
-        let toppingsPrice = 0;
-        const allAddons = [...TOPPINGS_CONFIG, ...EXTRA_ADDONS];
-        selectedToppings.forEach(tId => {
-            const config = allAddons.find(c => c.id === tId);
-            if (config && config.prices[selectedSize]) {
-                toppingsPrice += config.prices[selectedSize];
-            }
-        });
+        let addonsPrice = 0;
+        const formattedToppings = [];
 
-        const finalItemPrice = basePrice + toppingsPrice;
+        if (selectedItem.category === 'pizza') {
+            addonsPrice += selectedVegToppings.length * ADDON_PRICES.veg[selectedSize];
+            if (extraCheese) addonsPrice += ADDON_PRICES.cheese[selectedSize];
+            if (cheeseBurst) addonsPrice += ADDON_PRICES.burst[selectedSize];
+            if (ketchupEnabled) addonsPrice += (ketchupQty * ADDON_PRICES.ketchup);
+
+            selectedVegToppings.forEach(id => {
+                const toppingName = VEG_TOPPINGS.find(t => t.id === id)?.name;
+                if (toppingName) formattedToppings.push(toppingName);
+            });
+
+            if (extraCheese) formattedToppings.push('Extra Cheese');
+            if (cheeseBurst) formattedToppings.push('Cheese Burst Crust');
+            if (ketchupEnabled) formattedToppings.push(`Ketchup Packets (x${ketchupQty})`);
+        }
+
+        const finalItemPrice = basePrice + addonsPrice;
 
         const newItem = {
             id: Date.now().toString(),
@@ -290,18 +314,33 @@ const POSPanel = () => {
             price: finalItemPrice,
             quantity: itemQuantity,
             size: selectedSize,
-            toppings: selectedToppings.map(tId => allAddons.find(c => c.id === tId)?.name).filter(Boolean)
+            toppings: formattedToppings
         };
         setCart([...cart, newItem]);
         setSelectedItem(null);
     };
 
-    const toggleTopping = (tId) => {
-        if (selectedToppings.includes(tId)) {
-            setSelectedToppings(selectedToppings.filter(id => id !== tId));
+    const handleVegToggle = (id) => {
+        if (selectedVegToppings.includes(id)) {
+            setSelectedVegToppings(selectedVegToppings.filter(t => t !== id));
         } else {
-            setSelectedToppings([...selectedToppings, tId]);
+            setSelectedVegToppings([...selectedVegToppings, id]);
         }
+    };
+
+    const calculateModalTotal = () => {
+        if (!selectedItem) return 0;
+        let basePrice = selectedItem.prices ? selectedItem.prices[selectedSize] : selectedItem.price;
+        let addonsPrice = 0;
+
+        if (selectedItem.category === 'pizza') {
+            addonsPrice += selectedVegToppings.length * ADDON_PRICES.veg[selectedSize];
+            if (extraCheese) addonsPrice += ADDON_PRICES.cheese[selectedSize];
+            if (cheeseBurst) addonsPrice += ADDON_PRICES.burst[selectedSize];
+            if (ketchupEnabled) addonsPrice += (ketchupQty * ADDON_PRICES.ketchup);
+        }
+
+        return (basePrice + addonsPrice) * itemQuantity;
     };
 
     const incrementQuantity = (cartId) => {
@@ -527,111 +566,93 @@ const POSPanel = () => {
                                 </div>
                             </div>
 
-                            <div className="pos-modal-section" style={{ marginTop: '25px' }}>
-                                <label style={{ display: 'block', marginBottom: '10px', fontWeight: 'bold' }}>2. Topping Category:</label>
-                                <div className="topping-category-switcher" style={{ display: 'flex', gap: '5px', marginBottom: '15px', borderBottom: '1px solid #eee' }}>
-                                    {['Veg Topping', 'Extra Cheese Topping', 'Cheese Burst'].map(cat => (
-                                        <button
-                                            key={cat}
-                                            onClick={() => setToppingCategory(cat)}
-                                            style={{
-                                                flex: 1,
-                                                padding: '12px 5px',
-                                                border: 'none',
-                                                background: (toppingCategory === cat || (!toppingCategory && cat === 'Veg Topping')) ? 'var(--pos-primary)' : 'transparent',
-                                                color: (toppingCategory === cat || (!toppingCategory && cat === 'Veg Topping')) ? 'white' : '#444',
-                                                cursor: 'pointer',
-                                                borderRadius: '5px 5px 0 0',
-                                                fontWeight: 'bold',
-                                                transition: 'all 0.2s'
-                                            }}
-                                        >
-                                            {cat === 'Veg Topping' ? 'VEG' : cat === 'Extra Cheese Topping' ? 'CHEESE' : 'BURST'}
-                                        </button>
-                                    ))}
+                            <div className="pos-modal-section addon-system" style={{ marginTop: '25px' }}>
+                                <label style={{ display: 'block', marginBottom: '10px', fontWeight: 'bold' }}>2. Pizza Add-Ons:</label>
+
+                                {/* Ketchup Add-On */}
+                                <div className="addon-card">
+                                    <label className="addon-checkbox-label">
+                                        <div className="addon-info">
+                                            <input type="checkbox" checked={ketchupEnabled} onChange={(e) => setKetchupEnabled(e.target.checked)} />
+                                            <span className="custom-checkbox"></span>
+                                            <strong>Ketchup Packets</strong>
+                                        </div>
+                                        <span className="addon-price-tag">+₹{ADDON_PRICES.ketchup}/ea</span>
+                                    </label>
+                                    {ketchupEnabled && (
+                                        <div className="addon-qty-controls">
+                                            <button onClick={() => setKetchupQty(Math.max(1, ketchupQty - 1))}>-</button>
+                                            <span>{ketchupQty}</span>
+                                            <button onClick={() => setKetchupQty(ketchupQty + 1)}>+</button>
+                                        </div>
+                                    )}
                                 </div>
 
-                                <div className="cat-toppings-content" style={{ minHeight: '120px', padding: '10px', background: '#f9f9f9', borderRadius: '8px' }}>
-                                    {(toppingCategory === 'Veg Topping' || !toppingCategory) && (
-                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }}>
-                                            {TOPPINGS_CONFIG.map(t => (
-                                                <div
-                                                    key={t.id}
-                                                    className={`topping-option ${selectedToppings.includes(t.id) ? 'active' : ''}`}
-                                                    onClick={() => toggleTopping(t.id)}
-                                                    style={{
-                                                        padding: '12px',
-                                                        border: `1px solid ${selectedToppings.includes(t.id) ? '#4caf50' : '#ddd'}`,
-                                                        borderRadius: '8px',
-                                                        display: 'flex',
-                                                        justifyContent: 'space-between',
-                                                        alignItems: 'center',
-                                                        cursor: 'pointer',
-                                                        background: selectedToppings.includes(t.id) ? '#f1f8e9' : '#fff'
-                                                    }}
-                                                >
-                                                    <span style={{ fontWeight: 'bold' }}>{t.name}</span>
-                                                    <span style={{ color: 'var(--pos-primary)' }}>+₹{t.prices[selectedSize]}</span>
-                                                </div>
-                                            ))}
+                                {/* Veg Toppings Dropdown */}
+                                <div className="addon-card dropdown-card">
+                                    <div
+                                        className="dropdown-header"
+                                        onClick={() => setShowVegDropdown(!showVegDropdown)}
+                                    >
+                                        <div>
+                                            <strong>Veg Toppings</strong>
+                                            <div className="selected-preview">
+                                                {selectedVegToppings.length > 0
+                                                    ? `${selectedVegToppings.length} selected (+₹${selectedVegToppings.length * ADDON_PRICES.veg[selectedSize]})`
+                                                    : 'Select Topping Type'
+                                                }
+                                            </div>
                                         </div>
-                                    )}
+                                        <i className={`fas fa-chevron-${showVegDropdown ? 'up' : 'down'}`}></i>
+                                    </div>
 
-                                    {toppingCategory === 'Extra Cheese Topping' && (
-                                        <div style={{ padding: '10px' }}>
-                                            {EXTRA_ADDONS.filter(t => t.id === 'cheese').map(t => (
-                                                <div
-                                                    key={t.id}
-                                                    className={`topping-option-large ${selectedToppings.includes(t.id) ? 'active' : ''}`}
-                                                    onClick={() => toggleTopping(t.id)}
-                                                    style={{
-                                                        padding: '20px',
-                                                        border: `2px solid ${selectedToppings.includes(t.id) ? '#ff9800' : '#ddd'}`,
-                                                        borderRadius: '10px',
-                                                        display: 'flex',
-                                                        justifyContent: 'space-between',
-                                                        alignItems: 'center',
-                                                        cursor: 'pointer',
-                                                        background: selectedToppings.includes(t.id) ? '#fff3e0' : '#fff'
-                                                    }}
-                                                >
-                                                    <div>
-                                                        <div style={{ fontWeight: 'bold', fontSize: '1.2rem' }}>{t.name}</div>
-                                                        <div style={{ fontSize: '0.9rem', color: '#666' }}>Add extra layer of gooey cheese</div>
-                                                    </div>
-                                                    <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--pos-primary)' }}>+₹{t.prices[selectedSize]}</div>
-                                                </div>
+                                    {showVegDropdown && (
+                                        <div className="dropdown-list">
+                                            {VEG_TOPPINGS.map(topping => (
+                                                <label key={topping.id} className="dropdown-item">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={selectedVegToppings.includes(topping.id)}
+                                                        onChange={() => handleVegToggle(topping.id)}
+                                                    />
+                                                    <span className="topping-name">{topping.name}</span>
+                                                    <span className="topping-price">+₹{ADDON_PRICES.veg[selectedSize]}</span>
+                                                </label>
                                             ))}
                                         </div>
                                     )}
+                                </div>
 
-                                    {toppingCategory === 'Cheese Burst' && (
-                                        <div style={{ padding: '10px' }}>
-                                            {EXTRA_ADDONS.filter(t => t.id === 'burst').map(t => (
-                                                <div
-                                                    key={t.id}
-                                                    className={`topping-option-large ${selectedToppings.includes(t.id) ? 'active' : ''}`}
-                                                    onClick={() => toggleTopping(t.id)}
-                                                    style={{
-                                                        padding: '20px',
-                                                        border: `2px solid ${selectedToppings.includes(t.id) ? '#2196f3' : '#ddd'}`,
-                                                        borderRadius: '10px',
-                                                        display: 'flex',
-                                                        justifyContent: 'space-between',
-                                                        alignItems: 'center',
-                                                        cursor: 'pointer',
-                                                        background: selectedToppings.includes(t.id) ? '#e3f2fd' : '#fff'
-                                                    }}
-                                                >
-                                                    <div>
-                                                        <div style={{ fontWeight: 'bold', fontSize: '1.2rem' }}>{t.name}</div>
-                                                        <div style={{ fontSize: '0.9rem', color: '#666' }}>Liquid cheese stuffed inside the crust</div>
-                                                    </div>
-                                                    <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--pos-primary)' }}>+₹{t.prices[selectedSize]}</div>
-                                                </div>
-                                            ))}
+                                {/* Extra Cheese toggle */}
+                                <div className="addon-card">
+                                    <label className="addon-checkbox-label toggle-style">
+                                        <div className="addon-info">
+                                            <strong>Extra Cheese Topping</strong>
                                         </div>
-                                    )}
+                                        <div className="addon-toggle-right">
+                                            <span className="addon-price-tag">+₹{ADDON_PRICES.cheese[selectedSize]}</span>
+                                            <div className="toggle-switch">
+                                                <input type="checkbox" checked={extraCheese} onChange={e => setExtraCheese(e.target.checked)} />
+                                                <span className="slider round"></span>
+                                            </div>
+                                        </div>
+                                    </label>
+                                </div>
+
+                                {/* Cheese Burst Crust toggle */}
+                                <div className="addon-card">
+                                    <label className="addon-checkbox-label toggle-style">
+                                        <div className="addon-info">
+                                            <strong>Cheese Burst Crust</strong>
+                                        </div>
+                                        <div className="addon-toggle-right">
+                                            <span className="addon-price-tag">+₹{ADDON_PRICES.burst[selectedSize]}</span>
+                                            <div className="toggle-radio">
+                                                <input type="radio" checked={cheeseBurst} onChange={() => setCheeseBurst(!cheeseBurst)} onClick={() => setCheeseBurst(!cheeseBurst)} />
+                                                <span className="radio-circle"></span>
+                                            </div>
+                                        </div>
+                                    </label>
                                 </div>
                             </div>
 
@@ -648,7 +669,7 @@ const POSPanel = () => {
                         <div className="pos-modal-actions" style={{ borderTop: '1px solid #eee', paddingTop: '20px', display: 'flex', flexDirection: 'column', gap: '15px' }}>
                             <div className="modal-total-preview" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.2rem', fontWeight: 'bold' }}>
                                 <span>Grand Total:</span>
-                                <span>₹{((selectedItem.prices ? selectedItem.prices[selectedSize] : selectedItem.price) + selectedToppings.reduce((acc, tId) => acc + ([...TOPPINGS_CONFIG, ...EXTRA_ADDONS].find(c => c.id === tId)?.prices[selectedSize] || 0), 0)) * itemQuantity}</span>
+                                <span>₹{calculateModalTotal()}</span>
                             </div>
                             <div className="action-btns" style={{ display: 'flex', gap: '10px' }}>
                                 <button className="btn-cancel" onClick={() => setSelectedItem(null)} style={{ flex: 1, padding: '15px', border: '1px solid #ccc', borderRadius: '8px', background: '#fff', fontSize: '1.1rem', cursor: 'pointer' }}>Go Back</button>

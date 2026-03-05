@@ -682,84 +682,89 @@ const POSPanel = () => {
                             <div className="pos-modal-section addon-system" style={{ marginTop: '25px' }}>
                                 <label style={{ display: 'block', marginBottom: '10px', fontWeight: 'bold' }}>2. Pizza Add-Ons:</label>
 
-                                {/* Ketchup Add-On */}
+                                {/* Ketchup Add-On — Direct Qty Stepper */}
                                 <div className="addon-card dropdown-card">
                                     <div className="dropdown-header" onClick={() => setExpandedSection(expandedSection === 'ketchup' ? null : 'ketchup')}>
                                         <div>
-                                            <strong>Ketchup Packets</strong>
+                                            <strong>🍅 Ketchup Packets</strong>
                                             <div className="selected-preview">
-                                                {ketchupEnabled ? `Selected (x${ketchupQty}) +₹${ketchupQty * ADDON_PRICES.ketchup}` : 'Not Selected'}
+                                                {ketchupEnabled ? `x${ketchupQty} +₹${ketchupQty * ADDON_PRICES.ketchup}` : 'Not Added'}
                                             </div>
                                         </div>
                                         <i className={`fas fa-chevron-${expandedSection === 'ketchup' ? 'up' : 'down'}`}></i>
                                     </div>
                                     {expandedSection === 'ketchup' && (
                                         <div className="dropdown-list">
-                                            <div className="dropdown-item-complex">
-                                                <label className="dropdown-item-header">
-                                                    <input type="checkbox" checked={ketchupEnabled} onChange={(e) => setKetchupEnabled(e.target.checked)} />
-                                                    <span className="topping-name">Include Ketchup</span>
-                                                </label>
-                                                {ketchupEnabled && (
-                                                    <div className="topping-size-selector" style={{ alignItems: 'center', justifyContent: 'center' }}>
-                                                        <div className="addon-qty-controls" style={{ margin: 0, padding: 0, border: 'none' }}>
-                                                            <button onClick={() => setKetchupQty(Math.max(1, ketchupQty - 1))}>-</button>
-                                                            <span style={{ color: '#333' }}>{ketchupQty}</span>
-                                                            <button onClick={() => setKetchupQty(ketchupQty + 1)}>+</button>
-                                                            <span style={{ marginLeft: '10px', fontWeight: 'bold', color: 'var(--pos-primary)' }}>+₹{ketchupQty * ADDON_PRICES.ketchup}</span>
-                                                        </div>
-                                                    </div>
-                                                )}
+                                            <div style={{ padding: '12px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                                <span style={{ fontSize: '0.85rem', color: '#555', fontWeight: '600' }}>₹{ADDON_PRICES.ketchup} per packet</span>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                    <button
+                                                        onClick={() => { const nq = Math.max(0, ketchupQty - 1); setKetchupQty(nq); if (nq === 0) setKetchupEnabled(false); }}
+                                                        style={{ width: '34px', height: '34px', borderRadius: '50%', border: '2px solid #E0E0E0', background: '#F5F5F5', fontSize: '1.1rem', fontWeight: '900', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#555', transition: 'all 0.15s' }}
+                                                    >−</button>
+                                                    <span style={{ fontSize: '1.1rem', fontWeight: '800', color: '#1A1A1A', minWidth: '24px', textAlign: 'center' }}>{ketchupQty}</span>
+                                                    <button
+                                                        onClick={() => { setKetchupQty(q => q + 1); setKetchupEnabled(true); }}
+                                                        style={{ width: '34px', height: '34px', borderRadius: '50%', border: '2px solid var(--pos-primary)', background: 'var(--pos-primary)', fontSize: '1.1rem', fontWeight: '900', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', transition: 'all 0.15s' }}
+                                                    >+</button>
+                                                    {ketchupEnabled && ketchupQty > 0 && <span style={{ fontSize: '0.85rem', fontWeight: '700', color: 'var(--pos-primary)' }}>+₹{ketchupQty * ADDON_PRICES.ketchup}</span>}
+                                                </div>
                                             </div>
                                         </div>
                                     )}
                                 </div>
 
-                                {/* Veg Toppings Accordion */}
+                                {/* Veg Toppings — Direct Size Cards (no checkbox) */}
                                 <div className="addon-card dropdown-card">
-                                    <div
-                                        className="dropdown-header"
-                                        onClick={() => setExpandedSection(expandedSection === 'veg' ? null : 'veg')}
-                                    >
+                                    <div className="dropdown-header" onClick={() => setExpandedSection(expandedSection === 'veg' ? null : 'veg')}>
                                         <div>
                                             <strong>Veg Toppings</strong>
                                             <div className="selected-preview">
                                                 {Object.keys(selectedVegToppings).length > 0
                                                     ? `${Object.keys(selectedVegToppings).length} selected (+₹${Object.values(selectedVegToppings).reduce((acc, sz) => acc + ADDON_PRICES.veg[sz], 0)})`
-                                                    : 'Not Selected'
-                                                }
+                                                    : 'Not Selected'}
                                             </div>
                                         </div>
                                         <i className={`fas fa-chevron-${expandedSection === 'veg' ? 'up' : 'down'}`}></i>
                                     </div>
-
                                     {expandedSection === 'veg' && (
                                         <div className="dropdown-list">
                                             {VEG_TOPPINGS.map(topping => (
-                                                <div key={topping.id} className="dropdown-item-complex">
-                                                    <label className="dropdown-item-header">
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={!!selectedVegToppings[topping.id]}
-                                                            onChange={() => handleVegToggle(topping.id)}
-                                                        />
-                                                        <span className="topping-name">{topping.name}</span>
-                                                    </label>
-                                                    {selectedVegToppings[topping.id] && (
-                                                        <div className="topping-size-selector">
-                                                            {['small', 'medium', 'large'].map(sz => (
-                                                                <label key={sz} className="nested-size-radio">
-                                                                    <input
-                                                                        type="radio"
-                                                                        name={`size-${topping.id}`}
-                                                                        checked={selectedVegToppings[topping.id] === sz}
-                                                                        onChange={() => handleVegSizeChange(topping.id, sz)}
-                                                                    />
-                                                                    <span>{sz.charAt(0).toUpperCase()} (+₹{ADDON_PRICES.veg[sz]})</span>
-                                                                </label>
-                                                            ))}
-                                                        </div>
-                                                    )}
+                                                <div key={topping.id} style={{ padding: '10px 0', borderBottom: '1px solid #F5F5F5' }}>
+                                                    <div style={{ fontSize: '0.88rem', fontWeight: '700', color: '#1A1A1A', marginBottom: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                        <span>{topping.name}</span>
+                                                        {selectedVegToppings[topping.id] && (
+                                                            <span style={{ fontSize: '0.75rem', color: 'var(--pos-primary)', fontWeight: '700' }}>+₹{ADDON_PRICES.veg[selectedVegToppings[topping.id]]}</span>
+                                                        )}
+                                                    </div>
+                                                    <div style={{ display: 'flex', gap: '8px' }}>
+                                                        {['small', 'medium', 'large'].map(sz => {
+                                                            const isActive = selectedVegToppings[topping.id] === sz;
+                                                            return (
+                                                                <button
+                                                                    key={sz}
+                                                                    onClick={() => {
+                                                                        if (isActive) {
+                                                                            setSelectedVegToppings(prev => { const n = { ...prev }; delete n[topping.id]; return n; });
+                                                                        } else {
+                                                                            handleVegSizeChange(topping.id, sz);
+                                                                        }
+                                                                    }}
+                                                                    style={{
+                                                                        flex: 1, padding: '8px 4px', borderRadius: '10px', cursor: 'pointer',
+                                                                        border: `2px solid ${isActive ? 'var(--pos-primary)' : '#E0E0E0'}`,
+                                                                        background: isActive ? 'var(--pos-primary)' : '#F9F9F9',
+                                                                        color: isActive ? '#fff' : '#333',
+                                                                        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px',
+                                                                        fontWeight: '700', transition: 'all 0.15s', fontFamily: 'inherit'
+                                                                    }}
+                                                                >
+                                                                    <span style={{ fontSize: '0.78rem' }}>{sz === 'small' ? 'S' : sz === 'medium' ? 'M' : 'L'}</span>
+                                                                    <span style={{ fontSize: '0.7rem', opacity: 0.85 }}>+₹{ADDON_PRICES.veg[sz]}</span>
+                                                                </button>
+                                                            );
+                                                        })}
+                                                    </div>
                                                 </div>
                                             ))}
                                         </div>

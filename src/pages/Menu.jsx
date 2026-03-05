@@ -22,11 +22,12 @@ const Menu = () => {
     // --- BOGO State ---
     const [bogoModalOpen, setBogoModalOpen] = useState(false);
     const [bogoSelection, setBogoSelection] = useState({
-        size: 'medium', // default
+        size: 'medium',
+        category: null, // 'Deluxe Veg' | 'Supreme Veg'
         pizza1: null,
         pizza2: null,
     });
-    const bogoOfferItem = useRef(null); // Keep reference to the BOGO item itself
+    const bogoOfferItem = useRef(null);
 
     useEffect(() => {
         fetch('https://pizza-backend-api-a5mm.onrender.com/api/menu?all=true')
@@ -141,15 +142,19 @@ const Menu = () => {
         // filter out empty categories
     }, [dbItems]);
 
-    const bogoPizzas1 = React.useMemo(() => {
-        const deluxeCat = allCategories.find(c => c.title === 'Deluxe Veg');
-        return deluxeCat && deluxeCat.data ? deluxeCat.data.items : [];
+    const bogoPizzasByCategory = React.useMemo(() => {
+        const found = (title) => {
+            const cat = allCategories.find(c => c.title === title);
+            return (cat && cat.data && cat.data.items) ? cat.data.items : [];
+        };
+        return {
+            'Deluxe Veg': found('Deluxe Veg'),
+            'Supreme Veg': found('Supreme Veg'),
+        };
     }, [allCategories]);
 
-    const bogoPizzas2 = React.useMemo(() => {
-        const supremeCat = allCategories.find(c => c.title === 'Supreme Veg');
-        return supremeCat && supremeCat.data ? supremeCat.data.items : [];
-    }, [allCategories]);
+    // Pizzas available for the selected BOGO category
+    const bogoPizzaPool = bogoSelection.category ? (bogoPizzasByCategory[bogoSelection.category] || []) : [];
 
     // Scroll Spy Effect
     useEffect(() => {
@@ -288,35 +293,26 @@ const Menu = () => {
     );
 
     const handleBogoAddToCart = () => {
-        if (!user) {
-            alert("Please login to place an order!");
-            navigate('/login');
-            return;
-        }
+        if (!user) { alert('Please login to place an order!'); navigate('/login'); return; }
+        if (!bogoSelection.category) { alert('Please select a pizza category!'); return; }
+        if (!bogoSelection.pizza1 || !bogoSelection.pizza2) { alert('Please select both pizzas!'); return; }
+        if (bogoSelection.pizza1.id === bogoSelection.pizza2.id) { alert('Please select two different pizzas!'); return; }
 
-        if (!bogoSelection.pizza1 || !bogoSelection.pizza2) {
-            alert("Please select both pizzas for the offer!");
-            return;
-        }
-
-        // We use the highest price of the two pizzas as the base price based on selected size
         const p1Price = bogoSelection.pizza1.price[bogoSelection.size] || 0;
         const p2Price = bogoSelection.pizza2.price[bogoSelection.size] || 0;
         const offerPrice = Math.max(p1Price, p2Price);
 
-        const customBogoItem = {
+        addToCart({
             id: `bogo-${Date.now()}`,
             name: `BOGO: ${bogoSelection.pizza1.name} + ${bogoSelection.pizza2.name} (${bogoSelection.size})`,
-            desc: "Buy 1 Get 1 Special Offer",
+            desc: 'Buy 1 Get 1 Special Offer',
             price: offerPrice,
             image: bogoOfferItem.current?.image || 'https://images.unsplash.com/photo-1541745537411-b8046f4d5092?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80',
             cartId: `bogo-${Date.now()}`,
             selectedSize: bogoSelection.size
-        };
-
-        addToCart(customBogoItem);
+        });
         setBogoModalOpen(false);
-        setBogoSelection({ size: 'medium', pizza1: null, pizza2: null });
+        setBogoSelection({ size: 'medium', category: null, pizza1: null, pizza2: null });
     };
 
     return (
@@ -360,83 +356,126 @@ const Menu = () => {
                 </div>
             </div>
 
-            {/* BOGO Modal */}
+            {/* BOGO Modal — 4-step flow */}
             {bogoModalOpen && (
                 <div className="size-popup-overlay bogo-modal-overlay">
-                    <div className="size-popup bogo-popup animate-pop-in" style={{ maxWidth: '800px', width: '95%', maxHeight: '90vh', overflowY: 'auto' }}>
+                    <div className="size-popup bogo-popup animate-pop-in" style={{ maxWidth: '680px', width: '95%', maxHeight: '90vh', overflowY: 'auto' }}>
                         <div className="popup-header">
-                            <h3><i className="fas fa-gift" style={{ color: 'var(--primary)' }}></i> Customise Your Buy 1 Get 1</h3>
+                            <h3><i className="fas fa-gift" style={{ color: 'var(--primary)' }}></i> Buy 1 Get 1 — Customise</h3>
                             <button className="close-popup" onClick={() => setBogoModalOpen(false)}><i className="fas fa-times"></i></button>
                         </div>
-                        <p className="popup-desc">First, choose your size:</p>
 
-                        <div className="size-options bogo-sizing" style={{ flexDirection: 'row', gap: '10px', marginBottom: '20px' }}>
-                            <button className={`var-btn ${bogoSelection.size === 'medium' ? 'active-size' : ''}`} style={{ flex: 1, padding: '15px' }} onClick={() => setBogoSelection(prev => ({ ...prev, size: 'medium' }))}>Medium</button>
-                            <button className={`var-btn ${bogoSelection.size === 'large' ? 'active-size' : ''}`} style={{ flex: 1, padding: '15px' }} onClick={() => setBogoSelection(prev => ({ ...prev, size: 'large' }))}>Large</button>
-                        </div>
-
-                        <div className="bogo-pizza-selectors" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-                            {/* Pizza 1 Selection */}
-                            <div className="bogo-column">
-                                <h4 style={{ marginBottom: '10px', color: 'var(--text-main)' }}>1. Select Deluxe Veg Pizza</h4>
-                                <div className="bogo-list-container" style={{ maxHeight: '300px', overflowY: 'auto', border: '1px solid #eee', borderRadius: '8px', padding: '10px' }}>
-                                    {bogoPizzas1.length === 0 ? <p>Loading Deluxe Pizzas...</p> : bogoPizzas1.map(p => (
-                                        <div
-                                            key={p.id}
-                                            className={`bogo-list-item ${bogoSelection.pizza1?.id === p.id ? 'selected' : ''}`}
-                                            onClick={() => setBogoSelection(prev => ({ ...prev, pizza1: p }))}
-                                            style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', borderBottom: '1px solid #eee', cursor: 'pointer', backgroundColor: bogoSelection.pizza1?.id === p.id ? 'rgba(229,0,0,0.05)' : 'white' }}
-                                        >
-                                            <img src={(p.image.startsWith('http') || p.image.startsWith('data:') || p.image.startsWith('/')) ? p.image : `/images/menu/${p.image}`} alt={p.name} style={{ width: '50px', height: '50px', objectFit: 'cover', borderRadius: '4px' }} />
-                                            <div style={{ flex: 1 }}>
-                                                <div style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>{p.name}</div>
-                                                <div style={{ color: 'var(--primary)', fontSize: '0.8rem', fontWeight: 'bold' }}>₹{p.price[bogoSelection.size]}</div>
-                                            </div>
-                                            {bogoSelection.pizza1?.id === p.id && <i className="fas fa-check-circle" style={{ color: 'green' }}></i>}
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Pizza 2 Selection */}
-                            <div className="bogo-column">
-                                <h4 style={{ marginBottom: '10px', color: 'var(--text-main)' }}>2. Select Supreme Veg Pizza</h4>
-                                <div className="bogo-list-container" style={{ maxHeight: '300px', overflowY: 'auto', border: '1px solid #eee', borderRadius: '8px', padding: '10px' }}>
-                                    {bogoPizzas2.length === 0 ? <p>Loading Supreme Pizzas...</p> : bogoPizzas2.map(p => (
-                                        <div
-                                            key={p.id}
-                                            className={`bogo-list-item ${bogoSelection.pizza2?.id === p.id ? 'selected' : ''}`}
-                                            onClick={() => setBogoSelection(prev => ({ ...prev, pizza2: p }))}
-                                            style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', borderBottom: '1px solid #eee', cursor: 'pointer', backgroundColor: bogoSelection.pizza2?.id === p.id ? 'rgba(229,0,0,0.05)' : 'white' }}
-                                        >
-                                            <img src={(p.image.startsWith('http') || p.image.startsWith('data:') || p.image.startsWith('/')) ? p.image : `/images/menu/${p.image}`} alt={p.name} style={{ width: '50px', height: '50px', objectFit: 'cover', borderRadius: '4px' }} />
-                                            <div style={{ flex: 1 }}>
-                                                <div style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>{p.name}</div>
-                                                <div style={{ color: 'var(--primary)', fontSize: '0.8rem', fontWeight: 'bold' }}>₹{p.price[bogoSelection.size]}</div>
-                                            </div>
-                                            {bogoSelection.pizza2?.id === p.id && <i className="fas fa-check-circle" style={{ color: 'green' }}></i>}
-                                        </div>
-                                    ))}
-                                </div>
+                        {/* Step 1: Size */}
+                        <div style={{ marginBottom: '20px' }}>
+                            <p style={{ fontWeight: '800', color: '#1A1A1A', marginBottom: '10px', fontSize: '0.9rem' }}>STEP 1 — Choose Size (applies to both pizzas)</p>
+                            <div style={{ display: 'flex', gap: '10px' }}>
+                                {['medium', 'large'].map(sz => (
+                                    <button
+                                        key={sz}
+                                        onClick={() => setBogoSelection(prev => ({ ...prev, size: sz, pizza1: null, pizza2: null }))}
+                                        style={{
+                                            flex: 1, padding: '14px', borderRadius: '12px', cursor: 'pointer', fontWeight: '800', fontSize: '1rem',
+                                            border: `2px solid ${bogoSelection.size === sz ? 'var(--primary)' : '#DDD'}`,
+                                            background: bogoSelection.size === sz ? 'var(--primary)' : '#FFF',
+                                            color: bogoSelection.size === sz ? '#FFF' : '#333', transition: 'all 0.15s'
+                                        }}
+                                    >{sz === 'medium' ? '🍕 Medium' : '🍕🍕 Large'}</button>
+                                ))}
                             </div>
                         </div>
 
-                        <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #eee', paddingTop: '15px' }}>
-                            <div className="bogo-total-calc">
-                                <div style={{ fontSize: '0.9rem', color: '#666' }}>Offer Price:</div>
-                                <div style={{ fontSize: '1.4rem', fontWeight: 'bold', color: 'var(--text-main)' }}>
-                                    {bogoSelection.pizza1 && bogoSelection.pizza2 ?
-                                        `₹${Math.max(bogoSelection.pizza1.price[bogoSelection.size] || 0, bogoSelection.pizza2.price[bogoSelection.size] || 0)}`
-                                        : '₹0'}
+                        {/* Step 2: Category */}
+                        <div style={{ marginBottom: '20px' }}>
+                            <p style={{ fontWeight: '800', color: '#1A1A1A', marginBottom: '10px', fontSize: '0.9rem' }}>STEP 2 — Choose Category (both pizzas will be from this category)</p>
+                            <div style={{ display: 'flex', gap: '10px' }}>
+                                {['Deluxe Veg', 'Supreme Veg'].map(cat => (
+                                    <button
+                                        key={cat}
+                                        onClick={() => setBogoSelection(prev => ({ ...prev, category: cat, pizza1: null, pizza2: null }))}
+                                        style={{
+                                            flex: 1, padding: '14px', borderRadius: '12px', cursor: 'pointer', fontWeight: '800', fontSize: '0.95rem',
+                                            border: `2px solid ${bogoSelection.category === cat ? 'var(--primary)' : '#DDD'}`,
+                                            background: bogoSelection.category === cat ? 'var(--primary)' : '#FFF',
+                                            color: bogoSelection.category === cat ? '#FFF' : '#333', transition: 'all 0.15s'
+                                        }}
+                                    >⭐ {cat}</button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Step 3 & 4: Pick both pizzas from same pool */}
+                        {bogoSelection.category && (
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
+                                {[1, 2].map(slot => {
+                                    const selected = slot === 1 ? bogoSelection.pizza1 : bogoSelection.pizza2;
+                                    const other = slot === 1 ? bogoSelection.pizza2 : bogoSelection.pizza1;
+                                    return (
+                                        <div key={slot}>
+                                            <p style={{ fontWeight: '800', color: '#1A1A1A', marginBottom: '8px', fontSize: '0.88rem' }}>STEP {slot + 2} — Pizza {slot}</p>
+                                            <div style={{ maxHeight: '280px', overflowY: 'auto', border: '1px solid #EEE', borderRadius: '12px', padding: '8px' }}>
+                                                {bogoPizzaPool.length === 0
+                                                    ? <p style={{ color: '#888', padding: '20px', textAlign: 'center' }}>Loading {bogoSelection.category} pizzas...</p>
+                                                    : bogoPizzaPool.map(p => {
+                                                        const isMe = selected?.id === p.id;
+                                                        const isOther = other?.id === p.id;
+                                                        return (
+                                                            <div
+                                                                key={p.id}
+                                                                onClick={() => {
+                                                                    if (isOther) return; // can't pick same pizza twice
+                                                                    if (slot === 1) setBogoSelection(prev => ({ ...prev, pizza1: isMe ? null : p }));
+                                                                    else setBogoSelection(prev => ({ ...prev, pizza2: isMe ? null : p }));
+                                                                }}
+                                                                style={{
+                                                                    display: 'flex', alignItems: 'center', gap: '10px', padding: '10px',
+                                                                    marginBottom: '4px', borderRadius: '10px', cursor: isOther ? 'not-allowed' : 'pointer',
+                                                                    border: `2px solid ${isMe ? 'var(--primary)' : '#EEE'}`,
+                                                                    background: isMe ? 'rgba(183,28,28,0.06)' : isOther ? '#F5F5F5' : '#FFF',
+                                                                    opacity: isOther ? 0.45 : 1, transition: 'all 0.12s'
+                                                                }}
+                                                            >
+                                                                <img
+                                                                    src={(p.image?.startsWith('http') || p.image?.startsWith('/') || p.image?.startsWith('data:')) ? p.image : `/images/menu/${p.image}`}
+                                                                    alt={p.name}
+                                                                    style={{ width: '44px', height: '44px', objectFit: 'cover', borderRadius: '8px' }}
+                                                                />
+                                                                <div style={{ flex: 1 }}>
+                                                                    <div style={{ fontWeight: '700', fontSize: '0.85rem', color: '#1A1A1A' }}>{p.name}</div>
+                                                                    <div style={{ color: 'var(--primary)', fontSize: '0.8rem', fontWeight: '700' }}>₹{p.price[bogoSelection.size]}</div>
+                                                                </div>
+                                                                {isMe && <i className="fas fa-check-circle" style={{ color: 'var(--primary)', fontSize: '1.1rem' }}></i>}
+                                                            </div>
+                                                        );
+                                                    })
+                                                }
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+
+                        {/* Summary + Add */}
+                        <div style={{ borderTop: '1px solid #EEE', paddingTop: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div>
+                                <div style={{ fontSize: '0.8rem', color: '#888' }}>Offer Price</div>
+                                <div style={{ fontSize: '1.5rem', fontWeight: '800', color: '#1A1A1A' }}>
+                                    {bogoSelection.pizza1 && bogoSelection.pizza2
+                                        ? `₹${Math.max(bogoSelection.pizza1.price[bogoSelection.size] || 0, bogoSelection.pizza2.price[bogoSelection.size] || 0)}`
+                                        : '₹—'}
                                 </div>
+                                <div style={{ fontSize: '0.76rem', color: '#888' }}>(Pay for the higher-priced pizza only)</div>
                             </div>
                             <button
-                                className="btn-primary"
-                                style={{ padding: '12px 30px', fontSize: '1.1rem', opacity: (bogoSelection.pizza1 && bogoSelection.pizza2) ? 1 : 0.5 }}
                                 onClick={handleBogoAddToCart}
                                 disabled={!bogoSelection.pizza1 || !bogoSelection.pizza2}
+                                style={{
+                                    padding: '14px 28px', background: (!bogoSelection.pizza1 || !bogoSelection.pizza2) ? '#DDD' : 'var(--primary)',
+                                    color: '#fff', border: 'none', borderRadius: '12px', fontWeight: '800', fontSize: '1rem',
+                                    cursor: (!bogoSelection.pizza1 || !bogoSelection.pizza2) ? 'not-allowed' : 'pointer', transition: 'all 0.15s'
+                                }}
                             >
-                                <ShoppingCart style={{ display: 'inline', marginRight: '5px' }} /> Add to Cart
+                                <i className="fas fa-shopping-cart"></i> Add to Cart
                             </button>
                         </div>
                     </div>

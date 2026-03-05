@@ -5,52 +5,93 @@ import { AuthContext } from '../context/AuthContext';
 import './CartDrawer.css';
 
 const API = 'https://pizza-backend-api-a5mm.onrender.com';
+const KETCHUP_PRICE = 1; // ₹1 per packet
 
-const ADDONS_CONFIG = [
-    { name: 'Ketchup Packets', isToggle: true, prices: { default: 1 } },
-    { name: 'Veg Topping', isToggle: false, prices: { small: 25, medium: 35, large: 45 } },
-    { name: 'Extra Cheese', isToggle: false, prices: { small: 40, medium: 60, large: 90 } },
-    { name: 'Cheese Burst', isToggle: false, prices: { small: 50, medium: 60, large: 90 } },
+// Addons that use size-based pricing (tap a size card to select/deselect)
+const SIZE_ADDONS = [
+    { name: 'Veg Topping', prices: { small: 25, medium: 35, large: 45 } },
+    { name: 'Extra Cheese', prices: { small: 40, medium: 60, large: 90 } },
+    { name: 'Cheese Burst', prices: { small: 50, medium: 60, large: 90 } },
 ];
 
+// ── Ketchup Stepper ───────────────────────────────────────────────────────────
+const KetchupStepper = ({ item, updateAddonQty }) => {
+    const existing = item.toppings?.find(t => t.baseName === 'Ketchup Packets');
+    const qty = existing ? Math.round(existing.price / KETCHUP_PRICE) : 0;
+
+    const set = (n) => updateAddonQty(item.cartItemId, 'Ketchup Packets', KETCHUP_PRICE, Math.max(0, n));
+
+    return (
+        <div className="cd-ketchup-row">
+            <div className="cd-ketchup-info">
+                <span className="cd-ketchup-name">🍅 Ketchup Packets</span>
+                <span className="cd-ketchup-price">₹{KETCHUP_PRICE} each</span>
+            </div>
+            <div className="cd-ketchup-stepper">
+                <button className="cd-stepper-btn" onClick={() => set(qty - 1)} disabled={qty === 0}>−</button>
+                <span className="cd-stepper-val">{qty}</span>
+                <button className="cd-stepper-btn add" onClick={() => set(qty + 1)}>+</button>
+                {qty > 0 && <span className="cd-ketchup-total">+₹{qty * KETCHUP_PRICE}</span>}
+            </div>
+        </div>
+    );
+};
+
+// ── Size Addon Card ───────────────────────────────────────────────────────────
+const SizeAddon = ({ item, addon, toggleAddonSML }) => {
+    const selectedSz = item.toppings?.find(t => t.baseName === addon.name)?.size;
+    return (
+        <div className="cd-size-addon">
+            <div className="cd-addon-row-title">
+                <span>{addon.name}</span>
+                {selectedSz && <span className="cd-addon-selected-tag">+₹{addon.prices[selectedSz]}</span>}
+            </div>
+            <div className="cd-size-cards">
+                {['small', 'medium', 'large'].map(sz => (
+                    <button
+                        key={sz}
+                        type="button"
+                        className={`cd-size-card${selectedSz === sz ? ' active' : ''}`}
+                        onClick={() => toggleAddonSML(item.cartItemId, addon.name, sz, addon.prices[sz])}
+                    >
+                        <span className="cd-size-label">{sz === 'small' ? 'S' : sz === 'medium' ? 'M' : 'L'}</span>
+                        <span className="cd-size-price">+₹{addon.prices[sz]}</span>
+                    </button>
+                ))}
+            </div>
+        </div>
+    );
+};
+
+// ── Main CartDrawer ───────────────────────────────────────────────────────────
 const CartDrawer = () => {
     const {
         cartItems, updateQuantity, clearCart,
-        toggleAddonSML, isCartOpen, setIsCartOpen, cartCount
+        toggleAddonSML, updateAddonQty,
+        isCartOpen, setIsCartOpen, cartCount
     } = useContext(CartContext);
     const { user, refreshUser } = useContext(AuthContext);
     const navigate = useNavigate();
 
-    // ── Delivery settings from backend ─────────────────────────────
     const [deliverySettings, setDeliverySettings] = useState({ charge: 40, threshold: 300 });
     const [adminWhatsApp, setAdminWhatsApp] = useState('919220367325');
-
-    // ── Checkout form ───────────────────────────────────────────────
     const [name, setName] = useState('');
     const [phone, setPhone] = useState('');
     const [address, setAddress] = useState('');
-
-    // ── Coupon ──────────────────────────────────────────────────────
     const [couponCode, setCouponCode] = useState('');
     const [discount, setDiscount] = useState(0);
     const [couponMsg, setCouponMsg] = useState('');
     const [applyingCoupon, setApplyingCoupon] = useState(false);
-
-    // ── State ───────────────────────────────────────────────────────
     const [view, setView] = useState('cart'); // 'cart' | 'checkout'
     const [orderPlacing, setOrderPlacing] = useState(false);
 
-    // ── Totals ──────────────────────────────────────────────────────
     const cartSubtotal = cartItems.reduce((acc, i) => acc + i.price * i.quantity, 0);
     const deliveryFee = cartSubtotal >= deliverySettings.threshold ? 0 : deliverySettings.charge;
     const finalTotal = Math.max(0, cartSubtotal + deliveryFee - discount);
 
     useEffect(() => {
-        if (user) {
-            setName(user.name || '');
-            setPhone(user.phone || '');
-        }
-        const fetchSettings = async () => {
+        if (user) { setName(user.name || ''); setPhone(user.phone || ''); }
+        (async () => {
             try {
                 const res = await fetch(`${API}/api/admin/settings`);
                 const data = await res.json();
@@ -60,20 +101,17 @@ const CartDrawer = () => {
                     setAdminWhatsApp(val('admin_whatsapp_number', '919220367325'));
                 }
             } catch (_) { }
-        };
-        fetchSettings();
+        })();
     }, [user]);
 
     if (!isCartOpen) return null;
 
-    // ── Coupon ──────────────────────────────────────────────────────
     const handleApplyCoupon = async () => {
         if (!couponCode.trim()) return;
         setApplyingCoupon(true); setCouponMsg('');
         try {
             const res = await fetch(`${API}/api/admin/coupons/validate`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ code: couponCode, orderTotal: cartSubtotal })
             });
             const data = await res.json();
@@ -83,17 +121,14 @@ const CartDrawer = () => {
         finally { setApplyingCoupon(false); }
     };
 
-    // ── WhatsApp notify ─────────────────────────────────────────────
-    const redirectToWhatsApp = (orderResp, paymentId) => {
-        let text = `🍕 *NEW ORDER* 🍕\n━━━━━━━━━━━━━━━━\n`;
-        text += `🆔 #${orderResp._id.slice(-6).toUpperCase()}\n💳 ${paymentId || 'N/A'}\n`;
-        text += `👤 ${name}\n📞 ${phone}\n📍 ${address}\n━━━━━━━━━━━━━━━━\n`;
+    const notifyWhatsApp = (orderResp, paymentId) => {
+        let txt = `🍕 *NEW ORDER* 🍕\n━━━━━━━━━━━━━━━━\n🆔 #${orderResp._id.slice(-6).toUpperCase()}\n💳 ${paymentId || 'N/A'}\n👤 ${name}\n📞 ${phone}\n📍 ${address}\n━━━━━━━━━━━━━━━━\n`;
         cartItems.forEach((item, i) => {
-            text += `${i + 1}. ${item.name} ×${item.quantity} — ₹${item.price * item.quantity}\n`;
-            if (item.toppings?.length) text += `   ➕ ${item.toppings.map(t => t.name || t).join(', ')}\n`;
+            txt += `${i + 1}. ${item.name} ×${item.quantity} — ₹${item.price * item.quantity}\n`;
+            if (item.toppings?.length) txt += `   ➕ ${item.toppings.map(t => t.name || t).join(', ')}\n`;
         });
-        text += `━━━━━━━━━━━━━━━━\n💰 Total: ₹${finalTotal}\n✅ PAID (Online)`;
-        window.open(`https://wa.me/${adminWhatsApp}?text=${encodeURIComponent(text)}`, '_blank');
+        txt += `━━━━━━━━━━━━━━━━\n💰 Total: ₹${finalTotal}\n✅ PAID (Online)`;
+        window.open(`https://wa.me/${adminWhatsApp}?text=${encodeURIComponent(txt)}`, '_blank');
     };
 
     const makeObjectId = (id) => {
@@ -104,93 +139,71 @@ const CartDrawer = () => {
         return h.padEnd(24, '0').slice(0, 24);
     };
 
-    // ── Place order ─────────────────────────────────────────────────
     const handlePlaceOrder = async (e) => {
         e.preventDefault();
-        if (cartItems.length === 0) return;
+        if (!cartItems.length) return;
         setOrderPlacing(true);
 
         const orderData = {
             userId: user?._id || null,
             customerInfo: { name, phone, address, email: user?.email || '' },
             orderItems: cartItems.map(i => ({
-                menuItem: makeObjectId(i._id || i.id),
-                name: i.name, quantity: i.quantity, size: i.selectedSize || 'regular',
+                menuItem: makeObjectId(i._id || i.id), name: i.name,
+                quantity: i.quantity, size: i.selectedSize || 'regular',
                 price: i.price, toppings: i.toppings?.map(t => t.name || t.baseName) || []
             })),
-            totalAmount: finalTotal,
-            orderType: 'delivery', paymentMethod: 'online',
+            totalAmount: finalTotal, orderType: 'delivery', paymentMethod: 'online',
             discount, tax: 0, subTotal: cartSubtotal, paymentStatus: 'pending'
         };
 
         try {
-            const resKey = await fetch(`${API}/api/orders/razorpay/key`);
-            const keyData = await resKey.json();
-            if (!keyData.key) { alert('Razorpay not configured.'); setOrderPlacing(false); return; }
+            const { key } = await (await fetch(`${API}/api/orders/razorpay/key`)).json();
+            if (!key) { alert('Razorpay not configured.'); setOrderPlacing(false); return; }
 
-            const resOrder = await fetch(`${API}/api/orders/razorpay/create`, {
+            const { success, order: rzpOrder } = await (await fetch(`${API}/api/orders/razorpay/create`, {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ amount: finalTotal })
-            });
-            const orderResult = await resOrder.json();
-            if (!orderResult.success) { alert('Failed to create Razorpay order.'); setOrderPlacing(false); return; }
+            })).json();
+            if (!success) { alert('Failed to create Razorpay order.'); setOrderPlacing(false); return; }
 
-            const options = {
-                key: keyData.key,
-                amount: orderResult.order.amount, currency: 'INR',
-                name: 'Captain Pizza', description: 'Pizza Order',
-                order_id: orderResult.order.id,
+            const rzp = new window.Razorpay({
+                key, amount: rzpOrder.amount, currency: 'INR',
+                name: 'Captain Pizza', description: 'Pizza Order', order_id: rzpOrder.id,
                 handler: async (response) => {
                     setOrderPlacing(true);
                     try {
-                        const verifyRes = await fetch(`${API}/api/orders/razorpay/verify`, {
+                        const vd = await (await fetch(`${API}/api/orders/razorpay/verify`, {
                             method: 'POST', headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                razorpay_order_id: response.razorpay_order_id,
-                                razorpay_payment_id: response.razorpay_payment_id,
-                                razorpay_signature: response.razorpay_signature,
-                                orderData
-                            })
-                        });
-                        const verifyData = await verifyRes.json();
-                        if (verifyData.success) {
+                            body: JSON.stringify({ ...response, orderData })
+                        })).json();
+                        if (vd.success) {
                             if (user) refreshUser({ ...user, hasUsedWelcomeOffer: true });
-                            clearCart();
-                            setIsCartOpen(false);
-                            alert(`🎉 Order Placed! ID: ${verifyData.data._id}`);
-                            redirectToWhatsApp(verifyData.data, response.razorpay_payment_id);
+                            clearCart(); setIsCartOpen(false);
+                            alert(`🎉 Order Placed! ID: ${vd.data._id}`);
+                            notifyWhatsApp(vd.data, response.razorpay_payment_id);
                             navigate('/');
-                        } else { alert('Payment verification failed. Contact support.'); }
-                    } catch { alert('Verification error. Contact support if money was deducted.'); }
+                        } else alert('Payment verification failed. Contact support.');
+                    } catch { alert('Verification error. Contact support.'); }
                     finally { setOrderPlacing(false); }
                 },
                 prefill: { name, contact: phone, email: user?.email || '' },
                 theme: { color: '#B71C1C' }
-            };
-
-            const rzp = new window.Razorpay(options);
+            });
             rzp.on('payment.failed', r => alert('Payment Failed: ' + r.error.description));
             rzp.open();
             setOrderPlacing(false);
-        } catch {
-            alert('Could not load payment gateway.');
-            setOrderPlacing(false);
-        }
+        } catch { alert('Could not load payment gateway.'); setOrderPlacing(false); }
     };
 
-    // ── Render ──────────────────────────────────────────────────────
     return (
         <div className="cart-overlay" onClick={() => setIsCartOpen(false)}>
             <div className="cart-drawer" onClick={e => e.stopPropagation()}>
 
-                {/* ─ Header ─ */}
+                {/* ── Header ── */}
                 <div className="cart-head">
                     <div className="cart-head-left">
                         <i className="fas fa-shopping-basket"></i>
-                        <h2>
-                            {view === 'cart' ? 'Your Cart' : 'Checkout'}
-                            <span className="cart-count-badge">{cartCount}</span>
-                        </h2>
+                        <h2>{view === 'cart' ? 'Your Cart' : 'Checkout'}<span className="cart-count-badge">{cartCount}</span></h2>
                     </div>
                     <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                         {view === 'checkout' && (
@@ -204,90 +217,54 @@ const CartDrawer = () => {
                     </div>
                 </div>
 
-                {/* ─ CART VIEW ─ */}
+                {/* ── CART VIEW ── */}
                 {view === 'cart' && (
                     <div className="cart-body">
                         {cartItems.length === 0 ? (
                             <div className="cart-empty">
                                 <div className="cart-empty-icon">🛒</div>
                                 <p>Your cart is empty</p>
-                                <button
-                                    className="cart-browse-btn"
-                                    onClick={() => { setIsCartOpen(false); navigate('/menu'); }}
-                                >
+                                <button className="cart-browse-btn"
+                                    onClick={() => { setIsCartOpen(false); navigate('/menu'); }}>
                                     Browse Menu
                                 </button>
                             </div>
                         ) : (
                             <>
-                                {/* Items */}
                                 {cartItems.map((item, index) => (
                                     <div key={item.cartItemId} className="cd-item-card">
-                                        {/* Item title + remove */}
+
+                                        {/* Title row */}
                                         <div className="cd-item-top">
                                             <h4 className="cd-item-name">{index + 1}. {item.name}</h4>
-                                            <button
-                                                className="cd-remove-btn"
+                                            <button className="cd-remove-btn"
                                                 onClick={() => updateQuantity(item.cartItemId, -item.quantity)}
-                                                title="Remove"
-                                            >
+                                                title="Remove item">
                                                 <i className="fas fa-trash-alt"></i>
                                             </button>
                                         </div>
 
-                                        {/* Add-ons section */}
-                                        <div className="cd-addons">
-                                            <p className="cd-addons-title">Add-ons</p>
+                                        {/* Add-ons block */}
+                                        <div className="cd-addons-block">
+                                            <p className="cd-addons-label">✨ Add-ons &amp; Customise</p>
 
-                                            {ADDONS_CONFIG.map((addon, i) => {
-                                                if (addon.isToggle) {
-                                                    const isSelected = item.toppings?.some(t => t.baseName === addon.name);
-                                                    return (
-                                                        <label key={i} className="cd-addon-toggle">
-                                                            <div className="cd-addon-label">
-                                                                <span>{addon.name}</span>
-                                                                <span className="cd-addon-price">+₹{addon.prices.default} each</span>
-                                                            </div>
-                                                            <input
-                                                                type="checkbox"
-                                                                checked={isSelected}
-                                                                onChange={() => toggleAddonSML(item.cartItemId, addon.name, 'default', addon.prices.default)}
-                                                            />
-                                                        </label>
-                                                    );
-                                                } else {
-                                                    const selectedSz = item.toppings?.find(t => t.baseName === addon.name)?.size;
-                                                    return (
-                                                        <div key={i} className="cd-addon-sizes">
-                                                            <div className="cd-addon-label">
-                                                                <span>{addon.name}</span>
-                                                                {selectedSz && <span className="cd-addon-price selected">+₹{addon.prices[selectedSz]}</span>}
-                                                            </div>
-                                                            <div className="cd-size-btns">
-                                                                {['small', 'medium', 'large'].map(sz => (
-                                                                    <button
-                                                                        key={sz}
-                                                                        type="button"
-                                                                        className={`cd-size-btn ${selectedSz === sz ? 'active' : ''}`}
-                                                                        onClick={() => toggleAddonSML(item.cartItemId, addon.name, sz, addon.prices[sz])}
-                                                                    >
-                                                                        <span>{sz.charAt(0).toUpperCase() + sz.slice(1)}</span>
-                                                                        <span>+₹{addon.prices[sz]}</span>
-                                                                    </button>
-                                                                ))}
-                                                            </div>
-                                                        </div>
-                                                    );
-                                                }
-                                            })}
+                                            {/* Ketchup — qty stepper */}
+                                            <KetchupStepper item={item} updateAddonQty={updateAddonQty} />
+
+                                            {/* Size-based addons — card buttons */}
+                                            {SIZE_ADDONS.map(addon => (
+                                                <SizeAddon key={addon.name} item={item} addon={addon} toggleAddonSML={toggleAddonSML} />
+                                            ))}
                                         </div>
 
-                                        {/* Item qty + price */}
+                                        {/* Qty stepper + Price row */}
                                         <div className="cd-item-bottom">
-                                            <div className="cd-qty">
-                                                <button onClick={() => updateQuantity(item.cartItemId, -1)}>−</button>
-                                                <span>{item.quantity}</span>
-                                                <button onClick={() => updateQuantity(item.cartItemId, 1)}>+</button>
+                                            <div className="cd-item-qty">
+                                                <button className="cd-qty-btn minus"
+                                                    onClick={() => updateQuantity(item.cartItemId, -1)}>−</button>
+                                                <span className="cd-qty-val">{item.quantity}</span>
+                                                <button className="cd-qty-btn plus"
+                                                    onClick={() => updateQuantity(item.cartItemId, 1)}>+</button>
                                             </div>
                                             <div className="cd-item-price">₹{item.price * item.quantity}</div>
                                         </div>
@@ -298,38 +275,30 @@ const CartDrawer = () => {
                                 <div className="cd-coupon">
                                     <p className="cd-coupon-title">🎟️ Promo Code</p>
                                     <div className="cd-coupon-row">
-                                        <input
-                                            type="text"
-                                            placeholder="Enter code"
-                                            value={couponCode}
+                                        <input type="text" placeholder="Enter code" value={couponCode}
                                             onChange={e => setCouponCode(e.target.value.toUpperCase())}
-                                            className="cd-coupon-input"
-                                        />
-                                        <button
-                                            className="cd-coupon-btn"
+                                            className="cd-coupon-input" />
+                                        <button className="cd-coupon-btn"
                                             onClick={handleApplyCoupon}
-                                            disabled={applyingCoupon || !couponCode}
-                                        >
+                                            disabled={applyingCoupon || !couponCode}>
                                             {applyingCoupon ? '...' : 'Apply'}
                                         </button>
                                     </div>
-                                    {couponMsg && (
-                                        <p className={`cd-coupon-msg ${discount > 0 ? 'success' : 'error'}`}>
-                                            {couponMsg}
-                                        </p>
-                                    )}
+                                    {couponMsg && <p className={`cd-coupon-msg ${discount > 0 ? 'success' : 'error'}`}>{couponMsg}</p>}
                                 </div>
 
                                 {/* Summary */}
                                 <div className="cd-summary">
                                     <div className="cd-sum-row"><span>Subtotal</span><span>₹{cartSubtotal}</span></div>
                                     <div className="cd-sum-row">
-                                        <span>Delivery Fee</span>
-                                        <span>{deliveryFee === 0 ? <span style={{ color: '#16a34a', fontWeight: 700 }}>FREE 🎉</span> : `₹${deliveryFee}`}</span>
+                                        <span>Delivery</span>
+                                        <span>{deliveryFee === 0
+                                            ? <span style={{ color: '#16a34a', fontWeight: 700 }}>FREE 🎉</span>
+                                            : `₹${deliveryFee}`}</span>
                                     </div>
                                     {discount > 0 && (
                                         <div className="cd-sum-row" style={{ color: '#16a34a' }}>
-                                            <span>Coupon Discount</span><span>−₹{discount}</span>
+                                            <span>Discount</span><span>−₹{discount}</span>
                                         </div>
                                     )}
                                     <div className="cd-sum-row total">
@@ -346,13 +315,11 @@ const CartDrawer = () => {
                     </div>
                 )}
 
-                {/* ─ CHECKOUT VIEW ─ */}
+                {/* ── CHECKOUT VIEW ── */}
                 {view === 'checkout' && (
                     <div className="cart-body">
                         <form className="cd-checkout-form" onSubmit={handlePlaceOrder}>
-                            <h3 className="cd-section-title">
-                                <i className="fas fa-map-marker-alt"></i> Delivery Details
-                            </h3>
+                            <h3 className="cd-section-title"><i className="fas fa-map-marker-alt"></i> Delivery Details</h3>
                             <div className="cd-form-group">
                                 <label>Full Name</label>
                                 <input type="text" placeholder="John Doe" value={name} onChange={e => setName(e.target.value)} required />
@@ -363,7 +330,8 @@ const CartDrawer = () => {
                             </div>
                             <div className="cd-form-group">
                                 <label>Delivery Address</label>
-                                <textarea placeholder="House no., Street, Locality, City..." rows={3} value={address} onChange={e => setAddress(e.target.value)} required />
+                                <textarea placeholder="House no., Street, Locality, City..." rows={3}
+                                    value={address} onChange={e => setAddress(e.target.value)} required />
                             </div>
 
                             <h3 className="cd-section-title" style={{ marginTop: '16px' }}>
@@ -378,7 +346,6 @@ const CartDrawer = () => {
                                 <i className="fas fa-shield-alt" style={{ color: '#16a34a' }}></i>
                             </label>
 
-                            {/* Order summary recap */}
                             <div className="cd-summary" style={{ marginTop: '16px' }}>
                                 <div className="cd-sum-row"><span>Subtotal</span><span>₹{cartSubtotal}</span></div>
                                 <div className="cd-sum-row"><span>Delivery</span><span>{deliveryFee === 0 ? 'FREE' : `₹${deliveryFee}`}</span></div>
@@ -386,11 +353,8 @@ const CartDrawer = () => {
                                 <div className="cd-sum-row total"><span>Total</span><strong>₹{finalTotal}</strong></div>
                             </div>
 
-                            <button
-                                type="submit"
-                                className="cd-place-order-btn"
-                                disabled={cartItems.length === 0 || orderPlacing}
-                            >
+                            <button type="submit" className="cd-place-order-btn"
+                                disabled={!cartItems.length || orderPlacing}>
                                 {orderPlacing
                                     ? <><i className="fas fa-spinner fa-spin"></i> Processing...</>
                                     : <><i className="fas fa-lock"></i> Place Order • ₹{finalTotal}</>
@@ -400,17 +364,15 @@ const CartDrawer = () => {
                     </div>
                 )}
 
-                {/* ─ Footer (only in cart view) ─ */}
+                {/* ── Footer ── */}
                 {view === 'cart' && cartItems.length > 0 && (
                     <div className="cart-foot">
-                        <button
-                            className="cart-checkout-btn"
+                        <button className="cart-checkout-btn"
                             onClick={() => {
                                 if (!user) { setIsCartOpen(false); navigate('/login'); return; }
                                 setView('checkout');
-                            }}
-                        >
-                            <i className="fas fa-arrow-right"></i> Proceed to Checkout — ₹{finalTotal}
+                            }}>
+                            <i className="fas fa-arrow-right"></i> Checkout — ₹{finalTotal}
                         </button>
                     </div>
                 )}

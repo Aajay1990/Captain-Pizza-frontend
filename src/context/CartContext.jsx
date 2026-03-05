@@ -125,8 +125,41 @@ export const CartProvider = ({ children }) => {
 
     const clearCart = () => setCartItems([]);
 
+    // updateAddonQty: sets ketchup (or any flat-price addon) to a specific quantity
+    // qty=0 removes the addon entirely
+    const updateAddonQty = (cartItemId, baseName, pricePerUnit, newQty) => {
+        setCartItems(items => items.map(item => {
+            if (item.cartItemId !== cartItemId) return item;
+            const currentToppings = item.toppings || [];
+            const existingIdx = currentToppings.findIndex(t => t.baseName === baseName);
+            let newToppings;
+            if (newQty <= 0) {
+                newToppings = currentToppings.filter(t => t.baseName !== baseName);
+            } else {
+                const entry = {
+                    baseName,
+                    name: `${baseName} x${newQty}`,
+                    size: 'default',
+                    price: pricePerUnit * newQty
+                };
+                if (existingIdx >= 0) {
+                    newToppings = currentToppings.map((t, i) => i === existingIdx ? entry : t);
+                } else {
+                    newToppings = [...currentToppings, entry];
+                }
+            }
+            const basePrice = item.basePrice || item.price;
+            return {
+                ...item,
+                basePrice,
+                toppings: newToppings,
+                price: basePrice + newToppings.reduce((sum, t) => sum + t.price, 0)
+            };
+        }));
+    };
+
     return (
-        <CartContext.Provider value={{ cartItems, addToCart, updateQuantity, toggleAddon, toggleAddonSML, cartCount, clearCart, isCartOpen, setIsCartOpen, isIconAnimating }}>
+        <CartContext.Provider value={{ cartItems, addToCart, updateQuantity, toggleAddon, toggleAddonSML, updateAddonQty, cartCount, clearCart, isCartOpen, setIsCartOpen, isIconAnimating }}>
             {children}
         </CartContext.Provider>
     );

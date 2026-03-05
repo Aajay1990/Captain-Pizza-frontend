@@ -4,17 +4,15 @@ import './Menu.css';
 import { menuData } from '../assets/data';
 import { CartContext } from '../context/CartContext';
 import classNames from 'classnames';
-import { ShoppingCart, LogIn } from 'lucide-react';
-import CustomizationModal from '../components/CustomizationModal';
+import { ShoppingCart } from 'lucide-react';
 import { AuthContext } from '../context/AuthContext';
 
 const Menu = () => {
     const navigate = useNavigate();
     const [activeSection, setActiveSection] = useState('simple-veg');
-    const { addToCart } = useContext(CartContext);
+    const { addToCart, setIsCartOpen } = useContext(CartContext);
     const { user } = useContext(AuthContext);
 
-    const [selectedCustomItem, setSelectedCustomItem] = useState(null);
 
     // Create refs for every section dynamically
     const sectionRefs = useRef({});
@@ -195,11 +193,12 @@ const Menu = () => {
 
     const handleAddToCartWithCheck = (item) => {
         if (!user) {
-            alert("Please login to place an order!");
+            alert('Please login to place an order!');
             navigate('/login');
             return;
         }
         addToCart(item);
+        setIsCartOpen(true); // Open cart drawer after adding
     };
 
     const renderPizzaSection = (category) => (
@@ -231,9 +230,9 @@ const Menu = () => {
                                     <button
                                         className="add-btn"
                                         style={{ width: '100%', height: '45px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px' }}
-                                        onClick={() => setSelectedCustomItem(pizza)}
+                                        onClick={() => handleAddToCartWithCheck(pizza)}
                                     >
-                                        <i className="fas fa-cog"></i> Customize & Add
+                                        <ShoppingCart size={16} /> Add to Cart
                                     </button>
                                 </div>
                             </div>
@@ -442,17 +441,6 @@ const Menu = () => {
                         </div>
                     </div>
                 </div>
-            )}
-            {/* Customization Modal */}
-            {selectedCustomItem && (
-                <CustomizationModal
-                    item={selectedCustomItem}
-                    onClose={() => setSelectedCustomItem(null)}
-                    onAddToCart={(customizedItem) => {
-                        addToCart(customizedItem);
-                        setSelectedCustomItem(null);
-                    }}
-                />
             )}
         </div>
     );

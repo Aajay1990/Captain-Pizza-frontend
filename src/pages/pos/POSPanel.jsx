@@ -696,7 +696,7 @@ const POSPanel = () => {
                                                     <div className="topping-size-selector" style={{ alignItems: 'center', justifyContent: 'center' }}>
                                                         <div className="addon-qty-controls" style={{ margin: 0, padding: 0, border: 'none' }}>
                                                             <button onClick={() => setKetchupQty(Math.max(1, ketchupQty - 1))}>-</button>
-                                                            <span style={{ color: 'black' }}>{ketchupQty}</span>
+                                                            <span style={{ color: '#333' }}>{ketchupQty}</span>
                                                             <button onClick={() => setKetchupQty(ketchupQty + 1)}>+</button>
                                                             <span style={{ marginLeft: '10px', fontWeight: 'bold', color: 'var(--pos-primary)' }}>+₹{ketchupQty * ADDON_PRICES.ketchup}</span>
                                                         </div>
@@ -758,13 +758,13 @@ const POSPanel = () => {
                                     )}
                                 </div>
 
-                                {/* Extra Cheese */}
+                                {/* Extra Cheese — Direct Size Selection */}
                                 <div className="addon-card dropdown-card">
                                     <div className="dropdown-header" onClick={() => setExpandedSection(expandedSection === 'cheese' ? null : 'cheese')}>
                                         <div>
                                             <strong>Extra Cheese Topping</strong>
                                             <div className="selected-preview">
-                                                {extraCheese ? `Selected (${extraCheese.charAt(0).toUpperCase()}) +₹${ADDON_PRICES.cheese[extraCheese]}` : 'Not Selected'}
+                                                {extraCheese ? `✓ (${extraCheese.charAt(0).toUpperCase()}) +₹${ADDON_PRICES.cheese[extraCheese]}` : 'Not Selected'}
                                             </div>
                                         </div>
                                         <i className={`fas fa-chevron-${expandedSection === 'cheese' ? 'up' : 'down'}`}></i>
@@ -772,41 +772,38 @@ const POSPanel = () => {
                                     {expandedSection === 'cheese' && (
                                         <div className="dropdown-list">
                                             <div className="dropdown-item-complex">
-                                                <label className="dropdown-item-header">
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={!!extraCheese}
-                                                        onChange={(e) => setExtraCheese(e.target.checked ? selectedSize : null)}
-                                                    />
-                                                    <span className="topping-name">Add Extra Cheese</span>
-                                                </label>
-                                                {extraCheese && (
-                                                    <div className="topping-size-selector">
-                                                        {['small', 'medium', 'large'].map(sz => (
-                                                            <label key={sz} className="nested-size-radio">
-                                                                <input
-                                                                    type="radio"
-                                                                    name="cheese-size"
-                                                                    checked={extraCheese === sz}
-                                                                    onChange={() => setExtraCheese(sz)}
-                                                                />
-                                                                <span>{sz.charAt(0).toUpperCase()} (+₹{ADDON_PRICES.cheese[sz]})</span>
-                                                            </label>
-                                                        ))}
-                                                    </div>
-                                                )}
+                                                <p style={{ fontSize: '0.78rem', color: '#888', margin: '0 0 10px', fontStyle: 'italic' }}>Tap a size to add — tap again to remove</p>
+                                                <div className="topping-size-selector" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                                    {['small', 'medium', 'large'].map(sz => (
+                                                        <button
+                                                            key={sz}
+                                                            onClick={() => setExtraCheese(extraCheese === sz ? null : sz)}
+                                                            style={{
+                                                                display: 'flex', flexDirection: 'column', alignItems: 'center',
+                                                                padding: '8px 16px', borderRadius: '10px', cursor: 'pointer',
+                                                                border: `2px solid ${extraCheese === sz ? 'var(--pos-primary)' : '#ddd'}`,
+                                                                background: extraCheese === sz ? 'var(--pos-primary)' : '#f9f9f9',
+                                                                color: extraCheese === sz ? '#fff' : '#333',
+                                                                fontWeight: '700', minWidth: '80px', transition: 'all 0.15s'
+                                                            }}
+                                                        >
+                                                            <span style={{ fontSize: '0.85rem' }}>{sz.charAt(0).toUpperCase() + sz.slice(1)}</span>
+                                                            <span style={{ fontSize: '0.75rem', opacity: 0.85 }}>+₹{ADDON_PRICES.cheese[sz]}</span>
+                                                        </button>
+                                                    ))}
+                                                </div>
                                             </div>
                                         </div>
                                     )}
                                 </div>
 
-                                {/* Cheese Burst Crust */}
+                                {/* Cheese Burst Crust — Direct Size Selection */}
                                 <div className="addon-card dropdown-card">
                                     <div className="dropdown-header" onClick={() => setExpandedSection(expandedSection === 'burst' ? null : 'burst')}>
                                         <div>
                                             <strong>Cheese Burst Crust</strong>
                                             <div className="selected-preview">
-                                                {cheeseBurst ? `Selected (${cheeseBurst.charAt(0).toUpperCase()}) +₹${ADDON_PRICES.burst[cheeseBurst]}` : 'Not Selected'}
+                                                {cheeseBurst ? `✓ (${cheeseBurst.charAt(0).toUpperCase()}) +₹${ADDON_PRICES.burst[cheeseBurst]}` : 'Not Selected'}
                                             </div>
                                         </div>
                                         <i className={`fas fa-chevron-${expandedSection === 'burst' ? 'up' : 'down'}`}></i>
@@ -814,29 +811,26 @@ const POSPanel = () => {
                                     {expandedSection === 'burst' && (
                                         <div className="dropdown-list">
                                             <div className="dropdown-item-complex">
-                                                <label className="dropdown-item-header">
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={!!cheeseBurst}
-                                                        onChange={(e) => setCheeseBurst(e.target.checked ? selectedSize : null)}
-                                                    />
-                                                    <span className="topping-name">Add Cheese Burst Crust</span>
-                                                </label>
-                                                {cheeseBurst && (
-                                                    <div className="topping-size-selector">
-                                                        {['small', 'medium', 'large'].map(sz => (
-                                                            <label key={sz} className="nested-size-radio">
-                                                                <input
-                                                                    type="radio"
-                                                                    name="burst-size"
-                                                                    checked={cheeseBurst === sz}
-                                                                    onChange={() => setCheeseBurst(sz)}
-                                                                />
-                                                                <span>{sz.charAt(0).toUpperCase()} (+₹{ADDON_PRICES.burst[sz]})</span>
-                                                            </label>
-                                                        ))}
-                                                    </div>
-                                                )}
+                                                <p style={{ fontSize: '0.78rem', color: '#888', margin: '0 0 10px', fontStyle: 'italic' }}>Tap a size to add — tap again to remove</p>
+                                                <div className="topping-size-selector" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                                    {['small', 'medium', 'large'].map(sz => (
+                                                        <button
+                                                            key={sz}
+                                                            onClick={() => setCheeseBurst(cheeseBurst === sz ? null : sz)}
+                                                            style={{
+                                                                display: 'flex', flexDirection: 'column', alignItems: 'center',
+                                                                padding: '8px 16px', borderRadius: '10px', cursor: 'pointer',
+                                                                border: `2px solid ${cheeseBurst === sz ? 'var(--pos-primary)' : '#ddd'}`,
+                                                                background: cheeseBurst === sz ? 'var(--pos-primary)' : '#f9f9f9',
+                                                                color: cheeseBurst === sz ? '#fff' : '#333',
+                                                                fontWeight: '700', minWidth: '80px', transition: 'all 0.15s'
+                                                            }}
+                                                        >
+                                                            <span style={{ fontSize: '0.85rem' }}>{sz.charAt(0).toUpperCase() + sz.slice(1)}</span>
+                                                            <span style={{ fontSize: '0.75rem', opacity: 0.85 }}>+₹{ADDON_PRICES.burst[sz]}</span>
+                                                        </button>
+                                                    ))}
+                                                </div>
                                             </div>
                                         </div>
                                     )}

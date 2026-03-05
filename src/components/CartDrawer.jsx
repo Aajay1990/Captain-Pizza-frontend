@@ -3,132 +3,126 @@ import { useNavigate } from 'react-router-dom';
 import { CartContext } from '../context/CartContext';
 import './CartDrawer.css';
 
-/* ─── Add-On Prices (mirrors POS) ─── */
-const ADDON_PRICES = {
+/* ─── Addon Prices ────────────────────────────────────────────────── */
+const AP = {
+    ketchup: 1,
     veg: { small: 25, medium: 35, large: 45 },
     cheese: { small: 40, medium: 60, large: 90 },
     burst: { small: 50, medium: 60, large: 90 },
-    ketchup: 1
 };
+
 const VEG_TOPPINGS = [
     { id: 'tomato', name: 'Tomato' },
     { id: 'onion', name: 'Onion' },
     { id: 'corn', name: 'Sweet Corn' },
-    { id: 'capsicum', name: 'Capsicum' }
+    { id: 'capsicum', name: 'Capsicum' },
 ];
 
-/* ─── Inline Customization Panel (shown inside cart) ─── */
-const CartItemCustomizer = ({ item, onSave, onClose }) => {
-    const [vegToppings, setVegToppings] = useState({});
-    const [extraCheese, setExtraCheese] = useState(null);
-    const [cheeseBurst, setCheeseBurst] = useState(null);
-    const [ketchupEnabled, setKetchupEnabled] = useState(false);
-    const [ketchupQty, setKetchupQty] = useState(1);
-    const [expanded, setExpanded] = useState('ketchup');
+/* ─── Size Chip ──────────────────────────────────────────────────── */
+const SizeChip = ({ size, price, active, onClick }) => (
+    <button
+        className={`sz-chip ${active ? 'active' : ''}`}
+        onClick={onClick}
+        type="button"
+    >
+        <span className="sz-label">{size.charAt(0).toUpperCase() + size.slice(1)}</span>
+        <span className="sz-price">+₹{price}</span>
+    </button>
+);
 
-    const toggleSection = (s) => setExpanded(expanded === s ? null : s);
+/* ─── Inline Cart Customizer ─────────────────────────────────────── */
+const CartCustomizer = ({ item, onSave, onClose }) => {
+    const [ketchupQty, setKetchupQty] = useState(0);
+    const [vegToppings, setVegToppings] = useState({});  // id → size
+    const [cheese, setCheese] = useState(null); // size | null
+    const [burst, setBurst] = useState(null); // size | null
+    const [openSection, setOpenSection] = useState('ketchup');
+
+    const toggle = (s) => setOpenSection(openSection === s ? null : s);
+
+    const vegTotal = Object.values(vegToppings).reduce((a, sz) => a + AP.veg[sz], 0);
+    const addonTotal = ketchupQty * AP.ketchup
+        + vegTotal
+        + (cheese ? AP.cheese[cheese] : 0)
+        + (burst ? AP.burst[burst] : 0);
 
     const handleVegToggle = (id) => {
         setVegToppings(prev => {
-            const next = { ...prev };
-            if (next[id]) delete next[id];
-            else next[id] = 'medium';
-            return next;
+            if (prev[id]) { const n = { ...prev }; delete n[id]; return n; }
+            return { ...prev, [id]: 'medium' };
         });
-    };
-
-    const calculateAddonsTotal = () => {
-        let t = 0;
-        Object.values(vegToppings).forEach(sz => t += ADDON_PRICES.veg[sz]);
-        if (extraCheese) t += ADDON_PRICES.cheese[extraCheese];
-        if (cheeseBurst) t += ADDON_PRICES.burst[cheeseBurst];
-        if (ketchupEnabled) t += ketchupQty * ADDON_PRICES.ketchup;
-        return t;
     };
 
     const handleSave = () => {
-        const formattedToppings = [];
-        let addonsPrice = 0;
+        const toppings = [];
+        if (ketchupQty > 0) toppings.push({ name: `Ketchup ×${ketchupQty}`, price: ketchupQty * AP.ketchup });
         Object.entries(vegToppings).forEach(([id, sz]) => {
-            const name = VEG_TOPPINGS.find(t => t.id === id)?.name;
-            if (name) {
-                addonsPrice += ADDON_PRICES.veg[sz];
-                formattedToppings.push({ name: `${name} (${sz.charAt(0).toUpperCase()})`, price: ADDON_PRICES.veg[sz] });
-            }
+            const t = VEG_TOPPINGS.find(x => x.id === id);
+            if (t) toppings.push({ name: `${t.name} (${sz.charAt(0).toUpperCase()})`, price: AP.veg[sz] });
         });
-        if (extraCheese) {
-            addonsPrice += ADDON_PRICES.cheese[extraCheese];
-            formattedToppings.push({ name: `Extra Cheese (${extraCheese.charAt(0).toUpperCase()})`, price: ADDON_PRICES.cheese[extraCheese] });
-        }
-        if (cheeseBurst) {
-            addonsPrice += ADDON_PRICES.burst[cheeseBurst];
-            formattedToppings.push({ name: `Cheese Burst (${cheeseBurst.charAt(0).toUpperCase()})`, price: ADDON_PRICES.burst[cheeseBurst] });
-        }
-        if (ketchupEnabled) {
-            addonsPrice += ketchupQty * ADDON_PRICES.ketchup;
-            formattedToppings.push({ name: `Ketchup (x${ketchupQty})`, price: ketchupQty * ADDON_PRICES.ketchup });
-        }
-        onSave({ toppings: formattedToppings, addonsPrice });
+        if (cheese) toppings.push({ name: `Extra Cheese (${cheese.charAt(0).toUpperCase()})`, price: AP.cheese[cheese] });
+        if (burst) toppings.push({ name: `Cheese Burst (${burst.charAt(0).toUpperCase()})`, price: AP.burst[burst] });
+        onSave({ toppings, addonTotal });
     };
 
-    const addonTotal = calculateAddonsTotal();
-    const baseItem = item;
-
     return (
-        <div className="cart-customizer">
-            <div className="cust-header">
+        <div className="cart-cust">
+            <div className="cart-cust-header">
                 <span>🍕 Customize: <strong>{item.name}</strong></span>
-                <button onClick={onClose} className="cust-close-btn">&times;</button>
+                <button className="cust-x" onClick={onClose}>×</button>
             </div>
 
-            {/* Ketchup */}
-            <div className="cust-accordion">
-                <div className="cust-acc-header" onClick={() => toggleSection('ketchup')}>
-                    <strong>Ketchup Packets</strong>
-                    <span>{ketchupEnabled ? `✓ x${ketchupQty} +₹${ketchupQty}` : 'Not selected'}</span>
-                    <i className={`fas fa-chevron-${expanded === 'ketchup' ? 'up' : 'down'}`}></i>
+            {/* ── Ketchup ───────────────────────────── */}
+            <div className="cust-section">
+                <div className="cust-sec-title" onClick={() => toggle('ketchup')}>
+                    <div>
+                        <strong>Ketchup Packets</strong>
+                        {ketchupQty > 0 && <span className="cust-badge">×{ketchupQty} +₹{ketchupQty}</span>}
+                    </div>
+                    <i className={`fas fa-chevron-${openSection === 'ketchup' ? 'up' : 'down'}`}></i>
                 </div>
-                {expanded === 'ketchup' && (
-                    <div className="cust-acc-body">
-                        <label className="cust-check-row">
-                            <input type="checkbox" checked={ketchupEnabled} onChange={e => setKetchupEnabled(e.target.checked)} />
-                            <span>Include Ketchup (+₹1/packet)</span>
-                        </label>
-                        {ketchupEnabled && (
-                            <div className="cust-qty-row">
-                                <button onClick={() => setKetchupQty(q => Math.max(1, q - 1))}>-</button>
-                                <span>{ketchupQty}</span>
-                                <button onClick={() => setKetchupQty(q => q + 1)}>+</button>
-                                <strong>+₹{ketchupQty}</strong>
-                            </div>
-                        )}
+                {openSection === 'ketchup' && (
+                    <div className="cust-body">
+                        <p className="cust-hint">₹1 per packet — select quantity</p>
+                        <div className="qty-row">
+                            <button className="qty-btn" onClick={() => setKetchupQty(q => Math.max(0, q - 1))}>−</button>
+                            <span className="qty-val">{ketchupQty}</span>
+                            <button className="qty-btn plus" onClick={() => setKetchupQty(q => q + 1)}>+</button>
+                            {ketchupQty > 0 && <span className="qty-price">+₹{ketchupQty}</span>}
+                        </div>
                     </div>
                 )}
             </div>
 
-            {/* Veg Toppings */}
-            <div className="cust-accordion">
-                <div className="cust-acc-header" onClick={() => toggleSection('veg')}>
-                    <strong>Veg Toppings</strong>
-                    <span>{Object.keys(vegToppings).length > 0 ? `✓ ${Object.keys(vegToppings).length} selected +₹${Object.values(vegToppings).reduce((a, sz) => a + ADDON_PRICES.veg[sz], 0)}` : 'Not selected'}</span>
-                    <i className={`fas fa-chevron-${expanded === 'veg' ? 'up' : 'down'}`}></i>
+            {/* ── Veg Toppings ──────────────────────── */}
+            <div className="cust-section">
+                <div className="cust-sec-title" onClick={() => toggle('veg')}>
+                    <div>
+                        <strong>Veg Toppings</strong>
+                        {Object.keys(vegToppings).length > 0 && (
+                            <span className="cust-badge">{Object.keys(vegToppings).length} added +₹{vegTotal}</span>
+                        )}
+                    </div>
+                    <i className={`fas fa-chevron-${openSection === 'veg' ? 'up' : 'down'}`}></i>
                 </div>
-                {expanded === 'veg' && (
-                    <div className="cust-acc-body">
+                {openSection === 'veg' && (
+                    <div className="cust-body">
                         {VEG_TOPPINGS.map(t => (
-                            <div key={t.id} className="cust-topping-row">
-                                <label className="cust-check-row">
-                                    <input type="checkbox" checked={!!vegToppings[t.id]} onChange={() => handleVegToggle(t.id)} />
+                            <div key={t.id} className="topping-row">
+                                <label className="topping-check">
+                                    <input type="checkbox" checked={!!vegToppings[t.id]}
+                                        onChange={() => handleVegToggle(t.id)} />
                                     <span>{t.name}</span>
+                                    {vegToppings[t.id] && (
+                                        <span className="cust-badge sm">+₹{AP.veg[vegToppings[t.id]]}</span>
+                                    )}
                                 </label>
                                 {vegToppings[t.id] && (
-                                    <div className="cust-size-row">
+                                    <div className="size-chips">
                                         {['small', 'medium', 'large'].map(sz => (
-                                            <label key={sz} className={`cust-size-chip ${vegToppings[t.id] === sz ? 'active' : ''}`}>
-                                                <input type="radio" name={`veg-${t.id}`} checked={vegToppings[t.id] === sz}
-                                                    onChange={() => setVegToppings(p => ({ ...p, [t.id]: sz }))} style={{ display: 'none' }} />
-                                                {sz.charAt(0).toUpperCase()} +₹{ADDON_PRICES.veg[sz]}
-                                            </label>
+                                            <SizeChip key={sz} size={sz} price={AP.veg[sz]}
+                                                active={vegToppings[t.id] === sz}
+                                                onClick={() => setVegToppings(p => ({ ...p, [t.id]: sz }))} />
                                         ))}
                                     </div>
                                 )}
@@ -138,163 +132,161 @@ const CartItemCustomizer = ({ item, onSave, onClose }) => {
                 )}
             </div>
 
-            {/* Extra Cheese */}
-            <div className="cust-accordion">
-                <div className="cust-acc-header" onClick={() => toggleSection('cheese')}>
-                    <strong>Extra Cheese</strong>
-                    <span>{extraCheese ? `✓ (${extraCheese.charAt(0).toUpperCase()}) +₹${ADDON_PRICES.cheese[extraCheese]}` : 'Not selected'}</span>
-                    <i className={`fas fa-chevron-${expanded === 'cheese' ? 'up' : 'down'}`}></i>
+            {/* ── Extra Cheese — direct size selection ─ */}
+            <div className="cust-section">
+                <div className="cust-sec-title" onClick={() => toggle('cheese')}>
+                    <div>
+                        <strong>Extra Cheese</strong>
+                        {cheese && <span className="cust-badge">({cheese.charAt(0).toUpperCase()}) +₹{AP.cheese[cheese]}</span>}
+                    </div>
+                    <i className={`fas fa-chevron-${openSection === 'cheese' ? 'up' : 'down'}`}></i>
                 </div>
-                {expanded === 'cheese' && (
-                    <div className="cust-acc-body">
-                        <label className="cust-check-row">
-                            <input type="checkbox" checked={!!extraCheese} onChange={e => setExtraCheese(e.target.checked ? 'medium' : null)} />
-                            <span>Add Extra Cheese</span>
-                        </label>
-                        {extraCheese && (
-                            <div className="cust-size-row">
-                                {['small', 'medium', 'large'].map(sz => (
-                                    <label key={sz} className={`cust-size-chip ${extraCheese === sz ? 'active' : ''}`}>
-                                        <input type="radio" name="cheese-sz" checked={extraCheese === sz}
-                                            onChange={() => setExtraCheese(sz)} style={{ display: 'none' }} />
-                                        {sz.charAt(0).toUpperCase()} +₹{ADDON_PRICES.cheese[sz]}
-                                    </label>
-                                ))}
-                            </div>
-                        )}
+                {openSection === 'cheese' && (
+                    <div className="cust-body">
+                        <p className="cust-hint">Tap a size to add — tap again to remove</p>
+                        <div className="size-chips">
+                            {['small', 'medium', 'large'].map(sz => (
+                                <SizeChip key={sz} size={sz} price={AP.cheese[sz]}
+                                    active={cheese === sz}
+                                    onClick={() => setCheese(cheese === sz ? null : sz)} />
+                            ))}
+                        </div>
                     </div>
                 )}
             </div>
 
-            {/* Cheese Burst */}
-            <div className="cust-accordion">
-                <div className="cust-acc-header" onClick={() => toggleSection('burst')}>
-                    <strong>Cheese Burst Crust</strong>
-                    <span>{cheeseBurst ? `✓ (${cheeseBurst.charAt(0).toUpperCase()}) +₹${ADDON_PRICES.burst[cheeseBurst]}` : 'Not selected'}</span>
-                    <i className={`fas fa-chevron-${expanded === 'burst' ? 'up' : 'down'}`}></i>
+            {/* ── Cheese Burst — direct size selection ─ */}
+            <div className="cust-section">
+                <div className="cust-sec-title" onClick={() => toggle('burst')}>
+                    <div>
+                        <strong>Cheese Burst Crust</strong>
+                        {burst && <span className="cust-badge">({burst.charAt(0).toUpperCase()}) +₹{AP.burst[burst]}</span>}
+                    </div>
+                    <i className={`fas fa-chevron-${openSection === 'burst' ? 'up' : 'down'}`}></i>
                 </div>
-                {expanded === 'burst' && (
-                    <div className="cust-acc-body">
-                        <label className="cust-check-row">
-                            <input type="checkbox" checked={!!cheeseBurst} onChange={e => setCheeseBurst(e.target.checked ? 'medium' : null)} />
-                            <span>Add Cheese Burst Crust</span>
-                        </label>
-                        {cheeseBurst && (
-                            <div className="cust-size-row">
-                                {['small', 'medium', 'large'].map(sz => (
-                                    <label key={sz} className={`cust-size-chip ${cheeseBurst === sz ? 'active' : ''}`}>
-                                        <input type="radio" name="burst-sz" checked={cheeseBurst === sz}
-                                            onChange={() => setCheeseBurst(sz)} style={{ display: 'none' }} />
-                                        {sz.charAt(0).toUpperCase()} +₹{ADDON_PRICES.burst[sz]}
-                                    </label>
-                                ))}
-                            </div>
-                        )}
+                {openSection === 'burst' && (
+                    <div className="cust-body">
+                        <p className="cust-hint">Tap a size to add — tap again to remove</p>
+                        <div className="size-chips">
+                            {['small', 'medium', 'large'].map(sz => (
+                                <SizeChip key={sz} size={sz} price={AP.burst[sz]}
+                                    active={burst === sz}
+                                    onClick={() => setBurst(burst === sz ? null : sz)} />
+                            ))}
+                        </div>
                     </div>
                 )}
             </div>
 
+            {/* ── Footer ───────────────────────────── */}
             <div className="cust-footer">
-                <div className="cust-total">Add-ons Total: <strong>+₹{addonTotal}</strong></div>
-                <div className="cust-actions">
-                    <button onClick={onClose} className="cust-btn-cancel">Cancel</button>
-                    <button onClick={handleSave} className="cust-btn-save">Apply Add-Ons</button>
+                {addonTotal > 0 && (
+                    <div className="cust-addon-total">Add-ons: <strong>+₹{addonTotal}</strong></div>
+                )}
+                <div className="cust-footer-btns">
+                    <button className="cust-cancel" onClick={onClose}>Cancel</button>
+                    <button className="cust-apply" onClick={handleSave}>
+                        Apply Add-Ons {addonTotal > 0 && `(+₹${addonTotal})`}
+                    </button>
                 </div>
             </div>
         </div>
     );
 };
 
-/* ─── Main Cart Drawer ─── */
+/* ─── Main Cart Drawer ───────────────────────────────────────────── */
 const CartDrawer = () => {
-    const { cartItems, updateQuantity, isCartOpen, setIsCartOpen, cartCount, toggleAddon } = useContext(CartContext);
-    const [customizingItem, setCustomizingItem] = useState(null);
+    const {
+        cartItems, updateQuantity, isCartOpen, setIsCartOpen,
+        cartCount, toggleAddon
+    } = useContext(CartContext);
+
+    const [customizingId, setCustomizingId] = useState(null);
     const navigate = useNavigate();
 
     if (!isCartOpen) return null;
 
-    const calculateTotal = () => cartItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+    const subtotal = cartItems.reduce((acc, i) => acc + i.price * i.quantity, 0);
 
     const handleCheckout = () => {
         setIsCartOpen(false);
         navigate('/order');
     };
 
-    const handleSaveCustomization = (cartItem, { toppings, addonsPrice }) => {
-        // Apply each topping to the cart item via toggleAddon
-        toppings.forEach(t => toggleAddon(cartItem.cartItemId, t));
-        setCustomizingItem(null);
-    };
-
-    // Determine if item is a pizza (has size in its name or isPizza flag)
-    const isPizza = (item) => {
-        return item.category === 'pizza' || (item.name && (
-            item.name.toLowerCase().includes('pizza') ||
-            item.selectedSize || item.size
-        ));
+    const handleSaveCust = (cartItemId, { toppings, addonTotal }) => {
+        toppings.forEach(t => toggleAddon(cartItemId, t));
+        setCustomizingId(null);
     };
 
     return (
-        <div className="cart-drawer-overlay" onClick={() => setIsCartOpen(false)}>
+        <div className="cart-overlay" onClick={() => setIsCartOpen(false)}>
             <div className="cart-drawer" onClick={e => e.stopPropagation()}>
-                <div className="cart-drawer-header">
-                    <h2>Your Basket ({cartCount})</h2>
-                    <button className="close-btn" onClick={() => setIsCartOpen(false)}>
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <line x1="18" y1="6" x2="6" y2="18"></line>
-                            <line x1="6" y1="6" x2="18" y2="18"></line>
-                        </svg>
+
+                {/* Header */}
+                <div className="cart-head">
+                    <div className="cart-head-left">
+                        <i className="fas fa-shopping-basket"></i>
+                        <h2>Your Cart <span className="cart-count-badge">{cartCount}</span></h2>
+                    </div>
+                    <button className="cart-close" onClick={() => setIsCartOpen(false)}>
+                        <i className="fas fa-times"></i>
                     </button>
                 </div>
 
-                <div className="cart-drawer-body">
+                {/* Body */}
+                <div className="cart-body">
                     {cartItems.length === 0 ? (
-                        <div className="empty-cart-drawer" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '20px' }}>
-                            <p>Your basket is empty!</p>
-                            <button className="btn-primary" onClick={() => { setIsCartOpen(false); navigate('/menu'); }} style={{ padding: '10px 20px', marginTop: '10px' }}>
+                        <div className="cart-empty">
+                            <div className="cart-empty-icon">🛒</div>
+                            <p>Your cart is empty</p>
+                            <button
+                                className="cart-browse-btn"
+                                onClick={() => { setIsCartOpen(false); navigate('/menu'); }}
+                            >
                                 Browse Menu
                             </button>
                         </div>
                     ) : (
-                        <div className="drawer-items">
+                        <div className="cart-items-list">
                             {cartItems.map(item => (
-                                <div key={item.cartItemId}>
-                                    <div className="drawer-item">
-                                        <div className="drawer-item-info">
-                                            <h4>{item.name}</h4>
+                                <div key={item.cartItemId} className="cart-item-block">
+                                    {/* Item Row */}
+                                    <div className="cart-item-row">
+                                        <div className="cart-item-info">
+                                            <div className="cart-item-name">{item.name}</div>
                                             {item.toppings && item.toppings.length > 0 && (
-                                                <div className="cart-item-toppings" style={{ fontSize: '0.78rem', color: '#c62828', marginTop: '-2px', marginBottom: '3px' }}>
-                                                    + {item.toppings.map(t => t.name || t).join(', ')}
+                                                <div className="cart-item-addons">
+                                                    {item.toppings.map((t, i) => (
+                                                        <span key={i} className="addon-tag">+ {t.name || t}</span>
+                                                    ))}
                                                 </div>
                                             )}
-                                            <p className="drawer-item-price">₹{item.price} × {item.quantity} = <strong>₹{item.price * item.quantity}</strong></p>
+                                            <div className="cart-item-price">₹{item.price} × {item.quantity} = <strong>₹{item.price * item.quantity}</strong></div>
                                         </div>
-                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
-                                            <div className="quantity-controls drawer-qty">
-                                                <button onClick={() => updateQuantity(item.cartItemId, -1)}>-</button>
+                                        <div className="cart-item-controls">
+                                            <div className="cart-qty">
+                                                <button onClick={() => updateQuantity(item.cartItemId, -1)}>−</button>
                                                 <span>{item.quantity}</span>
                                                 <button onClick={() => updateQuantity(item.cartItemId, 1)}>+</button>
                                             </div>
-                                            {/* Show Customize button for pizzas */}
                                             <button
-                                                onClick={() => setCustomizingItem(customizingItem?.cartItemId === item.cartItemId ? null : item)}
-                                                style={{
-                                                    fontSize: '0.75rem', border: '1px solid #c62828', background: customizingItem?.cartItemId === item.cartItemId ? '#c62828' : 'transparent',
-                                                    color: customizingItem?.cartItemId === item.cartItemId ? '#fff' : '#c62828',
-                                                    borderRadius: '6px', padding: '3px 8px', cursor: 'pointer', fontWeight: '600', transition: 'all 0.2s'
-                                                }}
+                                                className={`addon-toggle-btn ${customizingId === item.cartItemId ? 'active' : ''}`}
+                                                onClick={() => setCustomizingId(
+                                                    customizingId === item.cartItemId ? null : item.cartItemId
+                                                )}
                                             >
-                                                🍕 Add-Ons
+                                                <i className="fas fa-sliders-h"></i>
+                                                {customizingId === item.cartItemId ? 'Close' : 'Add-Ons'}
                                             </button>
                                         </div>
                                     </div>
 
-                                    {/* Inline Cart Customizer */}
-                                    {customizingItem?.cartItemId === item.cartItemId && (
-                                        <CartItemCustomizer
+                                    {/* Inline Customizer */}
+                                    {customizingId === item.cartItemId && (
+                                        <CartCustomizer
                                             item={item}
-                                            onSave={(data) => handleSaveCustomization(item, data)}
-                                            onClose={() => setCustomizingItem(null)}
+                                            onSave={(data) => handleSaveCust(item.cartItemId, data)}
+                                            onClose={() => setCustomizingId(null)}
                                         />
                                     )}
                                 </div>
@@ -303,14 +295,15 @@ const CartDrawer = () => {
                     )}
                 </div>
 
+                {/* Footer */}
                 {cartItems.length > 0 && (
-                    <div className="cart-drawer-footer">
-                        <div className="drawer-subtotal">
-                            <span>Subtotal:</span>
-                            <span>₹{calculateTotal()}</span>
+                    <div className="cart-foot">
+                        <div className="cart-subtotal">
+                            <span>Subtotal</span>
+                            <strong>₹{subtotal}</strong>
                         </div>
-                        <button className="btn-primary checkout-btn-drawer" onClick={handleCheckout}>
-                            Proceed to Checkout
+                        <button className="cart-checkout-btn" onClick={handleCheckout}>
+                            <i className="fas fa-lock"></i> Proceed to Checkout &nbsp;₹{subtotal}
                         </button>
                     </div>
                 )}

@@ -14,26 +14,24 @@ const DashboardStats = () => {
         staffSummary: []
     });
     const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
 
-    useEffect(() => {
-        const fetchDashboardData = async () => {
-            try {
-                const res = await fetch('https://pizza-backend-api-a5mm.onrender.com/api/admin/dashboard', {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                const data = await res.json();
-                if (data.success) {
-                    setStats(data.data);
-                }
-            } catch (error) {
-                console.error("Failed to fetch dashboard stats", error);
-            } finally {
-                setLoading(false);
-            }
-        };
+    const fetchDashboardData = async (isRefresh = false) => {
+        if (isRefresh) setRefreshing(true); else setLoading(true);
+        try {
+            const res = await fetch('https://pizza-backend-api-a5mm.onrender.com/api/admin/dashboard', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await res.json();
+            if (data.success) setStats(data.data);
+        } catch (error) {
+            console.error('Failed to fetch dashboard stats', error);
+        } finally {
+            setLoading(false); setRefreshing(false);
+        }
+    };
 
-        fetchDashboardData();
-    }, []);
+    useEffect(() => { fetchDashboardData(); }, []);
 
     const statCards = [
         { id: 1, title: 'Total Revenue', value: `₹${stats.totalRevenue.toLocaleString()}`, icon: 'fas fa-rupee-sign', color: '#10b981' },
@@ -50,7 +48,17 @@ const DashboardStats = () => {
 
     return (
         <div className="dashboard-stats">
-            <h3 className="section-title">Store Overview (<span style={{ color: 'var(--primary)' }}>Real-time Sync</span>)</h3>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                <h3 className="section-title" style={{ margin: 0 }}>Store Overview (<span style={{ color: 'var(--primary)' }}>Real-time Sync</span>)</h3>
+                <button
+                    onClick={() => fetchDashboardData(true)}
+                    disabled={refreshing}
+                    style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 16px', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '700', fontSize: '0.85rem', opacity: refreshing ? 0.7 : 1 }}
+                >
+                    <i className={`fas fa-sync-alt ${refreshing ? 'fa-spin' : ''}`}></i>
+                    {refreshing ? 'Refreshing...' : 'Refresh'}
+                </button>
+            </div>
             <div className="stats-grid">
                 {statCards.map(stat => (
                     <div key={stat.id} className="stat-card">

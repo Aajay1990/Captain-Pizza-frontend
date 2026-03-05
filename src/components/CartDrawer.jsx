@@ -1,309 +1,416 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CartContext } from '../context/CartContext';
+import { AuthContext } from '../context/AuthContext';
 import './CartDrawer.css';
 
-/* ─── Addon Prices ────────────────────────────────────────────────── */
-const AP = {
-    ketchup: 1,
-    veg: { small: 25, medium: 35, large: 45 },
-    cheese: { small: 40, medium: 60, large: 90 },
-    burst: { small: 50, medium: 60, large: 90 },
-};
+const API = 'https://pizza-backend-api-a5mm.onrender.com';
 
-const VEG_TOPPINGS = [
-    { id: 'tomato', name: 'Tomato' },
-    { id: 'onion', name: 'Onion' },
-    { id: 'corn', name: 'Sweet Corn' },
-    { id: 'capsicum', name: 'Capsicum' },
+const ADDONS_CONFIG = [
+    { name: 'Ketchup Packets', isToggle: true, prices: { default: 1 } },
+    { name: 'Veg Topping', isToggle: false, prices: { small: 25, medium: 35, large: 45 } },
+    { name: 'Extra Cheese', isToggle: false, prices: { small: 40, medium: 60, large: 90 } },
+    { name: 'Cheese Burst', isToggle: false, prices: { small: 50, medium: 60, large: 90 } },
 ];
 
-/* ─── Size Chip ──────────────────────────────────────────────────── */
-const SizeChip = ({ size, price, active, onClick }) => (
-    <button
-        className={`sz-chip ${active ? 'active' : ''}`}
-        onClick={onClick}
-        type="button"
-    >
-        <span className="sz-label">{size.charAt(0).toUpperCase() + size.slice(1)}</span>
-        <span className="sz-price">+₹{price}</span>
-    </button>
-);
-
-/* ─── Inline Cart Customizer ─────────────────────────────────────── */
-const CartCustomizer = ({ item, onSave, onClose }) => {
-    const [ketchupQty, setKetchupQty] = useState(0);
-    const [vegToppings, setVegToppings] = useState({});  // id → size
-    const [cheese, setCheese] = useState(null); // size | null
-    const [burst, setBurst] = useState(null); // size | null
-    const [openSection, setOpenSection] = useState('ketchup');
-
-    const toggle = (s) => setOpenSection(openSection === s ? null : s);
-
-    const vegTotal = Object.values(vegToppings).reduce((a, sz) => a + AP.veg[sz], 0);
-    const addonTotal = ketchupQty * AP.ketchup
-        + vegTotal
-        + (cheese ? AP.cheese[cheese] : 0)
-        + (burst ? AP.burst[burst] : 0);
-
-    const handleVegToggle = (id) => {
-        setVegToppings(prev => {
-            if (prev[id]) { const n = { ...prev }; delete n[id]; return n; }
-            return { ...prev, [id]: 'medium' };
-        });
-    };
-
-    const handleSave = () => {
-        const toppings = [];
-        if (ketchupQty > 0) toppings.push({ name: `Ketchup ×${ketchupQty}`, price: ketchupQty * AP.ketchup });
-        Object.entries(vegToppings).forEach(([id, sz]) => {
-            const t = VEG_TOPPINGS.find(x => x.id === id);
-            if (t) toppings.push({ name: `${t.name} (${sz.charAt(0).toUpperCase()})`, price: AP.veg[sz] });
-        });
-        if (cheese) toppings.push({ name: `Extra Cheese (${cheese.charAt(0).toUpperCase()})`, price: AP.cheese[cheese] });
-        if (burst) toppings.push({ name: `Cheese Burst (${burst.charAt(0).toUpperCase()})`, price: AP.burst[burst] });
-        onSave({ toppings, addonTotal });
-    };
-
-    return (
-        <div className="cart-cust">
-            <div className="cart-cust-header">
-                <span>🍕 Customize: <strong>{item.name}</strong></span>
-                <button className="cust-x" onClick={onClose}>×</button>
-            </div>
-
-            {/* ── Ketchup ───────────────────────────── */}
-            <div className="cust-section">
-                <div className="cust-sec-title" onClick={() => toggle('ketchup')}>
-                    <div>
-                        <strong>Ketchup Packets</strong>
-                        {ketchupQty > 0 && <span className="cust-badge">×{ketchupQty} +₹{ketchupQty}</span>}
-                    </div>
-                    <i className={`fas fa-chevron-${openSection === 'ketchup' ? 'up' : 'down'}`}></i>
-                </div>
-                {openSection === 'ketchup' && (
-                    <div className="cust-body">
-                        <p className="cust-hint">₹1 per packet — select quantity</p>
-                        <div className="qty-row">
-                            <button className="qty-btn" onClick={() => setKetchupQty(q => Math.max(0, q - 1))}>−</button>
-                            <span className="qty-val">{ketchupQty}</span>
-                            <button className="qty-btn plus" onClick={() => setKetchupQty(q => q + 1)}>+</button>
-                            {ketchupQty > 0 && <span className="qty-price">+₹{ketchupQty}</span>}
-                        </div>
-                    </div>
-                )}
-            </div>
-
-            {/* ── Veg Toppings ──────────────────────── */}
-            <div className="cust-section">
-                <div className="cust-sec-title" onClick={() => toggle('veg')}>
-                    <div>
-                        <strong>Veg Toppings</strong>
-                        {Object.keys(vegToppings).length > 0 && (
-                            <span className="cust-badge">{Object.keys(vegToppings).length} added +₹{vegTotal}</span>
-                        )}
-                    </div>
-                    <i className={`fas fa-chevron-${openSection === 'veg' ? 'up' : 'down'}`}></i>
-                </div>
-                {openSection === 'veg' && (
-                    <div className="cust-body">
-                        {VEG_TOPPINGS.map(t => (
-                            <div key={t.id} className="topping-row">
-                                <label className="topping-check">
-                                    <input type="checkbox" checked={!!vegToppings[t.id]}
-                                        onChange={() => handleVegToggle(t.id)} />
-                                    <span>{t.name}</span>
-                                    {vegToppings[t.id] && (
-                                        <span className="cust-badge sm">+₹{AP.veg[vegToppings[t.id]]}</span>
-                                    )}
-                                </label>
-                                {vegToppings[t.id] && (
-                                    <div className="size-chips">
-                                        {['small', 'medium', 'large'].map(sz => (
-                                            <SizeChip key={sz} size={sz} price={AP.veg[sz]}
-                                                active={vegToppings[t.id] === sz}
-                                                onClick={() => setVegToppings(p => ({ ...p, [t.id]: sz }))} />
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                        ))}
-                    </div>
-                )}
-            </div>
-
-            {/* ── Extra Cheese — direct size selection ─ */}
-            <div className="cust-section">
-                <div className="cust-sec-title" onClick={() => toggle('cheese')}>
-                    <div>
-                        <strong>Extra Cheese</strong>
-                        {cheese && <span className="cust-badge">({cheese.charAt(0).toUpperCase()}) +₹{AP.cheese[cheese]}</span>}
-                    </div>
-                    <i className={`fas fa-chevron-${openSection === 'cheese' ? 'up' : 'down'}`}></i>
-                </div>
-                {openSection === 'cheese' && (
-                    <div className="cust-body">
-                        <p className="cust-hint">Tap a size to add — tap again to remove</p>
-                        <div className="size-chips">
-                            {['small', 'medium', 'large'].map(sz => (
-                                <SizeChip key={sz} size={sz} price={AP.cheese[sz]}
-                                    active={cheese === sz}
-                                    onClick={() => setCheese(cheese === sz ? null : sz)} />
-                            ))}
-                        </div>
-                    </div>
-                )}
-            </div>
-
-            {/* ── Cheese Burst — direct size selection ─ */}
-            <div className="cust-section">
-                <div className="cust-sec-title" onClick={() => toggle('burst')}>
-                    <div>
-                        <strong>Cheese Burst Crust</strong>
-                        {burst && <span className="cust-badge">({burst.charAt(0).toUpperCase()}) +₹{AP.burst[burst]}</span>}
-                    </div>
-                    <i className={`fas fa-chevron-${openSection === 'burst' ? 'up' : 'down'}`}></i>
-                </div>
-                {openSection === 'burst' && (
-                    <div className="cust-body">
-                        <p className="cust-hint">Tap a size to add — tap again to remove</p>
-                        <div className="size-chips">
-                            {['small', 'medium', 'large'].map(sz => (
-                                <SizeChip key={sz} size={sz} price={AP.burst[sz]}
-                                    active={burst === sz}
-                                    onClick={() => setBurst(burst === sz ? null : sz)} />
-                            ))}
-                        </div>
-                    </div>
-                )}
-            </div>
-
-            {/* ── Footer ───────────────────────────── */}
-            <div className="cust-footer">
-                {addonTotal > 0 && (
-                    <div className="cust-addon-total">Add-ons: <strong>+₹{addonTotal}</strong></div>
-                )}
-                <div className="cust-footer-btns">
-                    <button className="cust-cancel" onClick={onClose}>Cancel</button>
-                    <button className="cust-apply" onClick={handleSave}>
-                        Apply Add-Ons {addonTotal > 0 && `(+₹${addonTotal})`}
-                    </button>
-                </div>
-            </div>
-        </div>
-    );
-};
-
-/* ─── Main Cart Drawer ───────────────────────────────────────────── */
 const CartDrawer = () => {
     const {
-        cartItems, updateQuantity, isCartOpen, setIsCartOpen,
-        cartCount, toggleAddon
+        cartItems, updateQuantity, clearCart,
+        toggleAddonSML, isCartOpen, setIsCartOpen, cartCount
     } = useContext(CartContext);
-
-    const [customizingId, setCustomizingId] = useState(null);
+    const { user, refreshUser } = useContext(AuthContext);
     const navigate = useNavigate();
+
+    // ── Delivery settings from backend ─────────────────────────────
+    const [deliverySettings, setDeliverySettings] = useState({ charge: 40, threshold: 300 });
+    const [adminWhatsApp, setAdminWhatsApp] = useState('919220367325');
+
+    // ── Checkout form ───────────────────────────────────────────────
+    const [name, setName] = useState('');
+    const [phone, setPhone] = useState('');
+    const [address, setAddress] = useState('');
+
+    // ── Coupon ──────────────────────────────────────────────────────
+    const [couponCode, setCouponCode] = useState('');
+    const [discount, setDiscount] = useState(0);
+    const [couponMsg, setCouponMsg] = useState('');
+    const [applyingCoupon, setApplyingCoupon] = useState(false);
+
+    // ── State ───────────────────────────────────────────────────────
+    const [view, setView] = useState('cart'); // 'cart' | 'checkout'
+    const [orderPlacing, setOrderPlacing] = useState(false);
+
+    // ── Totals ──────────────────────────────────────────────────────
+    const cartSubtotal = cartItems.reduce((acc, i) => acc + i.price * i.quantity, 0);
+    const deliveryFee = cartSubtotal >= deliverySettings.threshold ? 0 : deliverySettings.charge;
+    const finalTotal = Math.max(0, cartSubtotal + deliveryFee - discount);
+
+    useEffect(() => {
+        if (user) {
+            setName(user.name || '');
+            setPhone(user.phone || '');
+        }
+        const fetchSettings = async () => {
+            try {
+                const res = await fetch(`${API}/api/admin/settings`);
+                const data = await res.json();
+                if (data.success) {
+                    const val = (key, def) => data.data.find(s => s.key === key)?.value || def;
+                    setDeliverySettings({ charge: val('delivery_charge', 40), threshold: val('free_delivery_min_order', 300) });
+                    setAdminWhatsApp(val('admin_whatsapp_number', '919220367325'));
+                }
+            } catch (_) { }
+        };
+        fetchSettings();
+    }, [user]);
 
     if (!isCartOpen) return null;
 
-    const subtotal = cartItems.reduce((acc, i) => acc + i.price * i.quantity, 0);
-
-    const handleCheckout = () => {
-        setIsCartOpen(false);
-        navigate('/order');
+    // ── Coupon ──────────────────────────────────────────────────────
+    const handleApplyCoupon = async () => {
+        if (!couponCode.trim()) return;
+        setApplyingCoupon(true); setCouponMsg('');
+        try {
+            const res = await fetch(`${API}/api/admin/coupons/validate`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ code: couponCode, orderTotal: cartSubtotal })
+            });
+            const data = await res.json();
+            if (data.success) { setDiscount(data.discount); setCouponMsg(`✅ ${data.message} (-₹${data.discount})`); }
+            else { setDiscount(0); setCouponMsg(`❌ ${data.message}`); }
+        } catch { setCouponMsg('❌ Could not validate coupon'); }
+        finally { setApplyingCoupon(false); }
     };
 
-    const handleSaveCust = (cartItemId, { toppings, addonTotal }) => {
-        toppings.forEach(t => toggleAddon(cartItemId, t));
-        setCustomizingId(null);
+    // ── WhatsApp notify ─────────────────────────────────────────────
+    const redirectToWhatsApp = (orderResp, paymentId) => {
+        let text = `🍕 *NEW ORDER* 🍕\n━━━━━━━━━━━━━━━━\n`;
+        text += `🆔 #${orderResp._id.slice(-6).toUpperCase()}\n💳 ${paymentId || 'N/A'}\n`;
+        text += `👤 ${name}\n📞 ${phone}\n📍 ${address}\n━━━━━━━━━━━━━━━━\n`;
+        cartItems.forEach((item, i) => {
+            text += `${i + 1}. ${item.name} ×${item.quantity} — ₹${item.price * item.quantity}\n`;
+            if (item.toppings?.length) text += `   ➕ ${item.toppings.map(t => t.name || t).join(', ')}\n`;
+        });
+        text += `━━━━━━━━━━━━━━━━\n💰 Total: ₹${finalTotal}\n✅ PAID (Online)`;
+        window.open(`https://wa.me/${adminWhatsApp}?text=${encodeURIComponent(text)}`, '_blank');
     };
 
+    const makeObjectId = (id) => {
+        const s = String(id);
+        if (/^[a-fA-F0-9]{24}$/.test(s)) return s;
+        let h = '';
+        for (let i = 0; i < s.length; i++) h += s.charCodeAt(i).toString(16);
+        return h.padEnd(24, '0').slice(0, 24);
+    };
+
+    // ── Place order ─────────────────────────────────────────────────
+    const handlePlaceOrder = async (e) => {
+        e.preventDefault();
+        if (cartItems.length === 0) return;
+        setOrderPlacing(true);
+
+        const orderData = {
+            userId: user?._id || null,
+            customerInfo: { name, phone, address, email: user?.email || '' },
+            orderItems: cartItems.map(i => ({
+                menuItem: makeObjectId(i._id || i.id),
+                name: i.name, quantity: i.quantity, size: i.selectedSize || 'regular',
+                price: i.price, toppings: i.toppings?.map(t => t.name || t.baseName) || []
+            })),
+            totalAmount: finalTotal,
+            orderType: 'delivery', paymentMethod: 'online',
+            discount, tax: 0, subTotal: cartSubtotal, paymentStatus: 'pending'
+        };
+
+        try {
+            const resKey = await fetch(`${API}/api/orders/razorpay/key`);
+            const keyData = await resKey.json();
+            if (!keyData.key) { alert('Razorpay not configured.'); setOrderPlacing(false); return; }
+
+            const resOrder = await fetch(`${API}/api/orders/razorpay/create`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ amount: finalTotal })
+            });
+            const orderResult = await resOrder.json();
+            if (!orderResult.success) { alert('Failed to create Razorpay order.'); setOrderPlacing(false); return; }
+
+            const options = {
+                key: keyData.key,
+                amount: orderResult.order.amount, currency: 'INR',
+                name: 'Captain Pizza', description: 'Pizza Order',
+                order_id: orderResult.order.id,
+                handler: async (response) => {
+                    setOrderPlacing(true);
+                    try {
+                        const verifyRes = await fetch(`${API}/api/orders/razorpay/verify`, {
+                            method: 'POST', headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                razorpay_order_id: response.razorpay_order_id,
+                                razorpay_payment_id: response.razorpay_payment_id,
+                                razorpay_signature: response.razorpay_signature,
+                                orderData
+                            })
+                        });
+                        const verifyData = await verifyRes.json();
+                        if (verifyData.success) {
+                            if (user) refreshUser({ ...user, hasUsedWelcomeOffer: true });
+                            clearCart();
+                            setIsCartOpen(false);
+                            alert(`🎉 Order Placed! ID: ${verifyData.data._id}`);
+                            redirectToWhatsApp(verifyData.data, response.razorpay_payment_id);
+                            navigate('/');
+                        } else { alert('Payment verification failed. Contact support.'); }
+                    } catch { alert('Verification error. Contact support if money was deducted.'); }
+                    finally { setOrderPlacing(false); }
+                },
+                prefill: { name, contact: phone, email: user?.email || '' },
+                theme: { color: '#B71C1C' }
+            };
+
+            const rzp = new window.Razorpay(options);
+            rzp.on('payment.failed', r => alert('Payment Failed: ' + r.error.description));
+            rzp.open();
+            setOrderPlacing(false);
+        } catch {
+            alert('Could not load payment gateway.');
+            setOrderPlacing(false);
+        }
+    };
+
+    // ── Render ──────────────────────────────────────────────────────
     return (
         <div className="cart-overlay" onClick={() => setIsCartOpen(false)}>
             <div className="cart-drawer" onClick={e => e.stopPropagation()}>
 
-                {/* Header */}
+                {/* ─ Header ─ */}
                 <div className="cart-head">
                     <div className="cart-head-left">
                         <i className="fas fa-shopping-basket"></i>
-                        <h2>Your Cart <span className="cart-count-badge">{cartCount}</span></h2>
+                        <h2>
+                            {view === 'cart' ? 'Your Cart' : 'Checkout'}
+                            <span className="cart-count-badge">{cartCount}</span>
+                        </h2>
                     </div>
-                    <button className="cart-close" onClick={() => setIsCartOpen(false)}>
-                        <i className="fas fa-times"></i>
-                    </button>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        {view === 'checkout' && (
+                            <button className="cart-back-btn" onClick={() => setView('cart')}>
+                                <i className="fas fa-arrow-left"></i> Cart
+                            </button>
+                        )}
+                        <button className="cart-close" onClick={() => setIsCartOpen(false)}>
+                            <i className="fas fa-times"></i>
+                        </button>
+                    </div>
                 </div>
 
-                {/* Body */}
-                <div className="cart-body">
-                    {cartItems.length === 0 ? (
-                        <div className="cart-empty">
-                            <div className="cart-empty-icon">🛒</div>
-                            <p>Your cart is empty</p>
-                            <button
-                                className="cart-browse-btn"
-                                onClick={() => { setIsCartOpen(false); navigate('/menu'); }}
-                            >
-                                Browse Menu
-                            </button>
-                        </div>
-                    ) : (
-                        <div className="cart-items-list">
-                            {cartItems.map(item => (
-                                <div key={item.cartItemId} className="cart-item-block">
-                                    {/* Item Row */}
-                                    <div className="cart-item-row">
-                                        <div className="cart-item-info">
-                                            <div className="cart-item-name">{item.name}</div>
-                                            {item.toppings && item.toppings.length > 0 && (
-                                                <div className="cart-item-addons">
-                                                    {item.toppings.map((t, i) => (
-                                                        <span key={i} className="addon-tag">+ {t.name || t}</span>
-                                                    ))}
-                                                </div>
-                                            )}
-                                            <div className="cart-item-price">₹{item.price} × {item.quantity} = <strong>₹{item.price * item.quantity}</strong></div>
+                {/* ─ CART VIEW ─ */}
+                {view === 'cart' && (
+                    <div className="cart-body">
+                        {cartItems.length === 0 ? (
+                            <div className="cart-empty">
+                                <div className="cart-empty-icon">🛒</div>
+                                <p>Your cart is empty</p>
+                                <button
+                                    className="cart-browse-btn"
+                                    onClick={() => { setIsCartOpen(false); navigate('/menu'); }}
+                                >
+                                    Browse Menu
+                                </button>
+                            </div>
+                        ) : (
+                            <>
+                                {/* Items */}
+                                {cartItems.map((item, index) => (
+                                    <div key={item.cartItemId} className="cd-item-card">
+                                        {/* Item title + remove */}
+                                        <div className="cd-item-top">
+                                            <h4 className="cd-item-name">{index + 1}. {item.name}</h4>
+                                            <button
+                                                className="cd-remove-btn"
+                                                onClick={() => updateQuantity(item.cartItemId, -item.quantity)}
+                                                title="Remove"
+                                            >
+                                                <i className="fas fa-trash-alt"></i>
+                                            </button>
                                         </div>
-                                        <div className="cart-item-controls">
-                                            <div className="cart-qty">
+
+                                        {/* Add-ons section */}
+                                        <div className="cd-addons">
+                                            <p className="cd-addons-title">Add-ons</p>
+
+                                            {ADDONS_CONFIG.map((addon, i) => {
+                                                if (addon.isToggle) {
+                                                    const isSelected = item.toppings?.some(t => t.baseName === addon.name);
+                                                    return (
+                                                        <label key={i} className="cd-addon-toggle">
+                                                            <div className="cd-addon-label">
+                                                                <span>{addon.name}</span>
+                                                                <span className="cd-addon-price">+₹{addon.prices.default} each</span>
+                                                            </div>
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={isSelected}
+                                                                onChange={() => toggleAddonSML(item.cartItemId, addon.name, 'default', addon.prices.default)}
+                                                            />
+                                                        </label>
+                                                    );
+                                                } else {
+                                                    const selectedSz = item.toppings?.find(t => t.baseName === addon.name)?.size;
+                                                    return (
+                                                        <div key={i} className="cd-addon-sizes">
+                                                            <div className="cd-addon-label">
+                                                                <span>{addon.name}</span>
+                                                                {selectedSz && <span className="cd-addon-price selected">+₹{addon.prices[selectedSz]}</span>}
+                                                            </div>
+                                                            <div className="cd-size-btns">
+                                                                {['small', 'medium', 'large'].map(sz => (
+                                                                    <button
+                                                                        key={sz}
+                                                                        type="button"
+                                                                        className={`cd-size-btn ${selectedSz === sz ? 'active' : ''}`}
+                                                                        onClick={() => toggleAddonSML(item.cartItemId, addon.name, sz, addon.prices[sz])}
+                                                                    >
+                                                                        <span>{sz.charAt(0).toUpperCase() + sz.slice(1)}</span>
+                                                                        <span>+₹{addon.prices[sz]}</span>
+                                                                    </button>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                }
+                                            })}
+                                        </div>
+
+                                        {/* Item qty + price */}
+                                        <div className="cd-item-bottom">
+                                            <div className="cd-qty">
                                                 <button onClick={() => updateQuantity(item.cartItemId, -1)}>−</button>
                                                 <span>{item.quantity}</span>
                                                 <button onClick={() => updateQuantity(item.cartItemId, 1)}>+</button>
                                             </div>
-                                            <button
-                                                className={`addon-toggle-btn ${customizingId === item.cartItemId ? 'active' : ''}`}
-                                                onClick={() => setCustomizingId(
-                                                    customizingId === item.cartItemId ? null : item.cartItemId
-                                                )}
-                                            >
-                                                <i className="fas fa-sliders-h"></i>
-                                                {customizingId === item.cartItemId ? 'Close' : 'Add-Ons'}
-                                            </button>
+                                            <div className="cd-item-price">₹{item.price * item.quantity}</div>
                                         </div>
                                     </div>
+                                ))}
 
-                                    {/* Inline Customizer */}
-                                    {customizingId === item.cartItemId && (
-                                        <CartCustomizer
-                                            item={item}
-                                            onSave={(data) => handleSaveCust(item.cartItemId, data)}
-                                            onClose={() => setCustomizingId(null)}
+                                {/* Coupon */}
+                                <div className="cd-coupon">
+                                    <p className="cd-coupon-title">🎟️ Promo Code</p>
+                                    <div className="cd-coupon-row">
+                                        <input
+                                            type="text"
+                                            placeholder="Enter code"
+                                            value={couponCode}
+                                            onChange={e => setCouponCode(e.target.value.toUpperCase())}
+                                            className="cd-coupon-input"
                                         />
+                                        <button
+                                            className="cd-coupon-btn"
+                                            onClick={handleApplyCoupon}
+                                            disabled={applyingCoupon || !couponCode}
+                                        >
+                                            {applyingCoupon ? '...' : 'Apply'}
+                                        </button>
+                                    </div>
+                                    {couponMsg && (
+                                        <p className={`cd-coupon-msg ${discount > 0 ? 'success' : 'error'}`}>
+                                            {couponMsg}
+                                        </p>
                                     )}
                                 </div>
-                            ))}
-                        </div>
-                    )}
-                </div>
 
-                {/* Footer */}
-                {cartItems.length > 0 && (
+                                {/* Summary */}
+                                <div className="cd-summary">
+                                    <div className="cd-sum-row"><span>Subtotal</span><span>₹{cartSubtotal}</span></div>
+                                    <div className="cd-sum-row">
+                                        <span>Delivery Fee</span>
+                                        <span>{deliveryFee === 0 ? <span style={{ color: '#16a34a', fontWeight: 700 }}>FREE 🎉</span> : `₹${deliveryFee}`}</span>
+                                    </div>
+                                    {discount > 0 && (
+                                        <div className="cd-sum-row" style={{ color: '#16a34a' }}>
+                                            <span>Coupon Discount</span><span>−₹{discount}</span>
+                                        </div>
+                                    )}
+                                    <div className="cd-sum-row total">
+                                        <span>Total Payable</span><strong>₹{finalTotal}</strong>
+                                    </div>
+                                    {cartSubtotal < deliverySettings.threshold && (
+                                        <p className="cd-free-delivery-hint">
+                                            Add ₹{deliverySettings.threshold - cartSubtotal} more for FREE delivery
+                                        </p>
+                                    )}
+                                </div>
+                            </>
+                        )}
+                    </div>
+                )}
+
+                {/* ─ CHECKOUT VIEW ─ */}
+                {view === 'checkout' && (
+                    <div className="cart-body">
+                        <form className="cd-checkout-form" onSubmit={handlePlaceOrder}>
+                            <h3 className="cd-section-title">
+                                <i className="fas fa-map-marker-alt"></i> Delivery Details
+                            </h3>
+                            <div className="cd-form-group">
+                                <label>Full Name</label>
+                                <input type="text" placeholder="John Doe" value={name} onChange={e => setName(e.target.value)} required />
+                            </div>
+                            <div className="cd-form-group">
+                                <label>Phone Number</label>
+                                <input type="tel" placeholder="9876543210" value={phone} onChange={e => setPhone(e.target.value)} required />
+                            </div>
+                            <div className="cd-form-group">
+                                <label>Delivery Address</label>
+                                <textarea placeholder="House no., Street, Locality, City..." rows={3} value={address} onChange={e => setAddress(e.target.value)} required />
+                            </div>
+
+                            <h3 className="cd-section-title" style={{ marginTop: '16px' }}>
+                                <i className="fas fa-credit-card"></i> Payment
+                            </h3>
+                            <label className="cd-payment-option active">
+                                <input type="radio" checked readOnly />
+                                <div>
+                                    <span>Pay Online — Razorpay</span>
+                                    <small>UPI / Card / Net Banking / Wallet</small>
+                                </div>
+                                <i className="fas fa-shield-alt" style={{ color: '#16a34a' }}></i>
+                            </label>
+
+                            {/* Order summary recap */}
+                            <div className="cd-summary" style={{ marginTop: '16px' }}>
+                                <div className="cd-sum-row"><span>Subtotal</span><span>₹{cartSubtotal}</span></div>
+                                <div className="cd-sum-row"><span>Delivery</span><span>{deliveryFee === 0 ? 'FREE' : `₹${deliveryFee}`}</span></div>
+                                {discount > 0 && <div className="cd-sum-row" style={{ color: '#16a34a' }}><span>Discount</span><span>−₹{discount}</span></div>}
+                                <div className="cd-sum-row total"><span>Total</span><strong>₹{finalTotal}</strong></div>
+                            </div>
+
+                            <button
+                                type="submit"
+                                className="cd-place-order-btn"
+                                disabled={cartItems.length === 0 || orderPlacing}
+                            >
+                                {orderPlacing
+                                    ? <><i className="fas fa-spinner fa-spin"></i> Processing...</>
+                                    : <><i className="fas fa-lock"></i> Place Order • ₹{finalTotal}</>
+                                }
+                            </button>
+                        </form>
+                    </div>
+                )}
+
+                {/* ─ Footer (only in cart view) ─ */}
+                {view === 'cart' && cartItems.length > 0 && (
                     <div className="cart-foot">
-                        <div className="cart-subtotal">
-                            <span>Subtotal</span>
-                            <strong>₹{subtotal}</strong>
-                        </div>
-                        <button className="cart-checkout-btn" onClick={handleCheckout}>
-                            <i className="fas fa-lock"></i> Proceed to Checkout &nbsp;₹{subtotal}
+                        <button
+                            className="cart-checkout-btn"
+                            onClick={() => {
+                                if (!user) { setIsCartOpen(false); navigate('/login'); return; }
+                                setView('checkout');
+                            }}
+                        >
+                            <i className="fas fa-arrow-right"></i> Proceed to Checkout — ₹{finalTotal}
                         </button>
                     </div>
                 )}

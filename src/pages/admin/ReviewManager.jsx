@@ -45,7 +45,15 @@ const ReviewManager = () => {
 
     return (
         <div className="admin-content-card">
-            <h2>Website Reviews Management</h2>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                <h2 style={{ margin: 0 }}>Website Reviews Management</h2>
+                <button
+                    onClick={fetchReviews}
+                    style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 16px', background: '#2b2b2b', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '700', fontSize: '0.85rem' }}
+                >
+                    <i className="fas fa-sync-alt"></i> Refresh
+                </button>
+            </div>
             <div className="table-responsive">
                 <table className="admin-table">
                     <thead>

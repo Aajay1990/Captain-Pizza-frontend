@@ -153,9 +153,17 @@ const MenuManager = () => {
         <div className="menu-manager">
             <div className="admin-toolbar">
                 <h3 className="section-title">Database Menu Items</h3>
-                <button className="btn-primary" onClick={() => openEditor()}>
-                    <i className="fas fa-plus"></i> Add New Item
-                </button>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                    <button
+                        onClick={fetchMenu}
+                        style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 16px', background: '#2b2b2b', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '700', fontSize: '0.85rem' }}
+                    >
+                        <i className="fas fa-sync-alt"></i> Refresh
+                    </button>
+                    <button className="btn-primary" onClick={() => openEditor()}>
+                        <i className="fas fa-plus"></i> Add New Item
+                    </button>
+                </div>
             </div>
 
             <div className="admin-table-container">

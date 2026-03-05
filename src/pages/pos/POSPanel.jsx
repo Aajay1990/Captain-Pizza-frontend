@@ -427,6 +427,14 @@ const POSPanel = () => {
                         <i className="far fa-clock"></i> {currentTime}
                     </div>
                     <div className="pos-staff-info" style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                        {/* Refresh Button */}
+                        <button
+                            onClick={() => { fetchMenu(); if (activeView === 'orders') fetchOrderHistory(); }}
+                            style={{ background: 'rgba(183,28,28,0.1)', color: 'var(--pos-primary)', border: 'none', padding: '8px 15px', borderRadius: '10px', cursor: 'pointer', fontWeight: '700', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '6px' }}
+                            title="Refresh data"
+                        >
+                            <i className="fas fa-sync-alt"></i> Refresh
+                        </button>
                         {/* Order History Toggle */}
                         <button
                             onClick={() => handleViewChange(activeView === 'orders' ? 'menu' : 'orders')}

@@ -19,7 +19,6 @@ import ReviewEcosystem from '../components/ReviewEcosystem';
 
 const Home = () => {
     const { addToCart, cartCount } = useContext(CartContext);
-    const [showPopup, setShowPopup] = useState(false);
     const [timeLeft, setTimeLeft] = useState(24 * 60 * 60); // 24 hours in seconds
     const [isLoading, setIsLoading] = useState(true);
     const [seasonalOffer, setSeasonalOffer] = useState({ enabled: 'false', title: '', desc: '', coupon: '', new_user_discount: 20 });
@@ -45,25 +44,6 @@ const Home = () => {
         return () => clearTimeout(loadingTimer);
     }, []);
 
-    useEffect(() => {
-        const checkPopup = async () => {
-            try {
-                const res = await fetch('https://pizza-backend-api-a5mm.onrender.com/api/admin/settings/show_welcome_popup');
-                const data = await res.json();
-                if (data.success && data.data?.value === 'false') return;
-
-                const hasVisited = localStorage.getItem('hasVisitedCaptainPizza');
-                if (!hasVisited) {
-                    const timer = setTimeout(() => {
-                        setShowPopup(true);
-                        localStorage.setItem('hasVisitedCaptainPizza', 'true');
-                    }, 3000); // show after 3 seconds
-                    return () => clearTimeout(timer);
-                }
-            } catch (e) { }
-        };
-        checkPopup();
-    }, []);
 
     // Infinite Auto-Scroll Logic for Offers & Testimonials
     useEffect(() => {
@@ -481,18 +461,6 @@ const Home = () => {
                 <ReviewEcosystem />
 
 
-                {/* Smart First Order Popup */}
-                {showPopup && (
-                    <div className="popup-overlay animate-fade-in" onClick={() => setShowPopup(false)}>
-                        <div className="popup-content animated-confetti-bg" onClick={(e) => e.stopPropagation()}>
-                            <button className="popup-close" onClick={() => setShowPopup(false)}>×</button>
-                            <div className="popup-icon">🎁</div>
-                            <h2>Welcome to Captain Pizza!</h2>
-                            <p>Get <strong>{seasonalOffer.new_user_discount || 20}% OFF</strong> on your first order. Use code <strong>WELCOME{seasonalOffer.new_user_discount || 20}</strong> & treat yourself!</p>
-                            <Link to="/login" className="btn-primary popup-btn">Claim Offer & Login</Link>
-                        </div>
-                    </div>
-                )}
 
                 <div className="mobile-sticky-bar">
                     <Link to="/menu" className="mobile-order-btn">Start Ordering Now 🍕</Link>

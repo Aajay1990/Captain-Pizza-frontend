@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { AuthContext, api } from '../context/AuthContext';
 import './Login.css';
 
-const Login = () => {
+const Login = ({ adminOnly = false, staffOnly = false }) => {
     const { user, loginAuth } = useContext(AuthContext);
     const [isLogin, setIsLogin] = useState(true);
 
@@ -18,14 +18,26 @@ const Login = () => {
     const navigate = useNavigate();
     const location = useLocation();
 
-    // After login, send user back to where they were trying to go, or home
-    const from = location.state?.from?.pathname || "/";
+    const from = location.state?.from?.pathname || '/';
 
+    // Page title based on mode
+    const pageTitle = adminOnly
+        ? '🛡️ Admin Login'
+        : staffOnly
+            ? '🖥️ Staff / POS Login'
+            : '👋 Welcome Back!';
+
+    const pageSubtitle = adminOnly
+        ? 'Admin access only'
+        : staffOnly
+            ? 'Staff panel access'
+            : 'Login to your account to continue.';
+
+    // If already logged in, redirect appropriately
     useEffect(() => {
         if (user) {
-            // If already logged in, redirect away from login page
-            if (user.role === 'admin') navigate('/admin');
-            else if (user.role === 'staff' || user.role === 'pos') navigate('/pos');
+            if (user.role === 'admin') navigate('/admin', { replace: true });
+            else if (user.role === 'staff' || user.role === 'pos') navigate('/pos', { replace: true });
             else navigate(from, { replace: true });
         }
     }, [user, navigate, from]);
@@ -42,7 +54,7 @@ const Login = () => {
         if (!isLogin) {
             const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[!@#$%^&*(),.?":{}|<>]).{6,}$/;
             if (!strongPasswordRegex.test(password)) {
-                setError('Password must be at least 6 characters and include uppercase, lowercase, and a special symbol.');
+                setError('Password must be at least 6 characters with uppercase, lowercase, and a special symbol.');
                 setLoading(false);
                 return;
             }
@@ -51,17 +63,24 @@ const Login = () => {
         const endpoint = isLogin ? '/api/auth/login' : '/api/auth/register';
         try {
             const payload = isLogin ? { email, password } : { name, email, password };
-
-            // Using the 'api' instance from AuthContext which has withCredentials: true
             const res = await api.post(endpoint, payload);
-
             const data = res.data;
+
             if (data.success) {
                 if (data.redirect) {
                     navigate(data.redirect, { state: { email } });
                 } else {
-                    // loginAuth handles the global state. 
-                    // Token is handled by HttpOnly cookie automatically.
+                    // Validate role for restricted login pages
+                    if (adminOnly && data.user?.role !== 'admin') {
+                        setError('Access denied. Admin credentials required.');
+                        setLoading(false);
+                        return;
+                    }
+                    if (staffOnly && data.user?.role !== 'staff' && data.user?.role !== 'pos') {
+                        setError('Access denied. Staff credentials required.');
+                        setLoading(false);
+                        return;
+                    }
                     loginAuth(data.user);
                 }
             } else {
@@ -79,15 +98,29 @@ const Login = () => {
             <div className="login-container">
                 <div className="login-card">
                     <div className="login-header">
-                        <h2>{isLogin ? 'Welcome Back!' : 'Join Captain Pizza'}</h2>
-                        <p>{isLogin ? 'Login to your account' : 'Create a new account'} to continue.</p>
+                        <h2>{pageTitle}</h2>
+                        <p>{pageSubtitle}</p>
+                        {(adminOnly || staffOnly) && (
+                            <div style={{
+                                background: '#fff3cd',
+                                border: '1px solid #ffc107',
+                                borderRadius: '8px',
+                                padding: '8px 14px',
+                                marginTop: '10px',
+                                fontSize: '0.8rem',
+                                color: '#856404'
+                            }}>
+                                🔒 Restricted access — session valid for this tab only
+                            </div>
+                        )}
                     </div>
 
                     {message && <div className="auth-alert success-alert">{message}</div>}
                     {error && <div className="auth-alert error-alert">{error}</div>}
 
                     <form className="login-form" onSubmit={handleEmailSubmit}>
-                        {!isLogin && (
+                        {/* Only show signup tab for regular customer login */}
+                        {!adminOnly && !staffOnly && !isLogin && (
                             <div className="form-group">
                                 <label>Full Name</label>
                                 <input type="text" placeholder="Enter your full name" required value={name} onChange={e => setName(e.target.value)} />
@@ -117,9 +150,17 @@ const Login = () => {
                             {loading ? <i className="fas fa-spinner fa-spin"></i> : (isLogin ? 'Log In' : 'Sign Up')}
                         </button>
 
-                        <div className="login-footer">
-                            <p>{isLogin ? "Don't have an account?" : "Already have an account?"} <span onClick={toggleMode} className="toggle-link">{isLogin ? 'Sign up' : 'Log in'}</span></p>
-                        </div>
+                        {/* Only show signup toggle for regular login page */}
+                        {!adminOnly && !staffOnly && (
+                            <div className="login-footer">
+                                <p>
+                                    {isLogin ? "Don't have an account?" : 'Already have an account?'}{' '}
+                                    <span onClick={toggleMode} className="toggle-link">
+                                        {isLogin ? 'Sign up' : 'Log in'}
+                                    </span>
+                                </p>
+                            </div>
+                        )}
                     </form>
                 </div>
             </div>

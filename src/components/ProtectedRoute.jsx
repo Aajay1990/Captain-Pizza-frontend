@@ -3,56 +3,54 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 
 /**
- * Professional Role-Based Route Protection
- * @param {Array} allowedRoles - List of roles that can access this route (e.g. ['admin', 'staff'])
+ * Role-Based Route Protection
+ * @param {Array}  allowedRoles - Roles that can access this route
+ * @param {string} redirectTo   - Custom login page for this route (default /login)
  */
-const ProtectedRoute = ({ children, allowedRoles }) => {
+const ProtectedRoute = ({ children, allowedRoles, redirectTo = '/login' }) => {
     const { user, authLoading } = useContext(AuthContext);
     const location = useLocation();
 
-    // 1. Prevents UI flickering while session is being verified from cookie
+    // Show spinner while session is being verified
     if (authLoading) {
         return (
-            <div className="auth-loading-spinner" style={{
+            <div style={{
                 height: '100vh',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 flexDirection: 'column',
-                gap: '20px'
+                gap: '20px',
+                background: '#fff'
             }}>
-                <div className="spinner" style={{
-                    width: '50px',
-                    height: '50px',
+                <div style={{
+                    width: '48px',
+                    height: '48px',
                     border: '5px solid #f3f3f3',
-                    borderTop: '5px solid var(--primary)',
+                    borderTop: '5px solid #B71C1C',
                     borderRadius: '50%',
-                    animation: 'spin 1s linear infinite'
+                    animation: 'spin 0.8s linear infinite'
                 }}></div>
-                <p style={{ fontWeight: '500', color: '#666' }}>Verifying your secure session...</p>
+                <p style={{ fontWeight: '600', color: '#666', fontSize: '1rem' }}>Verifying session...</p>
                 <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
             </div>
         );
     }
 
-    // 2. Redirect to Login if NOT authenticated
+    // Not authenticated → send to the appropriate login page
     if (!user) {
-        // We save the original path (state) to redirect them back after they login
-        return <Navigate to="/login" state={{ from: location }} replace />;
+        return <Navigate to={redirectTo} state={{ from: location }} replace />;
     }
 
-    // 3. Check for specific Role Permission (e.g. admin trying to access POS or vice-versa)
+    // Wrong role → redirect to their own home
     if (allowedRoles && !allowedRoles.includes(user.role)) {
-        // Log unauthorized attempt
-        console.warn(`[AUTH GUARD] Unauthorized role ${user.role} tried to access ${location.pathname}`);
-
-        // Role-based redirection logic for "mismatch" access
+        console.warn(`[AUTH GUARD] Role "${user.role}" tried to access ${location.pathname}`);
         if (user.role === 'admin') return <Navigate to="/admin" replace />;
         if (user.role === 'staff' || user.role === 'pos') return <Navigate to="/pos" replace />;
-        return <Navigate to="/" replace />; // Everyone else back home
+        return <Navigate to="/" replace />;
     }
 
-    // 4. Authorized Access - Render the protected content
+    // ✅ Authorized
     return children;
 };
 

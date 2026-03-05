@@ -2,6 +2,7 @@ import React from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
+import CartDrawer from './components/CartDrawer';
 import Home from './pages/Home';
 import Menu from './pages/Menu';
 import Order from './pages/Order';
@@ -18,7 +19,7 @@ import TermsConditions from './pages/TermsConditions';
 import RefundPolicy from './pages/RefundPolicy';
 import OfferPopup from './components/OfferPopup';
 import FloatingActions from './components/FloatingActions';
-import ProtectedRoute from './components/ProtectedRoute'; // Universal Route Guard
+import ProtectedRoute from './components/ProtectedRoute';
 import './App.css';
 
 function App() {
@@ -31,14 +32,16 @@ function App() {
     <div className="app-container">
       <OfferPopup />
       <FloatingActions />
+      <CartDrawer />
+
       {!hideHeaderFooter && <Navbar />}
-      <main className={isAdminRoute ? "admin-main-wrapper" : isPosRoute ? "pos-main-wrapper" : "main-content"}>
+
+      <main className={isAdminRoute ? 'admin-main-wrapper' : isPosRoute ? 'pos-main-wrapper' : 'main-content'}>
         <Routes>
-          {/* Public Routes */}
+          {/* ── Public Routes ─────────────────────────────────────── */}
           <Route path="/" element={<Home />} />
           <Route path="/menu" element={<Menu />} />
           <Route path="/order" element={<Order />} />
-          <Route path="/login" element={<Login />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/verify-email" element={<VerifyEmail />} />
           <Route path="/about" element={<AboutUs />} />
@@ -47,28 +50,39 @@ function App() {
           <Route path="/terms" element={<TermsConditions />} />
           <Route path="/refund-policy" element={<RefundPolicy />} />
 
-          {/* User Profile - Protected for Customers only */}
+          {/* ── Login Routes ──────────────────────────────────────── */}
+          {/* Customer + general login */}
+          <Route path="/login" element={<Login />} />
+          {/* Hidden admin login URL — NOT shown in navbar */}
+          <Route path="/admin-login" element={<Login adminOnly />} />
+          {/* Hidden staff/POS login URL */}
+          <Route path="/staff-login" element={<Login staffOnly />} />
+
+          {/* ── Protected Customer Routes ─────────────────────────── */}
           <Route path="/profile" element={
             <ProtectedRoute allowedRoles={['customer', 'user']}>
               <UserProfile />
             </ProtectedRoute>
           } />
 
-          {/* Admin Dashboard - Protected for Admins only */}
+          {/* ── Protected Admin Routes ────────────────────────────── */}
+          {/* Admin accesses panel via /admin or /admin-login */}
           <Route path="/admin/*" element={
-            <ProtectedRoute allowedRoles={['admin']}>
+            <ProtectedRoute allowedRoles={['admin']} redirectTo="/admin-login">
               <AdminDashboard />
             </ProtectedRoute>
           } />
 
-          {/* POS Route - Protected for POS Staff and Admins only */}
+          {/* ── Protected POS Routes ──────────────────────────────── */}
+          {/* Staff accesses POS via /pos or /staff-login */}
           <Route path="/pos" element={
-            <ProtectedRoute allowedRoles={['staff', 'pos', 'admin']}>
+            <ProtectedRoute allowedRoles={['staff', 'pos', 'admin']} redirectTo="/staff-login">
               <POSPanel />
             </ProtectedRoute>
           } />
         </Routes>
       </main>
+
       {!hideHeaderFooter && <Footer />}
     </div>
   );

@@ -1,4 +1,4 @@
-import React, { useState, useContext, useRef, useEffect } from 'react';
+﻿import React, { useState, useContext, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Menu.css';
 import { menuData } from '../assets/data';
@@ -19,14 +19,9 @@ const Menu = () => {
 
     const [dbItems, setDbItems] = useState([]);
 
-    // --- BOGO State ---
-    const [bogoModalOpen, setBogoModalOpen] = useState(false);
-    const [bogoSelection, setBogoSelection] = useState({
-        size: 'medium',
-        category: null, // 'Deluxe Veg' | 'Supreme Veg'
-        pizza1: null,
-        pizza2: null,
-    });
+    // --- Two separate BOGO modals ---
+    const [bogoOpen, setBogoOpen] = useState(null); // 'Deluxe Veg' | 'Supreme Veg' | null
+    const [bogoSel, setBogoSel] = useState({ size: 'medium', pizza1: null, pizza2: null });
     const bogoOfferItem = useRef(null);
 
     useEffect(() => {
@@ -153,8 +148,8 @@ const Menu = () => {
         };
     }, [allCategories]);
 
-    // Pizzas available for the selected BOGO category
-    const bogoPizzaPool = bogoSelection.category ? (bogoPizzasByCategory[bogoSelection.category] || []) : [];
+    // Pizzas in the currently open BOGO offer
+    const bogoPizzaPool = bogoOpen ? (bogoPizzasByCategory[bogoOpen] || []) : [];
 
     // Scroll Spy Effect
     useEffect(() => {
@@ -269,15 +264,20 @@ const Menu = () => {
                                 <h4>{item.name}</h4>
                                 {item.desc && <p className="item-desc" style={{ marginBottom: '15px' }}>{item.desc}</p>}
                                 <div className="simple-price-action" style={item.desc ? { marginTop: 'auto', paddingTop: '15px', borderTop: '1px solid rgba(0,0,0,0.05)' } : {}}>
-                                    <span className="price">₹{item.price}</span>
-                                    {item.name === 'Buy 1 Get 1 FREE' ? (
-                                        <button className="add-btn" onClick={() => {
-                                            bogoOfferItem.current = item;
-                                            setBogoModalOpen(true);
-                                        }}>Select Pizzas</button>
+                                    <span className="price">â‚¹{item.price}</span>
+                                    {item.name === 'Buy 1 Get 1 FREE (Deluxe Veg)' ? (
+                                        <button className="add-btn" style={{ fontSize: '0.82rem' }} onClick={() => openBogo('Deluxe Veg')}>â­ Select Pizzas</button>
+                                    ) : item.name === 'Buy 1 Get 1 FREE (Supreme Veg)' ? (
+                                        <button className="add-btn" style={{ fontSize: '0.82rem' }} onClick={() => openBogo('Supreme Veg')}>ðŸ‘‘ Select Pizzas</button>
+                                    ) : item.name === 'Buy 1 Get 1 FREE' ? (
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', width: '100%' }}>
+                                            <button className="add-btn" style={{ fontSize: '0.78rem', background: 'linear-gradient(135deg, #1B5E20, #2E7D32)' }} onClick={() => openBogo('Deluxe Veg')}>â­ Deluxe BOGO</button>
+                                            <button className="add-btn" style={{ fontSize: '0.78rem' }} onClick={() => openBogo('Supreme Veg')}>ðŸ‘‘ Supreme BOGO</button>
+                                        </div>
                                     ) : (
                                         <button className="add-btn" onClick={() => handleAddToCartWithCheck(item)}>Add</button>
                                     )}
+
                                 </div>
                             </div>
                         </div>
@@ -287,29 +287,33 @@ const Menu = () => {
         </div>
     );
 
-    const handleBogoAddToCart = () => {
-        if (!bogoSelection.category) { alert('Please select a pizza category!'); return; }
-        if (!bogoSelection.pizza1 || !bogoSelection.pizza2) { alert('Please select both pizzas!'); return; }
-        if (bogoSelection.pizza1.id === bogoSelection.pizza2.id) { alert('Please select two different pizzas!'); return; }
+    const openBogo = (category) => {
+        setBogoOpen(category);
+        setBogoSel({ size: 'medium', pizza1: null, pizza2: null });
+    };
 
-        const p1Price = bogoSelection.pizza1.price[bogoSelection.size] || 0;
-        const p2Price = bogoSelection.pizza2.price[bogoSelection.size] || 0;
+    const closeBogo = () => { setBogoOpen(null); setBogoSel({ size: 'medium', pizza1: null, pizza2: null }); };
+
+    const handleBogoAddToCart = () => {
+        if (!bogoSel.pizza1 || !bogoSel.pizza2) { alert('Please select both pizzas!'); return; }
+        if (bogoSel.pizza1.id === bogoSel.pizza2.id) { alert('Please select two different pizzas!'); return; }
+
+        const p1Price = bogoSel.pizza1.price?.[bogoSel.size] || 0;
+        const p2Price = bogoSel.pizza2.price?.[bogoSel.size] || 0;
         const offerPrice = Math.max(p1Price, p2Price);
 
         addToCart({
             id: `bogo-${Date.now()}`,
-            name: `BOGO: ${bogoSelection.pizza1.name} + ${bogoSelection.pizza2.name} (${bogoSelection.size})`,
-            desc: 'Buy 1 Get 1 Special Offer',
+            name: `ðŸŽ BOGO (${bogoOpen}): ${bogoSel.pizza1.name} + ${bogoSel.pizza2.name}`,
+            desc: `Buy 1 Get 1 â€” ${bogoSel.size} size`,
             price: offerPrice,
-            image: bogoOfferItem.current?.image || 'https://images.unsplash.com/photo-1541745537411-b8046f4d5092?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80',
+            image: bogoSel.pizza1.image || 'https://images.unsplash.com/photo-1541745537411-b8046f4d5092?w=300',
             cartId: `bogo-${Date.now()}`,
-            selectedSize: bogoSelection.size
+            selectedSize: bogoSel.size,
         });
-        setBogoModalOpen(false);
-        setBogoSelection({ size: 'medium', category: null, pizza1: null, pizza2: null });
+        setIsCartOpen(true);
+        closeBogo();
     };
-
-    const bogoStep = !bogoSelection.category ? 1 : (!bogoSelection.pizza1 || !bogoSelection.pizza2) ? 2 : 3;
 
     return (
         <div className="menu-page animate-fade-in">
@@ -352,253 +356,228 @@ const Menu = () => {
                 </div>
             </div>
 
-            {/* ── PREMIUM BOGO Modal ── */}
-            {bogoModalOpen && (
-                <div
-                    style={{
-                        position: 'fixed', inset: 0, zIndex: 9999,
-                        background: 'rgba(10,10,20,0.75)', backdropFilter: 'blur(8px)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        padding: '16px'
-                    }}
-                    onClick={() => setBogoModalOpen(false)}
-                >
+            {/* â”€â”€ TWO BOGO Modals â”€â”€ */}
+            {bogoOpen && (() => {
+                const p1Price = bogoSel.pizza1?.price?.[bogoSel.size] || 0;
+                const p2Price = bogoSel.pizza2?.price?.[bogoSel.size] || 0;
+                const offerPrice = Math.max(p1Price, p2Price);
+                const isDeluxe = bogoOpen === 'Deluxe Veg';
+                const gradHead = isDeluxe
+                    ? 'linear-gradient(135deg, #1B5E20 0%, #2E7D32 60%, #43A047 100%)'
+                    : 'linear-gradient(135deg, #B71C1C 0%, #D32F2F 60%, #E64A19 100%)';
+                return (
                     <div
-                        onClick={e => e.stopPropagation()}
                         style={{
-                            width: '100%', maxWidth: '720px', maxHeight: '92vh',
-                            background: '#fff', borderRadius: '24px',
-                            boxShadow: '0 32px 80px rgba(0,0,0,0.35)',
-                            display: 'flex', flexDirection: 'column', overflow: 'hidden',
-                            animation: 'popIn 0.3s cubic-bezier(0.34,1.56,0.64,1)'
+                            position: 'fixed', inset: 0, zIndex: 9999,
+                            background: 'rgba(10,10,20,0.75)', backdropFilter: 'blur(8px)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px'
                         }}
+                        onClick={closeBogo}
                     >
-                        {/* Header */}
-                        <div style={{
-                            background: 'linear-gradient(135deg, #B71C1C 0%, #D32F2F 50%, #FF6F00 100%)',
-                            padding: '24px 28px', position: 'relative', overflow: 'hidden'
-                        }}>
-                            <div style={{ position: 'absolute', top: '-30px', right: '-30px', width: '120px', height: '120px', background: 'rgba(255,255,255,0.07)', borderRadius: '50%' }} />
-                            <div style={{ position: 'absolute', bottom: '-20px', left: '30%', width: '80px', height: '80px', background: 'rgba(255,255,255,0.05)', borderRadius: '50%' }} />
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', position: 'relative' }}>
-                                <div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
-                                        <span style={{ fontSize: '1.6rem' }}>🎁</span>
-                                        <h2 style={{ margin: 0, color: '#fff', fontSize: '1.4rem', fontWeight: '900', letterSpacing: '-0.5px' }}>Buy 1 Get 1 FREE</h2>
-                                    </div>
-                                    <p style={{ margin: 0, color: 'rgba(255,255,255,0.8)', fontSize: '0.85rem' }}>Choose your 2 pizzas — pay for the higher priced one only</p>
-                                </div>
-                                <button
-                                    onClick={() => setBogoModalOpen(false)}
-                                    style={{ background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)', color: '#fff', width: '36px', height: '36px', borderRadius: '50%', fontSize: '1.1rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
-                                >×</button>
-                            </div>
-
-                            {/* Step progress */}
-                            <div style={{ display: 'flex', gap: '8px', marginTop: '18px', position: 'relative' }}>
-                                {['Size', 'Category', 'Pizzas', 'Confirm'].map((label, i) => {
-                                    const stepNum = i + 1;
-                                    const done = bogoStep > stepNum;
-                                    const active = bogoStep === stepNum;
-                                    return (
-                                        <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1 }}>
-                                            <div style={{
-                                                width: '24px', height: '24px', borderRadius: '50%', flexShrink: 0,
-                                                background: done ? 'rgba(255,255,255,0.9)' : active ? '#fff' : 'rgba(255,255,255,0.3)',
-                                                color: done || active ? '#B71C1C' : 'rgba(255,255,255,0.6)',
-                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                fontSize: '0.7rem', fontWeight: '900',
-                                                boxShadow: active ? '0 0 0 3px rgba(255,255,255,0.3)' : 'none',
-                                                transition: 'all 0.3s'
-                                            }}>
-                                                {done ? '✓' : stepNum}
-                                            </div>
-                                            <span style={{ fontSize: '0.72rem', color: active || done ? '#fff' : 'rgba(255,255,255,0.5)', fontWeight: active ? '700' : '500', whiteSpace: 'nowrap' }}>{label}</span>
-                                            {i < 3 && <div style={{ flex: 1, height: '2px', background: done ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.2)', borderRadius: '2px', marginLeft: '4px' }} />}
+                        <div
+                            onClick={e => e.stopPropagation()}
+                            style={{
+                                width: '100%', maxWidth: '740px', maxHeight: '92vh',
+                                background: '#fff', borderRadius: '24px',
+                                boxShadow: '0 32px 80px rgba(0,0,0,0.4)',
+                                display: 'flex', flexDirection: 'column', overflow: 'hidden',
+                                animation: 'popIn 0.3s cubic-bezier(0.34,1.56,0.64,1)'
+                            }}
+                        >
+                            {/* â”€â”€ Modal Header â”€â”€ */}
+                            <div style={{ background: gradHead, padding: '22px 28px', position: 'relative', overflow: 'hidden', flexShrink: 0 }}>
+                                <div style={{ position: 'absolute', top: '-40px', right: '-40px', width: '140px', height: '140px', background: 'rgba(255,255,255,0.07)', borderRadius: '50%' }} />
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', position: 'relative' }}>
+                                    <div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
+                                            <span style={{ fontSize: '1.5rem' }}>{isDeluxe ? 'â­' : 'ðŸ‘‘'}</span>
+                                            <h2 style={{ margin: 0, color: '#fff', fontSize: '1.25rem', fontWeight: '900' }}>BOGO â€” {bogoOpen}</h2>
+                                            <span style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', fontSize: '0.7rem', fontWeight: '800', padding: '3px 10px', borderRadius: '20px' }}>Buy 1 Get 1 FREE</span>
                                         </div>
-                                    );
-                                })}
+                                        <p style={{ margin: 0, color: 'rgba(255,255,255,0.8)', fontSize: '0.83rem' }}>Select size â†’ choose 2 {bogoOpen} pizzas â€” pay for the higher priced one only</p>
+                                    </div>
+                                    <button
+                                        onClick={closeBogo}
+                                        style={{ background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)', color: '#fff', width: '34px', height: '34px', borderRadius: '50%', fontSize: '1.1rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+                                    >Ã—</button>
+                                </div>
+
+                                {/* Step indicators */}
+                                <div style={{ display: 'flex', gap: '0', marginTop: '16px', position: 'relative' }}>
+                                    {['1. Size', '2. Pizza 1', '3. Pizza 2', '4. Confirm'].map((label, i) => {
+                                        const done = (i === 0 && bogoSel.size) || (i === 1 && bogoSel.pizza1) || (i === 2 && bogoSel.pizza2);
+                                        const active = (i === 0 && !bogoSel.pizza1) || (i === 1 && bogoSel.size && !bogoSel.pizza1) || (i === 2 && bogoSel.pizza1 && !bogoSel.pizza2) || (i === 3 && bogoSel.pizza1 && bogoSel.pizza2);
+                                        return (
+                                            <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '4px', flex: 1 }}>
+                                                <div style={{
+                                                    width: '22px', height: '22px', borderRadius: '50%', flexShrink: 0,
+                                                    background: done ? 'rgba(255,255,255,0.9)' : active ? '#fff' : 'rgba(255,255,255,0.25)',
+                                                    color: done || active ? (isDeluxe ? '#1B5E20' : '#B71C1C') : 'rgba(255,255,255,0.6)',
+                                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                    fontSize: '0.62rem', fontWeight: '900', transition: 'all 0.2s',
+                                                    boxShadow: active ? '0 0 0 3px rgba(255,255,255,0.25)' : 'none'
+                                                }}>{done ? 'âœ“' : i + 1}</div>
+                                                <span style={{ fontSize: '0.68rem', color: active || done ? '#fff' : 'rgba(255,255,255,0.45)', fontWeight: active ? '700' : '500', whiteSpace: 'nowrap' }}>{label}</span>
+                                                {i < 3 && <div style={{ flex: 1, height: '1.5px', background: done ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.15)', borderRadius: '2px', marginLeft: '4px' }} />}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
                             </div>
-                        </div>
 
-                        {/* Body */}
-                        <div style={{ overflowY: 'auto', padding: '24px 28px', flex: 1 }}>
+                            {/* â”€â”€ Modal Body â”€â”€ */}
+                            <div style={{ overflowY: 'auto', padding: '22px 28px', flex: 1 }}>
 
-                            {/* Step 1 — Size */}
-                            <div style={{ marginBottom: '24px' }}>
-                                <p style={{ fontSize: '0.78rem', fontWeight: '800', color: '#B71C1C', letterSpacing: '1px', textTransform: 'uppercase', margin: '0 0 10px' }}>Step 1 — Choose Size</p>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                                {/* Size */}
+                                <p style={{ fontSize: '0.73rem', fontWeight: '800', color: isDeluxe ? '#1B5E20' : '#B71C1C', letterSpacing: '1px', textTransform: 'uppercase', margin: '0 0 10px' }}>Step 1 â€” Choose Size</p>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '22px' }}>
                                     {['medium', 'large'].map(sz => {
-                                        const active = bogoSelection.size === sz;
+                                        const active = bogoSel.size === sz;
+                                        const accentColor = isDeluxe ? '#2E7D32' : '#B71C1C';
                                         return (
                                             <button
                                                 key={sz}
-                                                onClick={() => setBogoSelection(prev => ({ ...prev, size: sz, pizza1: null, pizza2: null }))}
+                                                onClick={() => setBogoSel(prev => ({ ...prev, size: sz, pizza1: null, pizza2: null }))}
                                                 style={{
-                                                    padding: '16px', borderRadius: '16px', cursor: 'pointer', fontWeight: '800',
-                                                    border: `2px solid ${active ? '#B71C1C' : '#E8E8E8'}`,
-                                                    background: active ? 'linear-gradient(135deg, #B71C1C, #D32F2F)' : '#F8F8F8',
-                                                    color: active ? '#fff' : '#333',
-                                                    transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
-                                                    boxShadow: active ? '0 8px 20px rgba(183,28,28,0.25)' : 'none',
-                                                    transform: active ? 'scale(1.02)' : 'scale(1)'
+                                                    padding: '14px', borderRadius: '14px', cursor: 'pointer', fontWeight: '800',
+                                                    border: `2px solid ${active ? accentColor : '#E8E8E8'}`,
+                                                    background: active ? `linear-gradient(135deg, ${accentColor}, ${accentColor}DD)` : '#F8F8F8',
+                                                    color: active ? '#fff' : '#333', transition: 'all 0.2s',
+                                                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
+                                                    boxShadow: active ? `0 6px 16px ${accentColor}40` : 'none',
+                                                    transform: active ? 'scale(1.02)' : 'scale(1)', fontFamily: 'inherit'
                                                 }}
                                             >
-                                                <span style={{ fontSize: '1.5rem' }}>{sz === 'medium' ? '🍕' : '🍕'}</span>
+                                                <span style={{ fontSize: '1.3rem' }}>ðŸ•</span>
                                                 <div style={{ textAlign: 'left' }}>
-                                                    <div style={{ fontSize: '1rem', fontWeight: '900' }}>{sz === 'medium' ? 'Medium' : 'Large'}</div>
-                                                    <div style={{ fontSize: '0.75rem', opacity: 0.8 }}>{sz === 'medium' ? 'Perfect for 2' : 'Great for 3-4'}</div>
-                                                </div>
-                                                {active && <span style={{ marginLeft: 'auto', fontSize: '1.1rem' }}>✓</span>}
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-
-                            {/* Step 2 — Category */}
-                            <div style={{ marginBottom: '24px' }}>
-                                <p style={{ fontSize: '0.78rem', fontWeight: '800', color: '#B71C1C', letterSpacing: '1px', textTransform: 'uppercase', margin: '0 0 10px' }}>Step 2 — Choose Category</p>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                                    {['Deluxe Veg', 'Supreme Veg'].map(cat => {
-                                        const active = bogoSelection.category === cat;
-                                        return (
-                                            <button
-                                                key={cat}
-                                                onClick={() => setBogoSelection(prev => ({ ...prev, category: cat, pizza1: null, pizza2: null }))}
-                                                style={{
-                                                    padding: '16px', borderRadius: '16px', cursor: 'pointer', fontWeight: '800',
-                                                    border: `2px solid ${active ? '#B71C1C' : '#E8E8E8'}`,
-                                                    background: active ? 'linear-gradient(135deg, #B71C1C, #D32F2F)' : '#F8F8F8',
-                                                    color: active ? '#fff' : '#333',
-                                                    transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: '10px',
-                                                    boxShadow: active ? '0 8px 20px rgba(183,28,28,0.25)' : 'none',
-                                                    transform: active ? 'scale(1.02)' : 'scale(1)'
-                                                }}
-                                            >
-                                                <span style={{ fontSize: '1.4rem' }}>{cat === 'Deluxe Veg' ? '⭐' : '👑'}</span>
-                                                <div style={{ textAlign: 'left' }}>
-                                                    <div style={{ fontSize: '0.95rem', fontWeight: '900' }}>{cat}</div>
-                                                    <div style={{ fontSize: '0.73rem', opacity: 0.8 }}>{cat === 'Deluxe Veg' ? 'Our signature range' : 'Premium selection'}</div>
-                                                </div>
-                                                {active && <span style={{ marginLeft: 'auto', fontSize: '1.1rem' }}>✓</span>}
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-
-                            {/* Step 3 — Pick Pizzas */}
-                            {bogoSelection.category && (
-                                <div style={{ marginBottom: '8px' }}>
-                                    <p style={{ fontSize: '0.78rem', fontWeight: '800', color: '#B71C1C', letterSpacing: '1px', textTransform: 'uppercase', margin: '0 0 12px' }}>Step 3 — Select Your 2 Pizzas</p>
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                                        {[1, 2].map(slot => {
-                                            const selected = slot === 1 ? bogoSelection.pizza1 : bogoSelection.pizza2;
-                                            const other = slot === 1 ? bogoSelection.pizza2 : bogoSelection.pizza1;
-                                            return (
-                                                <div key={slot}>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                                                        <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: selected ? '#B71C1C' : '#E0E0E0', color: selected ? '#fff' : '#888', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: '900', flexShrink: 0 }}>
-                                                            {selected ? '✓' : slot}
-                                                        </div>
-                                                        <p style={{ margin: 0, fontSize: '0.82rem', fontWeight: '700', color: selected ? '#B71C1C' : '#555' }}>
-                                                            {selected ? selected.name : `Pizza ${slot}`}
-                                                        </p>
-                                                    </div>
-                                                    <div style={{ maxHeight: '260px', overflowY: 'auto', border: `2px solid ${selected ? '#B71C1C' : '#EEE'}`, borderRadius: '16px', padding: '6px', background: '#FAFAFA', transition: 'border-color 0.2s' }}>
-                                                        {bogoPizzaPool.length === 0
-                                                            ? <div style={{ padding: '20px', textAlign: 'center', color: '#AAA', fontSize: '0.85rem' }}>Loading pizzas...</div>
-                                                            : bogoPizzaPool.map(p => {
-                                                                const isMe = selected?.id === p.id;
-                                                                const isOther = other?.id === p.id;
-                                                                return (
-                                                                    <div
-                                                                        key={p.id}
-                                                                        onClick={() => {
-                                                                            if (isOther) return;
-                                                                            if (slot === 1) setBogoSelection(prev => ({ ...prev, pizza1: isMe ? null : p }));
-                                                                            else setBogoSelection(prev => ({ ...prev, pizza2: isMe ? null : p }));
-                                                                        }}
-                                                                        style={{
-                                                                            display: 'flex', alignItems: 'center', gap: '10px', padding: '10px',
-                                                                            marginBottom: '4px', borderRadius: '12px',
-                                                                            cursor: isOther ? 'not-allowed' : 'pointer',
-                                                                            border: `2px solid ${isMe ? '#B71C1C' : 'transparent'}`,
-                                                                            background: isMe ? 'rgba(183,28,28,0.06)' : isOther ? '#F0F0F0' : '#fff',
-                                                                            opacity: isOther ? 0.4 : 1,
-                                                                            transition: 'all 0.15s',
-                                                                            boxShadow: isMe ? '0 2px 8px rgba(183,28,28,0.12)' : 'none'
-                                                                        }}
-                                                                    >
-                                                                        <img
-                                                                            src={(p.image?.startsWith('http') || p.image?.startsWith('/') || p.image?.startsWith('data:')) ? p.image : `/images/menu/${p.image}`}
-                                                                            alt={p.name}
-                                                                            style={{ width: '46px', height: '46px', objectFit: 'cover', borderRadius: '10px', flexShrink: 0, boxShadow: '0 2px 6px rgba(0,0,0,0.1)' }}
-                                                                        />
-                                                                        <div style={{ flex: 1, minWidth: 0 }}>
-                                                                            <div style={{ fontWeight: '700', fontSize: '0.82rem', color: '#1A1A1A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</div>
-                                                                            <div style={{ color: '#B71C1C', fontSize: '0.78rem', fontWeight: '800', marginTop: '2px' }}>₹{p.price[bogoSelection.size]}</div>
-                                                                        </div>
-                                                                        {isMe && <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#B71C1C', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                                                                            <i className="fas fa-check" style={{ color: '#fff', fontSize: '0.65rem' }}></i>
-                                                                        </div>}
-                                                                    </div>
-                                                                );
-                                                            })
+                                                    <div style={{ fontSize: '0.95rem', fontWeight: '900' }}>{sz === 'medium' ? 'Medium' : 'Large'}</div>
+                                                    <div style={{ fontSize: '0.73rem', opacity: 0.8 }}>
+                                                        {bogoPizzaPool.length > 0
+                                                            ? `from â‚¹${Math.min(...bogoPizzaPool.map(p => p.price?.[sz] || 999))}`
+                                                            : sz === 'medium' ? 'Perfect for 2' : 'Perfect for 3-4'
                                                         }
                                                     </div>
                                                 </div>
-                                            );
-                                        })}
-                                    </div>
+                                                {active && <span style={{ marginLeft: 'auto' }}>âœ“</span>}
+                                            </button>
+                                        );
+                                    })}
                                 </div>
-                            )}
-                        </div>
 
-                        {/* Footer Summary + CTA */}
-                        <div style={{ padding: '20px 28px', borderTop: '1px solid #F0F0F0', background: '#FAFAFA' }}>
-                            {bogoSelection.pizza1 && bogoSelection.pizza2 ? (
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '14px', padding: '12px 16px', background: '#fff', borderRadius: '14px', border: '1px solid #F0E0E0', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
-                                    <div style={{ flex: 1 }}>
-                                        <div style={{ fontSize: '0.73rem', color: '#888', fontWeight: '600' }}>🎉 Your BOGO Deal</div>
-                                        <div style={{ fontSize: '0.82rem', fontWeight: '700', color: '#1A1A1A', marginTop: '2px' }}>
-                                            {bogoSelection.pizza1.name} <span style={{ color: '#B71C1C' }}>+</span> {bogoSelection.pizza2.name}
+                                {/* Pizza picker â€” side by side */}
+                                <p style={{ fontSize: '0.73rem', fontWeight: '800', color: isDeluxe ? '#1B5E20' : '#B71C1C', letterSpacing: '1px', textTransform: 'uppercase', margin: '0 0 12px' }}>Steps 2 & 3 â€” Pick Your 2 {bogoOpen} Pizzas</p>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                                    {[1, 2].map(slot => {
+                                        const selected = slot === 1 ? bogoSel.pizza1 : bogoSel.pizza2;
+                                        const other = slot === 1 ? bogoSel.pizza2 : bogoSel.pizza1;
+                                        const accentColor = isDeluxe ? '#2E7D32' : '#B71C1C';
+                                        return (
+                                            <div key={slot}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '7px', marginBottom: '8px' }}>
+                                                    <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: selected ? accentColor : '#E0E0E0', color: selected ? '#fff' : '#888', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', fontWeight: '900', flexShrink: 0 }}>
+                                                        {selected ? 'âœ“' : slot}
+                                                    </div>
+                                                    <p style={{ margin: 0, fontSize: '0.8rem', fontWeight: '700', color: selected ? accentColor : '#555', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                        {selected ? selected.name : `Pizza ${slot}`}
+                                                        {selected && <span style={{ color: '#B71C1C', marginLeft: '6px', fontWeight: '900' }}>â‚¹{selected.price?.[bogoSel.size] || 'â€”'}</span>}
+                                                    </p>
+                                                </div>
+                                                <div style={{
+                                                    maxHeight: '260px', overflowY: 'auto',
+                                                    border: `2px solid ${selected ? accentColor : '#EEE'}`,
+                                                    borderRadius: '14px', padding: '6px', background: '#FAFAFA', transition: 'border-color 0.2s'
+                                                }}>
+                                                    {bogoPizzaPool.length === 0
+                                                        ? <div style={{ padding: '24px', textAlign: 'center', color: '#AAA', fontSize: '0.85rem' }}>No {bogoOpen} pizzas yet</div>
+                                                        : bogoPizzaPool.map(p => {
+                                                            const isMe = selected?.id === p.id;
+                                                            const isOther = other?.id === p.id;
+                                                            const pPrice = p.price?.[bogoSel.size];
+                                                            return (
+                                                                <div
+                                                                    key={p.id}
+                                                                    onClick={() => {
+                                                                        if (isOther) return;
+                                                                        if (slot === 1) setBogoSel(prev => ({ ...prev, pizza1: isMe ? null : p }));
+                                                                        else setBogoSel(prev => ({ ...prev, pizza2: isMe ? null : p }));
+                                                                    }}
+                                                                    style={{
+                                                                        display: 'flex', alignItems: 'center', gap: '10px', padding: '9px',
+                                                                        marginBottom: '4px', borderRadius: '10px',
+                                                                        cursor: isOther ? 'not-allowed' : 'pointer',
+                                                                        border: `2px solid ${isMe ? accentColor : 'transparent'}`,
+                                                                        background: isMe ? `${accentColor}0D` : isOther ? '#F0F0F0' : '#fff',
+                                                                        opacity: isOther ? 0.4 : 1, transition: 'all 0.12s',
+                                                                        boxShadow: isMe ? `0 2px 8px ${accentColor}20` : 'none'
+                                                                    }}
+                                                                >
+                                                                    <img
+                                                                        src={(p.image?.startsWith('http') || p.image?.startsWith('/') || p.image?.startsWith('data:')) ? p.image : `/images/menu/${p.image}`}
+                                                                        alt={p.name}
+                                                                        style={{ width: '44px', height: '44px', objectFit: 'cover', borderRadius: '9px', flexShrink: 0, boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}
+                                                                        onError={e => { e.target.src = 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=100'; }}
+                                                                    />
+                                                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                                                        <div style={{ fontWeight: '700', fontSize: '0.8rem', color: '#1A1A1A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</div>
+                                                                        <div style={{ color: accentColor, fontSize: '0.77rem', fontWeight: '800', marginTop: '2px' }}>â‚¹{pPrice || 'â€”'}</div>
+                                                                    </div>
+                                                                    {isMe && <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: accentColor, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                                                        <i className="fas fa-check" style={{ color: '#fff', fontSize: '0.6rem' }}></i>
+                                                                    </div>}
+                                                                </div>
+                                                            );
+                                                        })
+                                                    }
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            {/* â”€â”€ Modal Footer â”€â”€ */}
+                            <div style={{ padding: '18px 28px', borderTop: '1px solid #F0F0F0', background: '#FAFAFA', flexShrink: 0 }}>
+                                {bogoSel.pizza1 && bogoSel.pizza2 ? (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px', padding: '10px 14px', background: '#fff', borderRadius: '12px', border: '1px solid #F0E8E8', boxShadow: '0 2px 6px rgba(0,0,0,0.04)' }}>
+                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                            <div style={{ fontSize: '0.7rem', color: '#888', fontWeight: '600' }}>ðŸŽ‰ Your {bogoOpen} BOGO Deal ({bogoSel.size})</div>
+                                            <div style={{ fontSize: '0.8rem', fontWeight: '700', color: '#1A1A1A', marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                {bogoSel.pizza1.name} <span style={{ color: '#B71C1C' }}>+</span> {bogoSel.pizza2.name}
+                                            </div>
+                                        </div>
+                                        <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                                            <div style={{ fontSize: '0.68rem', color: '#888' }}>You pay only</div>
+                                            <div style={{ fontSize: '1.3rem', fontWeight: '900', color: '#B71C1C', lineHeight: 1 }}>â‚¹{offerPrice}</div>
+                                            <div style={{ fontSize: '0.65rem', color: '#AAA', marginTop: '1px' }}>was â‚¹{p1Price + p2Price}</div>
                                         </div>
                                     </div>
-                                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                                        <div style={{ fontSize: '0.72rem', color: '#888' }}>Pay only</div>
-                                        <div style={{ fontSize: '1.4rem', fontWeight: '900', color: '#B71C1C', lineHeight: 1 }}>
-                                            ₹{Math.max(bogoSelection.pizza1.price[bogoSelection.size] || 0, bogoSelection.pizza2.price[bogoSelection.size] || 0)}
-                                        </div>
-                                        <div style={{ fontSize: '0.68rem', color: '#AAA' }}>({bogoSelection.size})</div>
+                                ) : (
+                                    <div style={{ marginBottom: '12px', padding: '9px 14px', background: '#FFF8E1', borderRadius: '10px', border: '1px dashed #FFB300', fontSize: '0.8rem', color: '#795548', fontWeight: '600' }}>
+                                        ðŸ‘† {!bogoSel.pizza1 ? 'Select your first pizza' : 'Now select the second pizza'}
                                     </div>
-                                </div>
-                            ) : (
-                                <div style={{ marginBottom: '14px', padding: '10px 16px', background: '#FFF8E1', borderRadius: '12px', border: '1px dashed #FFB300', fontSize: '0.82rem', color: '#795548', fontWeight: '600' }}>
-                                    👆 {!bogoSelection.category ? 'Choose a size and category to get started' : 'Select both pizzas to see your deal price'}
-                                </div>
-                            )}
-                            <button
-                                onClick={handleBogoAddToCart}
-                                disabled={!bogoSelection.pizza1 || !bogoSelection.pizza2}
-                                style={{
-                                    width: '100%', padding: '16px', border: 'none', borderRadius: '16px',
-                                    background: (!bogoSelection.pizza1 || !bogoSelection.pizza2) ? '#E0E0E0' : 'linear-gradient(135deg, #B71C1C, #D32F2F)',
-                                    color: (!bogoSelection.pizza1 || !bogoSelection.pizza2) ? '#AAA' : '#fff',
-                                    fontWeight: '900', fontSize: '1rem', cursor: (!bogoSelection.pizza1 || !bogoSelection.pizza2) ? 'not-allowed' : 'pointer',
-                                    transition: 'all 0.2s',
-                                    boxShadow: (!bogoSelection.pizza1 || !bogoSelection.pizza2) ? 'none' : '0 8px 24px rgba(183,28,28,0.3)',
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px'
-                                }}
-                            >
-                                <i className="fas fa-shopping-cart"></i>
-                                {(!bogoSelection.pizza1 || !bogoSelection.pizza2) ? 'Select Both Pizzas First' : 'Add BOGO Deal to Cart 🎉'}
-                            </button>
+                                )}
+                                <button
+                                    onClick={handleBogoAddToCart}
+                                    disabled={!bogoSel.pizza1 || !bogoSel.pizza2}
+                                    style={{
+                                        width: '100%', padding: '15px', border: 'none', borderRadius: '14px',
+                                        background: (!bogoSel.pizza1 || !bogoSel.pizza2) ? '#E0E0E0' : (isDeluxe ? 'linear-gradient(135deg, #1B5E20, #2E7D32)' : 'linear-gradient(135deg, #B71C1C, #D32F2F)'),
+                                        color: (!bogoSel.pizza1 || !bogoSel.pizza2) ? '#AAA' : '#fff',
+                                        fontWeight: '900', fontSize: '0.95rem',
+                                        cursor: (!bogoSel.pizza1 || !bogoSel.pizza2) ? 'not-allowed' : 'pointer',
+                                        transition: 'all 0.2s',
+                                        boxShadow: (!bogoSel.pizza1 || !bogoSel.pizza2) ? 'none' : '0 6px 20px rgba(0,0,0,0.25)',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', fontFamily: 'inherit'
+                                    }}
+                                >
+                                    <i className="fas fa-shopping-cart"></i>
+                                    {(!bogoSel.pizza1 || !bogoSel.pizza2) ? 'Select Both Pizzas' : `Add BOGO to Cart â€” Pay â‚¹${offerPrice} ðŸŽ‰`}
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
+                );
+            })()}
         </div>
     );
 };

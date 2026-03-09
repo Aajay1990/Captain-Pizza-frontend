@@ -255,7 +255,7 @@ const MenuManager = () => {
                                     <input type="text" value={formData.name || ''} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required />
                                 </div>
                                 <div className="form-group">
-                                    <label>Category Layout</label>
+                                    <label>Category</label>
                                     <select
                                         value={isCustomCategory ? 'custom' : formData.category}
                                         onChange={(e) => {
@@ -270,12 +270,30 @@ const MenuManager = () => {
                                         required={!isCustomCategory}
                                         style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ccc' }}
                                     >
-                                        <option value="pizza">Pizza</option>
-                                        <option value="burger">Burger</option>
-                                        <option value="wrap">Wrap</option>
-                                        <option value="sandwich">Sandwich</option>
-                                        <option value="side">Side Order / Drink</option>
-                                        <option value="custom">Create Custom...</option>
+                                        {/* Standard categories */}
+                                        <optgroup label="Standard Categories">
+                                            <option value="pizza">🍕 Pizza</option>
+                                            <option value="burger">🍔 Burger</option>
+                                            <option value="wrap">🌯 Wrap</option>
+                                            <option value="sandwich">🥪 Sandwich</option>
+                                            <option value="side">🍟 Side Order / Drink</option>
+                                        </optgroup>
+                                        {/* Existing custom DB categories */}
+                                        {(() => {
+                                            const defaultCats = ['pizza', 'burger', 'wrap', 'sandwich', 'side'];
+                                            const customCats = [...new Set(items.map(i => i.category).filter(c => !defaultCats.includes(c.toLowerCase())))];
+                                            if (customCats.length === 0) return null;
+                                            return (
+                                                <optgroup label="Your Custom Categories">
+                                                    {customCats.map(cat => (
+                                                        <option key={cat} value={cat}>📁 {cat.charAt(0).toUpperCase() + cat.slice(1)}</option>
+                                                    ))}
+                                                </optgroup>
+                                            );
+                                        })()}
+                                        <optgroup label="Other">
+                                            <option value="custom">✏️ Create New Category...</option>
+                                        </optgroup>
                                     </select>
 
                                     {isCustomCategory && (
@@ -285,7 +303,7 @@ const MenuManager = () => {
                                             value={formData.category || ''}
                                             onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                                             required
-                                            style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ccc', marginTop: '10px' }}
+                                            style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #B71C1C', marginTop: '10px', boxSizing: 'border-box' }}
                                         />
                                     )}
                                 </div>

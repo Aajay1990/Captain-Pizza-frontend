@@ -4,23 +4,24 @@ import { Link, useNavigate } from 'react-router-dom';
 import { CartContext } from '../context/CartContext';
 import { AuthContext } from '../context/AuthContext';
 
-const Order = () => {
-    const { cartItems, updateQuantity, clearCart, toggleAddonSML } = useContext(CartContext);
-    const { user, refreshUser } = useContext(AuthContext);
+const API = 'https://pizza-backend-api-a5mm.onrender.com';
+const TOPPING_TYPES = ['Tomato', 'Corn', 'Onion', 'Capsicum'];
+const SIZE_ADDONS = [
+    { name: 'Veg Topping', prices: { small: 25, medium: 35, large: 45 } },
+    { name: 'Extra Cheese', prices: { small: 40, medium: 60, large: 90 } },
+    { name: 'Cheese Burst', prices: { small: 50, medium: 60, large: 90 } },
+];
 
-    const ADDONS_CONFIG = [
-        { name: 'Ketchup x10', isToggle: true, prices: { default: 10 } },
-        { name: 'Veg Topping', isToggle: false, prices: { small: 25, medium: 35, large: 45 } },
-        { name: 'Extra Cheese', isToggle: false, prices: { small: 40, medium: 60, large: 90 } },
-        { name: 'Cheese Burst', isToggle: false, prices: { small: 50, medium: 60, large: 90 } }
-    ];
+const Order = () => {
+    const { cartItems, updateQuantity, clearCart, toggleAddonSML, toggleToppingType } = useContext(CartContext);
+    const { user, refreshUser } = useContext(AuthContext);
     const navigate = useNavigate();
 
     // Form states
     const [name, setName] = useState('');
     const [phone, setPhone] = useState('');
     const [address, setAddress] = useState('');
-    const [paymentMethod, setPaymentMethod] = useState('online'); // Locked to online
+    const [paymentMethod, setPaymentMethod] = useState('online');
 
     // Coupon states
     const [couponCode, setCouponCode] = useState('');
@@ -33,15 +34,14 @@ const Order = () => {
 
     // Guests are welcome — no login required
 
-    // Initial prefill if user is logged in
     useEffect(() => {
         if (user) {
             setName(user.name || '');
             setPhone(user.phone || '');
         }
-        const fetchOrderSettings = async () => {
+        (async () => {
             try {
-                const res = await fetch('https://pizza-backend-api-a5mm.onrender.com/api/admin/settings');
+                const res = await fetch(`${API}/api/admin/settings`);
                 const data = await res.json();
                 if (data.success) {
                     const findVal = (key, def) => data.data.find(s => s.key === key)?.value || def;
@@ -52,418 +52,364 @@ const Order = () => {
                     setAdminWhatsApp(findVal('admin_whatsapp_number', '919220367325'));
                 }
             } catch (e) { console.error(e); }
-        };
-        fetchOrderSettings();
-    }, []);
+        })();
+    }, [user]);
 
-    // Derived totals
-    const cartSubtotal = cartItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+    // Totals
+    const cartSubtotal = cartItems.reduce((acc, i) => acc + i.price * i.quantity, 0);
     const deliveryFee = cartSubtotal >= deliverySettings.threshold ? 0 : deliverySettings.charge;
     const finalTotal = Math.max(0, cartSubtotal + deliveryFee - discount);
 
-    // Handle Coupon Check
     const handleApplyCoupon = async () => {
         if (!couponCode.trim()) return;
-        setIsApplying(true);
-        setCouponMessage('');
-
+        setIsApplying(true); setCouponMessage('');
         try {
-            const res = await fetch('https://pizza-backend-api-a5mm.onrender.com/api/admin/coupons/validate', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+            const res = await fetch(`${API}/api/admin/coupons/validate`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ code: couponCode, orderTotal: cartSubtotal })
             });
             const data = await res.json();
-
-            if (data.success) {
-                setDiscount(data.discount);
-                setCouponMessage(`✅ ${data.message} (-₹${data.discount})`);
-            } else {
-                setDiscount(0);
-                setCouponMessage(`❌ ${data.message}`);
-            }
-        } catch (error) {
-            setDiscount(0);
-            setCouponMessage("❌ Error validating coupon");
-        } finally {
-            setIsApplying(false);
-        }
+            if (data.success) { setDiscount(data.discount); setCouponMessage(`✅ ${data.message} (-₹${data.discount})`); }
+            else { setDiscount(0); setCouponMessage(`❌ ${data.message}`); }
+        } catch { setCouponMessage('❌ Error validating coupon'); }
+        finally { setIsApplying(false); }
     };
 
     const makeObjectId = (id) => {
-        const idStr = String(id);
-        if (/^[a-fA-F0-9]{24}$/.test(idStr)) return idStr;
-        let hexKey = "";
-        for (let i = 0; i < idStr.length; i++) hexKey += idStr.charCodeAt(i).toString(16);
-        return hexKey.padEnd(24, '0').slice(0, 24);
+        const s = String(id);
+        if (/^[a-fA-F0-9]{24}$/.test(s)) return s;
+        let h = '';
+        for (let i = 0; i < s.length; i++) h += s.charCodeAt(i).toString(16);
+        return h.padEnd(24, '0').slice(0, 24);
     };
 
-    const redirectToWhatsApp = (orderDataResp, paymentId) => {
-        const adminPhone = adminWhatsApp; // Admin phone number for WhatsApp
-        let text = `🍕 *NEW ORDER FROM CAPTAIN PIZZA* 🍕\n`;
-        text += `━━━━━━━━━━━━━━━━━━━━\n`;
-        text += `🆔 *Order ID:* #${orderDataResp._id.slice(-6).toUpperCase()}\n`;
-        text += `💳 *Transaction ID:* ${paymentId || 'N/A'}\n`;
-        text += `📅 *Date:* ${new Date().toLocaleString()}\n`;
-        text += `━━━━━━━━━━━━━━━━━━━━\n`;
-        text += `👤 *Name:* ${name}\n`;
-        text += `📞 *Phone:* ${phone}\n`;
-        text += `📍 *Address:* ${address}\n`;
-        text += `━━━━━━━━━━━━━━━━━━━━\n`;
-        text += `🛍️ *Order Items:*\n`;
-
-        cartItems.forEach((item, index) => {
-            text += `*${index + 1}. ${item.name}*\n`;
-            text += `   Qty: ${item.quantity} | Size: ${item.selectedSize || 'Regular'}\n`;
-            if (item.toppings && item.toppings.length > 0) {
-                const toppingNames = item.toppings.map(t => typeof t === 'string' ? t : t.name).join(', ');
-                text += `   ➕ Add-ons: ${toppingNames}\n`;
-            }
-            text += `   Price: ₹${item.price * item.quantity}\n`;
+    const redirectToWhatsApp = (orderResp, paymentId) => {
+        let text = `🍕 *NEW ORDER* - CAPTAIN PIZZA\n━━━━━━━━━━━━━━━━\n🆔 #${orderResp._id.slice(-6).toUpperCase()}\n💳 ${paymentId || 'N/A'}\n👤 ${name} | 📞 ${phone}\n📍 ${address}\n━━━━━━━━━━━━━━━━\n`;
+        cartItems.forEach((item, i) => {
+            text += `${i + 1}. ${item.name} x${item.quantity} — ₹${item.price * item.quantity}\n`;
+            const types = item.toppingTypes?.join(', ');
+            if (types) text += `   🥗 Toppings: ${types}\n`;
+            if (item.toppings?.length) text += `   ➕ ${item.toppings.map(t => t.name || t).join(', ')}\n`;
         });
-
-        text += `━━━━━━━━━━━━━━━━━━━━\n`;
-        text += `💰 *Subtotal:* ₹${cartSubtotal}\n`;
-        if (discount > 0) text += `🎟️ *Coupon Discount:* -₹${discount}\n`;
-        text += `🚚 *Delivery Fee:* ₹${deliveryFee}\n`;
-        text += `⭐ *TOTAL PAYABLE:* ₹${finalTotal}\n`;
-        text += `━━━━━━━━━━━━━━━━━━━━\n`;
-        text += `✅ *Payment Status:* PAID (Online)\n`;
-        text += `Thank you for ordering with us!`;
-
-        const encodedText = encodeURIComponent(text);
-        window.open(`https://wa.me/${adminPhone}?text=${encodedText}`, '_blank');
+        text += `━━━━━━━━━━━━━━━━\n💰 Total: ₹${finalTotal} ✅ PAID`;
+        window.open(`https://wa.me/${adminWhatsApp}?text=${encodeURIComponent(text)}`, '_blank');
     };
 
-    // Handle Order Submission
     const handlePlaceOrder = async (e) => {
         e.preventDefault();
+        if (cartItems.length === 0) return;
 
-        if (cartItems.length === 0) return alert("Your cart is empty!");
+        // Validate topping types: If any item has Veg Topping selected, must also have toppingTypes
+        const invalid = cartItems.find(item => {
+            const hasVegTopping = item.toppings?.some(t => t.baseName === 'Veg Topping');
+            return hasVegTopping && (!item.toppingTypes || item.toppingTypes.length === 0);
+        });
+        if (invalid) {
+            alert(`⚠️ Please select at least one veg topping type (Tomato, Corn, Onion, Capsicum) for "${invalid.name}"`);
+            return;
+        }
 
         setOrderPlacing(true);
-
         const orderData = {
-            userId: user ? user._id : null,
-            customerInfo: { name, phone, address, email: user ? user.email : '' },
+            userId: user?._id || null,
+            customerInfo: { name, phone, address, email: user?.email || '' },
             orderItems: cartItems.map(i => ({
-                menuItem: makeObjectId(i._id || i.id),
-                name: i.name,
-                quantity: i.quantity,
-                size: i.selectedSize || 'regular',
-                price: i.price,
-                toppings: i.toppings ? i.toppings.map(t => t.name || t.baseName) : []
+                menuItem: makeObjectId(i._id || i.id), name: i.name,
+                quantity: i.quantity, size: i.selectedSize || 'regular', price: i.price,
+                toppings: [
+                    ...(i.toppings?.map(t => t.name || t.baseName) || []),
+                    ...(i.toppingTypes || [])
+                ]
             })),
-            totalAmount: finalTotal,
-            orderType: 'delivery',
-            paymentMethod,
-            discount,
-            tax: 0,
-            subTotal: cartSubtotal,
-            paymentStatus: 'pending' // Just simulating for now, or real razorpay
+            totalAmount: finalTotal, orderType: 'delivery', paymentMethod,
+            discount, tax: 0, subTotal: cartSubtotal, paymentStatus: 'pending'
         };
 
-        if (paymentMethod === 'online') {
-            try {
-                // Fetch Key
-                const resKey = await fetch('https://pizza-backend-api-a5mm.onrender.com/api/orders/razorpay/key');
-                const keyData = await resKey.json();
+        try {
+            const { key } = await (await fetch(`${API}/api/orders/razorpay/key`)).json();
+            if (!key) { alert('Razorpay not configured.'); setOrderPlacing(false); return; }
+            const { success, order: rzpOrder } = await (await fetch(`${API}/api/orders/razorpay/create`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ amount: finalTotal })
+            })).json();
+            if (!success) { alert('Failed to create payment order.'); setOrderPlacing(false); return; }
 
-                if (!keyData.key) {
-                    alert("Razorpay is not configured on the backend. Please use Cash on Delivery.");
+            new window.Razorpay({
+                key, amount: rzpOrder.amount, currency: 'INR',
+                name: 'Captain Pizza', description: 'Order Payment', order_id: rzpOrder.id,
+                handler: async (response) => {
+                    setOrderPlacing(true);
+                    const vd = await (await fetch(`${API}/api/orders/razorpay/verify`, {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ ...response, orderData })
+                    })).json();
+                    if (vd.success) {
+                        if (user) refreshUser({ ...user, hasUsedWelcomeOffer: true });
+                        clearCart(); alert(`🎉 Order Placed! ID: ${vd.data._id}`);
+                        redirectToWhatsApp(vd.data, response.razorpay_payment_id);
+                        navigate('/');
+                    } else { alert('Payment verification failed.'); }
                     setOrderPlacing(false);
-                    return;
-                }
-
-                // Create Order on Backend
-                const resOrder = await fetch('https://pizza-backend-api-a5mm.onrender.com/api/orders/razorpay/create', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ amount: finalTotal })
-                });
-
-                const orderResult = await resOrder.json();
-
-                if (!orderResult.success) {
-                    alert("Failed to create Razorpay order.");
-                    setOrderPlacing(false);
-                    return;
-                }
-
-                const options = {
-                    key: keyData.key,
-                    amount: orderResult.order.amount,
-                    currency: "INR",
-                    name: "Captain Pizza",
-                    description: "Pizza Order",
-                    order_id: orderResult.order.id,
-                    handler: async function (response) {
-                        setOrderPlacing(true); // Re-show loading during verification
-                        try {
-                            const verifyRes = await fetch('https://pizza-backend-api-a5mm.onrender.com/api/orders/razorpay/verify', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({
-                                    razorpay_order_id: response.razorpay_order_id,
-                                    razorpay_payment_id: response.razorpay_payment_id,
-                                    razorpay_signature: response.razorpay_signature,
-                                    orderData
-                                })
-                            });
-                            const verifyData = await verifyRes.json();
-                            if (verifyData.success) {
-                                if (user) { refreshUser({ ...user, hasUsedWelcomeOffer: true }); }
-                                clearCart();
-                                alert(`🎉 Order Placed Successfully! Your Order ID is: ${verifyData.data._id}`);
-                                redirectToWhatsApp(verifyData.data, response.razorpay_payment_id);
-                                navigate('/');
-                            } else {
-                                alert("Payment verification failed. Please contact support.");
-                            }
-                        } catch (err) {
-                            console.error("Verification error", err);
-                            alert("Verification error. If money was deducted, please refer to support.");
-                        } finally {
-                            setOrderPlacing(false);
-                        }
-                    },
-                    prefill: {
-                        name: name,
-                        contact: phone,
-                        email: user ? user.email : ''
-                    },
-                    theme: {
-                        color: "#B71C1C"
-                    }
-                };
-
-                const rzp = new window.Razorpay(options);
-                rzp.on('payment.failed', function (response) {
-                    alert('Payment Failed: ' + response.error.description);
-                });
-                rzp.open();
-                setOrderPlacing(false); // Enable button once window opens
-
-            } catch (error) {
-                console.error("Razorpay error", error);
-                alert("Could not load payment gateway. Try Cash on Delivery.");
-                setOrderPlacing(false);
-            }
-        } else {
-            // Cash on Delivery
-            try {
-                const res = await fetch('https://pizza-backend-api-a5mm.onrender.com/api/orders', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(orderData)
-                });
-                const data = await res.json();
-
-                if (data.success) {
-                    if (user) {
-                        refreshUser({ ...user, hasUsedWelcomeOffer: true });
-                    }
-                    clearCart();
-                    alert(`🎉 Order Placed Successfully! Your Order ID is: ${data.data._id}`);
-                    navigate('/'); // Redirect back home
-                } else {
-                    alert("Failed to place order: " + (data.message || "Unknown server error"));
-                }
-            } catch (error) {
-                console.error("Order error", error);
-                alert("Checkout Error. Please check your connection.");
-            } finally {
-                setOrderPlacing(false);
-            }
-        }
+                },
+                prefill: { name, contact: phone, email: user?.email || '' },
+                theme: { color: '#B71C1C' }
+            }).open();
+            setOrderPlacing(false);
+        } catch { alert('Could not load payment gateway.'); setOrderPlacing(false); }
     };
 
     return (
         <div className="order-page animate-fade-in">
-            <div className="order-header">
-                <h1>Complete Your Order</h1>
-                <p>Fast delivery right to your doorstep</p>
+            {/* Hero Header */}
+            <div className="order-hero">
+                <h1><i className="fas fa-shopping-bag" style={{ marginRight: '10px' }}></i>Your Order</h1>
+                <p>Review your items • Customize • Pay securely</p>
             </div>
 
-            <div className="order-content">
-                {/* Cart Snapshot Area */}
-                <div className="cart-section card">
-                    <h2 className="section-title-sm">Your Cart</h2>
-                    {cartItems.length === 0 ? (
-                        <div className="empty-cart">
-                            <p>Your cart is empty.</p>
-                            <Link to="/menu" className="btn-primary" style={{ marginTop: '30px', display: 'inline-block' }}>Browse Menu</Link>
+            <div className="order-body">
+                {/* ─── LEFT COLUMN: Cart & Addons ─── */}
+                <div>
+                    <div className="op-card">
+                        <div className="op-card-head">
+                            <div className="head-icon"><i className="fas fa-shopping-cart"></i></div>
+                            <h2>Cart Items</h2>
+                            <span>{cartItems.length} item{cartItems.length !== 1 ? 's' : ''}</span>
                         </div>
-                    ) : (
-                        <div className="cart-items">
-                            {cartItems.map((item, index) => {
-                                return (
-                                    <div key={item.cartItemId} className="cart-item" style={{ display: 'flex', flexDirection: 'column', padding: '20px', backgroundColor: 'transparent', border: '1px solid rgba(0,0,0,0.05)', borderRadius: '8px', borderBottom: '1px solid rgba(0, 0, 0, 0.05)' }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '15px' }}>
-                                            <h4 style={{ margin: 0, fontSize: '1.1rem', color: '#333' }}>{index + 1}. {item.name}</h4>
-                                        </div>
-
-                                        <div className="item-addons-list">
-                                            <p style={{ color: '#555', fontSize: '0.95rem', marginBottom: '12px', fontWeight: 'bold' }}>Add-ons</p>
-
-                                            {ADDONS_CONFIG.map((addon, i) => {
-                                                if (addon.isToggle) {
-                                                    const isSelected = item.toppings?.some(t => t.baseName === addon.name);
-                                                    return (
-                                                        <label key={i} style={{ padding: '12px 15px', backgroundColor: 'rgba(0,0,0,0.03)', borderRadius: '8px', marginBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', border: '1px solid rgba(0,0,0,0.05)' }}>
-                                                            <div style={{ fontWeight: '600', fontSize: '0.95rem', color: '#333' }}>{addon.name} <span style={{ color: '#666', fontSize: '0.85rem', fontWeight: 'normal' }}> (+₹{addon.prices.default})</span></div>
-                                                            <input
-                                                                type="checkbox"
-                                                                checked={isSelected}
-                                                                onChange={() => toggleAddonSML(item.cartItemId, addon.name, 'default', addon.prices.default)}
-                                                                style={{ width: '20px', height: '20px', accentColor: '#E53935', cursor: 'pointer' }}
-                                                            />
-                                                        </label>
-                                                    );
-                                                } else {
-                                                    const selectedSizeForThisAddon = item.toppings?.find(t => t.baseName === addon.name)?.size;
-                                                    return (
-                                                        <div key={i} style={{ padding: '15px', backgroundColor: 'rgba(0,0,0,0.03)', borderRadius: '8px', marginBottom: '10px', border: '1px solid rgba(0,0,0,0.05)' }}>
-                                                            <div style={{ fontWeight: '600', marginBottom: '12px', fontSize: '0.95rem', color: '#333' }}>{addon.name}</div>
-                                                            <div style={{ display: 'flex', gap: '8px' }}>
-                                                                {['small', 'medium', 'large'].map(sz => {
-                                                                    const price = addon.prices[sz];
-                                                                    const isSelected = selectedSizeForThisAddon === sz;
-                                                                    const sizeLabel = sz === 'small' ? 'Small' : sz === 'medium' ? 'Medium' : 'Large';
-                                                                    return (
-                                                                        <button
-                                                                            key={sz}
-                                                                            type="button"
-                                                                            onClick={() => toggleAddonSML(item.cartItemId, addon.name, sz, price)}
-                                                                            style={{
-                                                                                flex: 1, padding: '10px 5px', fontSize: '0.85rem', borderRadius: '6px',
-                                                                                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px',
-                                                                                backgroundColor: isSelected ? 'var(--primary)' : '#fff',
-                                                                                color: isSelected ? 'white' : '#444',
-                                                                                border: `1px solid ${isSelected ? 'var(--primary)' : '#ddd'}`,
-                                                                                cursor: 'pointer',
-                                                                                transition: 'all 0.2s ease',
-                                                                                boxShadow: isSelected ? '0 3px 6px rgba(229,0,0,0.2)' : '0 1px 3px rgba(0,0,0,0.05)'
-                                                                            }}
-                                                                        >
-                                                                            <span style={{ fontWeight: isSelected ? 'bold' : '500' }}>{sizeLabel}</span>
-                                                                            <span style={{ fontSize: '0.8rem', opacity: isSelected ? 1 : 0.8 }}>+₹{price}</span>
-                                                                        </button>
-                                                                    );
-                                                                })}
-                                                            </div>
-                                                        </div>
-                                                    );
-                                                }
-                                            })}
-                                        </div>
-
-                                        {/* Bottom Controls */}
-                                        <div className="item-bottom-controls" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '20px' }}>
-                                            <div className="quantity-controls" style={{ margin: 0 }}>
-                                                <button onClick={() => updateQuantity(item.cartItemId, -1)} style={{ width: '30px', height: '30px', border: 'none', background: 'transparent', fontSize: '1.2rem', cursor: 'pointer' }}>-</button>
-                                                <span style={{ width: '25px', textAlign: 'center', fontSize: '1.1rem' }}>{item.quantity}</span>
-                                                <button onClick={() => updateQuantity(item.cartItemId, 1)} style={{ width: '30px', height: '30px', border: 'none', background: 'transparent', fontSize: '1.2rem', cursor: 'pointer' }}>+</button>
-                                            </div>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                                                <span style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>₹{item.price * item.quantity}</span>
-                                                <button onClick={() => updateQuantity(item.cartItemId, -item.quantity)} style={{ background: 'none', border: 'none', color: '#E53935', cursor: 'pointer', fontSize: '1.2rem', padding: '5px' }}>
-                                                    <i className="fas fa-trash-alt"></i>
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                );
-                            })}
-
-                            {/* Coupon Input UI */}
-                            <div className="coupon-section" style={{ margin: '20px 0', padding: '15px', backgroundColor: 'rgba(0,0,0,0.02)', borderRadius: '8px', border: '1px dashed #ccc' }}>
-                                <h4 style={{ marginTop: 0, marginBottom: '10px', fontSize: '0.9rem' }}>Have a Promo Code?</h4>
-                                <div style={{ display: 'flex', gap: '10px' }}>
-                                    <input
-                                        type="text"
-                                        placeholder="Enter Code"
-                                        value={couponCode}
-                                        onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                                        style={{ flex: 1, padding: '10px', borderRadius: '5px', border: '1px solid #ccc', textTransform: 'uppercase' }}
-                                    />
-                                    <button
-                                        onClick={handleApplyCoupon}
-                                        disabled={isApplying || !couponCode}
-                                        className="btn-primary"
-                                        style={{ padding: '10px 20px' }}
-                                    >
-                                        {isApplying ? 'Checking...' : 'Apply'}
-                                    </button>
+                        <div className="op-card-body">
+                            {cartItems.length === 0 ? (
+                                <div className="op-empty">
+                                    <div className="op-empty-icon">🛒</div>
+                                    <p>Your cart is empty</p>
+                                    <Link to="/menu">Browse Menu</Link>
                                 </div>
-                                {couponMessage && <p style={{ margin: '10px 0 0 0', fontSize: '0.85rem', color: discount > 0 ? 'green' : 'red', fontWeight: 'bold' }}>{couponMessage}</p>}
-                            </div>
+                            ) : (
+                                <>
+                                    {cartItems.map((item, index) => {
+                                        const vegToppingEntry = item.toppings?.find(t => t.baseName === 'Veg Topping');
+                                        return (
+                                            <div key={item.cartItemId} className="op-cart-item">
+                                                <div className="op-item-top">
+                                                    <div className="op-item-num">{index + 1}</div>
+                                                    <div className="op-item-info">
+                                                        <div className="op-item-name">{item.name}</div>
+                                                        {item.selectedSize && <div className="op-item-size">{item.selectedSize.charAt(0).toUpperCase() + item.selectedSize.slice(1)} size</div>}
+                                                        {item.toppings?.length > 0 && (
+                                                            <div style={{ fontSize: '0.75rem', color: '#B71C1C', marginTop: '2px', fontWeight: '600' }}>
+                                                                + {item.toppings.map(t => t.name || t.baseName).join(', ')}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <div className="op-item-price-qty">
+                                                        <div className="op-qty-ctrl">
+                                                            <button onClick={() => updateQuantity(item.cartItemId, -1)}>−</button>
+                                                            <span>{item.quantity}</span>
+                                                            <button onClick={() => updateQuantity(item.cartItemId, 1)}>+</button>
+                                                        </div>
+                                                        <div className="op-item-total">₹{item.price * item.quantity}</div>
+                                                        <button className="op-remove-btn" onClick={() => updateQuantity(item.cartItemId, -item.quantity)}>
+                                                            <i className="fas fa-trash-alt"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
 
-                            <div className="cart-summary">
-                                <div className="summary-row">
+                                                {/* Add-ons customizer */}
+                                                <div className="op-addons-block">
+                                                    <div className="op-addons-label">✨ Customize Add-ons</div>
+
+                                                    {/* Ketchup stepper */}
+                                                    <div className="op-addon-row">
+                                                        <div className="op-addon-name">🍅 Ketchup Packets (₹1 each)</div>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                            {(() => {
+                                                                const k = item.toppings?.find(t => t.baseName === 'Ketchup Packets');
+                                                                const qty = k ? Math.round(k.price) : 0;
+                                                                return (
+                                                                    <>
+                                                                        <button className="op-sz-btn" onClick={() => {
+                                                                            const n = Math.max(0, qty - 1);
+                                                                            if (n === 0) toggleAddonSML(item.cartItemId, 'Ketchup Packets', 'default', 1);
+                                                                            else toggleAddonSML(item.cartItemId, 'Ketchup Packets', 'default', n);
+                                                                        }} disabled={qty === 0}>−</button>
+                                                                        <span style={{ fontWeight: '700', minWidth: '20px', textAlign: 'center' }}>{qty}</span>
+                                                                        <button className="op-sz-btn active" onClick={() => {
+                                                                            const n = qty + 1;
+                                                                            // simplified: use updateAddonQty via toggleAddonSML workaround
+                                                                            toggleAddonSML(item.cartItemId, 'Ketchup Packets', 'default', n);
+                                                                        }}>+</button>
+                                                                        {qty > 0 && <span style={{ fontSize: '0.75rem', color: '#B71C1C', fontWeight: '700' }}>+₹{qty}</span>}
+                                                                    </>
+                                                                );
+                                                            })()}
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Size-based addons */}
+                                                    {SIZE_ADDONS.map(addon => {
+                                                        const selSz = item.toppings?.find(t => t.baseName === addon.name)?.size;
+                                                        return (
+                                                            <div key={addon.name}>
+                                                                <div className="op-addon-row">
+                                                                    <div className="op-addon-name">{addon.name}</div>
+                                                                    <div className="op-size-btns">
+                                                                        {['small', 'medium', 'large'].map(sz => (
+                                                                            <button
+                                                                                key={sz}
+                                                                                className={`op-sz-btn ${selSz === sz ? 'active' : ''}`}
+                                                                                onClick={() => toggleAddonSML(item.cartItemId, addon.name, sz, addon.prices[sz])}
+                                                                            >
+                                                                                {sz === 'small' ? 'S' : sz === 'medium' ? 'M' : 'L'}
+                                                                                <span style={{ opacity: 0.8, fontSize: '0.65rem', marginLeft: '2px' }}>+₹{addon.prices[sz]}</span>
+                                                                            </button>
+                                                                        ))}
+                                                                    </div>
+                                                                    {selSz && <span style={{ fontSize: '0.75rem', color: '#B71C1C', fontWeight: '700', marginLeft: '6px' }}>+₹{addon.prices[selSz]}</span>}
+                                                                </div>
+
+                                                                {/* Topping type selector only for Veg Topping */}
+                                                                {addon.name === 'Veg Topping' && selSz && (
+                                                                    <div className="op-topping-types">
+                                                                        <div className="op-topping-types-label">Select Veg Type</div>
+                                                                        <div className="op-type-chips">
+                                                                            {TOPPING_TYPES.map(type => {
+                                                                                const active = item.toppingTypes?.includes(type);
+                                                                                return (
+                                                                                    <button
+                                                                                        key={type}
+                                                                                        className={`op-type-chip ${active ? 'active' : ''}`}
+                                                                                        onClick={() => toggleToppingType(item.cartItemId, type)}
+                                                                                    >
+                                                                                        {active && '✓ '}{type}
+                                                                                    </button>
+                                                                                );
+                                                                            })}
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+
+                                    {/* Coupon */}
+                                    <div className="op-coupon">
+                                        <div className="op-coupon-title">🎟️ Have a Promo Code?</div>
+                                        <div className="op-coupon-row">
+                                            <input
+                                                type="text"
+                                                placeholder="ENTER CODE"
+                                                className="op-coupon-input"
+                                                value={couponCode}
+                                                onChange={e => setCouponCode(e.target.value.toUpperCase())}
+                                            />
+                                            <button className="op-coupon-btn" onClick={handleApplyCoupon} disabled={isApplying || !couponCode}>
+                                                {isApplying ? '...' : 'Apply'}
+                                            </button>
+                                        </div>
+                                        {couponMessage && <p className={`op-coupon-msg ${discount > 0 ? 'ok' : 'err'}`}>{couponMessage}</p>}
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                {/* ─── RIGHT COLUMN: Order Summary + Checkout ─── */}
+                <div className="op-sticky">
+                    {/* Order Summary */}
+                    <div className="op-card" style={{ marginBottom: '20px' }}>
+                        <div className="op-card-head">
+                            <div className="head-icon"><i className="fas fa-receipt"></i></div>
+                            <h2>Order Summary</h2>
+                        </div>
+                        <div className="op-card-body">
+                            <div className="op-summary-block">
+                                <div className="op-sum-row">
                                     <span>Subtotal</span>
                                     <span>₹{cartSubtotal}</span>
                                 </div>
-                                <div className="summary-row">
-                                    <span>Delivery Fee</span>
-                                    <span>{deliveryFee === 0 ? 'Free' : `₹${deliveryFee}`}</span>
+                                <div className="op-sum-row">
+                                    <span>Delivery</span>
+                                    <span>{deliveryFee === 0 ? <span className="op-free-badge">🎉 FREE</span> : `₹${deliveryFee}`}</span>
                                 </div>
                                 {discount > 0 && (
-                                    <div className="summary-row" style={{ color: 'green', fontWeight: 'bold' }}>
-                                        <span>Coupon Discount</span>
-                                        <span>-₹{discount}</span>
+                                    <div className="op-sum-row" style={{ color: '#2E7D32', fontWeight: '700' }}>
+                                        <span>🎟️ Coupon Discount</span>
+                                        <span>−₹{discount}</span>
                                     </div>
                                 )}
-                                <div className="summary-row total">
-                                    <span>Total Final Amount</span>
-                                    <span>₹{finalTotal}</span>
+                                <div className="op-sum-row total">
+                                    <span>Total Payable</span>
+                                    <strong>₹{finalTotal}</strong>
                                 </div>
                             </div>
+                            {cartSubtotal > 0 && cartSubtotal < deliverySettings.threshold && (
+                                <div style={{ fontSize: '0.78rem', color: '#666', textAlign: 'center', marginTop: '12px', padding: '8px', background: '#FFF8E1', borderRadius: '8px' }}>
+                                    Add ₹{deliverySettings.threshold - cartSubtotal} more for <strong>FREE delivery</strong> 🛵
+                                </div>
+                            )}
                         </div>
-                    )}
-                </div>
+                    </div>
 
-                {/* Secure Checkout Form */}
-                <div className="checkout-section card">
-                    <h2 className="section-title-sm">Delivery Details</h2>
-                    <form className="checkout-form" onSubmit={handlePlaceOrder}>
-                        <div className="form-group">
-                            <label>Full Name</label>
-                            <input type="text" placeholder="John Doe" value={name} onChange={e => setName(e.target.value)} required />
+                    {/* Checkout Form */}
+                    <div className="op-card">
+                        <div className="op-card-head">
+                            <div className="head-icon"><i className="fas fa-map-marker-alt"></i></div>
+                            <h2>Delivery Details</h2>
                         </div>
-                        <div className="form-group">
-                            <label>Phone Number</label>
-                            <input type="tel" placeholder="9876543210" value={phone} onChange={e => setPhone(e.target.value)} required />
-                        </div>
-                        <div className="form-group">
-                            <label>Delivery Address</label>
-                            <textarea placeholder="Enter complete address..." rows="3" value={address} onChange={e => setAddress(e.target.value)} required></textarea>
-                        </div>
+                        <div className="op-card-body">
+                            <form className="op-form" onSubmit={handlePlaceOrder}>
+                                <div className="op-form-group">
+                                    <label><i className="fas fa-user"></i> Full Name</label>
+                                    <input type="text" placeholder="e.g. Rahul Sharma" value={name} onChange={e => setName(e.target.value)} required />
+                                </div>
+                                <div className="op-form-group">
+                                    <label><i className="fas fa-phone"></i> Phone Number</label>
+                                    <input type="tel" placeholder="9876543210" value={phone} onChange={e => setPhone(e.target.value)} required />
+                                </div>
+                                <div className="op-form-group">
+                                    <label><i className="fas fa-map-pin"></i> Delivery Address</label>
+                                    <textarea placeholder="House No., Street, Area, City..." rows="3" value={address} onChange={e => setAddress(e.target.value)} required></textarea>
+                                </div>
 
-                        <h2 className="section-title-sm mt-4">Payment Method</h2>
-                        <div className="payment-options">
-                            <label className="payment-radio" style={{ opacity: 0.5, cursor: 'not-allowed' }}>
-                                <input type="radio" name="payment" disabled checked={false} />
-                                <span>Cash on Delivery (Coming Soon)</span>
-                            </label>
-                            <label className="payment-radio">
-                                <input type="radio" name="payment" checked={true} readOnly />
-                                <span>Pay Online (Razorpay)</span>
-                            </label>
-                        </div>
+                                <div className="op-form-group">
+                                    <label><i className="fas fa-credit-card"></i> Payment Method</label>
+                                    <div className="op-payment-opts">
+                                        <div className="op-pay-opt active">
+                                            <span className="pay-icon">💳</span>
+                                            <span className="pay-label">Online (Razorpay)</span>
+                                        </div>
+                                        <div className="op-pay-opt coming-soon">
+                                            <span className="pay-icon">💵</span>
+                                            <span className="pay-label">Cash (Coming Soon)</span>
+                                        </div>
+                                    </div>
+                                </div>
 
-                        <button
-                            type="submit"
-                            className="btn-primary checkout-btn"
-                            disabled={cartItems.length === 0 || orderPlacing}
-                            style={{ marginTop: '20px', width: '100%', fontSize: '1.1rem' }}
-                        >
-                            {orderPlacing ? 'Processing Database...' : `Place Order • ₹${finalTotal}`}
-                        </button>
-                    </form>
+                                <button
+                                    type="submit"
+                                    className="op-place-btn"
+                                    disabled={cartItems.length === 0 || orderPlacing}
+                                >
+                                    {orderPlacing
+                                        ? <><i className="fas fa-spinner fa-spin"></i> Processing...</>
+                                        : <><i className="fas fa-lock"></i> Pay Securely • ₹{finalTotal}</>
+                                    }
+                                </button>
+
+                                {!user && (
+                                    <p style={{ textAlign: 'center', fontSize: '0.78rem', color: '#888', margin: '4px 0 0' }}>
+                                        <Link to="/login" style={{ color: '#B71C1C', fontWeight: '700' }}>Login</Link> to earn rewards & track orders
+                                    </p>
+                                )}
+                            </form>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div >
+        </div>
     );
 };
 

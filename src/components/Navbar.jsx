@@ -78,13 +78,8 @@ const Navbar = () => {
                                 </button>
                             </li>
                         </>
-                    ) : (
-                        <li className="nav-item">
-                            <Link to="/login" className="nav-link login-btn" onClick={closeMenu}>
-                                <i className="fas fa-sign-in-alt"></i> Login
-                            </Link>
-                        </li>
-                    )}
+                    ) : null}
+
                 </ul>
             </div>
 

@@ -158,8 +158,18 @@ export const CartProvider = ({ children }) => {
         }));
     };
 
+    const toggleToppingType = (cartItemId, type) => {
+        setCartItems(items => items.map(item => {
+            if (item.cartItemId !== cartItemId) return item;
+            const currentTypes = item.toppingTypes || [];
+            const exists = currentTypes.includes(type);
+            const newTypes = exists ? currentTypes.filter(t => t !== type) : [...currentTypes, type];
+            return { ...item, toppingTypes: newTypes };
+        }));
+    };
+
     return (
-        <CartContext.Provider value={{ cartItems, addToCart, updateQuantity, toggleAddon, toggleAddonSML, updateAddonQty, cartCount, clearCart, isCartOpen, setIsCartOpen, isIconAnimating }}>
+        <CartContext.Provider value={{ cartItems, addToCart, updateQuantity, toggleAddon, toggleAddonSML, updateAddonQty, toggleToppingType, cartCount, clearCart, isCartOpen, setIsCartOpen, isIconAnimating }}>
             {children}
         </CartContext.Provider>
     );

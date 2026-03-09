@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 const CouponManager = () => {
     const [coupons, setCoupons] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [currentCoupon, setCurrentCoupon] = useState(null);
 
@@ -15,6 +16,7 @@ const CouponManager = () => {
     }, []);
 
     const fetchCoupons = async () => {
+        setRefreshing(true);
         try {
             const res = await fetch('https://pizza-backend-api-a5mm.onrender.com/api/admin/coupons');
             const data = await res.json();
@@ -24,7 +26,10 @@ const CouponManager = () => {
         } catch (error) {
             console.error(error);
         } finally {
-            setLoading(false);
+            setTimeout(() => {
+                setLoading(false);
+                setRefreshing(false);
+            }, 600);
         }
     };
 
@@ -95,9 +100,10 @@ const CouponManager = () => {
                 <div style={{ display: 'flex', gap: '10px' }}>
                     <button
                         onClick={fetchCoupons}
-                        style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 16px', background: '#2b2b2b', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '700', fontSize: '0.85rem' }}
+                        disabled={refreshing}
+                        style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 16px', background: '#2b2b2b', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '700', fontSize: '0.85rem', opacity: refreshing ? 0.7 : 1 }}
                     >
-                        <i className="fas fa-sync-alt"></i> Refresh
+                        <i className={`fas fa-sync-alt ${refreshing ? 'fa-spin' : ''}`}></i> {refreshing ? 'Refreshing...' : 'Refresh'}
                     </button>
                     <button className="btn-primary" onClick={() => openEditor()}>
                         <i className="fas fa-plus"></i> Create Code

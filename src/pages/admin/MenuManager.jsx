@@ -8,11 +8,14 @@ const MenuManager = () => {
     const [itemToDelete, setItemToDelete] = useState(null);
     const [isCustomCategory, setIsCustomCategory] = useState(false);
     const [uploadingImage, setUploadingImage] = useState(false);
+    const [refreshing, setRefreshing] = useState(false);
+    const [isRenamingCategory, setIsRenamingCategory] = useState(false);
+    const [catRenameData, setCatRenameData] = useState({ oldName: '', newName: '' });
 
     // Lock background scroll when any modal open
     useEffect(() => {
         const adminMain = document.querySelector('.admin-main');
-        const lockScroll = isEditing || itemToDelete;
+        const lockScroll = isEditing || itemToDelete || isRenamingCategory;
 
         if (lockScroll) {
             if (adminMain) adminMain.style.overflow = 'hidden';
@@ -40,6 +43,7 @@ const MenuManager = () => {
     }, []);
 
     const fetchMenu = async () => {
+        setRefreshing(true);
         try {
             const res = await fetch('https://pizza-backend-api-a5mm.onrender.com/api/menu?all=true');
             const result = await res.json();
@@ -49,7 +53,35 @@ const MenuManager = () => {
         } catch (error) {
             console.error("Failed to fetch menu items", error);
         } finally {
-            setLoading(false);
+            // Keep spinner for at least 600ms for visual comfort
+            setTimeout(() => {
+                setLoading(false);
+                setRefreshing(false);
+            }, 600);
+        }
+    };
+
+    const handleRenameCategory = async (e) => {
+        e.preventDefault();
+        if (!catRenameData.oldName || !catRenameData.newName) return;
+
+        try {
+            const res = await fetch('https://pizza-backend-api-a5mm.onrender.com/api/menu/category-rename', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(catRenameData)
+            });
+            const data = await res.json();
+            if (data.success) {
+                alert(data.message);
+                setIsRenamingCategory(false);
+                setCatRenameData({ oldName: '', newName: '' });
+                fetchMenu();
+            } else {
+                alert(data.message);
+            }
+        } catch (error) {
+            alert("Error renaming category");
         }
     };
 
@@ -156,9 +188,21 @@ const MenuManager = () => {
                 <div style={{ display: 'flex', gap: '10px' }}>
                     <button
                         onClick={fetchMenu}
-                        style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 16px', background: '#2b2b2b', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '700', fontSize: '0.85rem' }}
+                        disabled={refreshing}
+                        style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 16px', background: '#2b2b2b', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '700', fontSize: '0.85rem', opacity: refreshing ? 0.7 : 1 }}
                     >
-                        <i className="fas fa-sync-alt"></i> Refresh
+                        <i className={`fas fa-sync-alt ${refreshing ? 'fa-spin' : ''}`}></i> {refreshing ? 'Refreshing...' : 'Refresh'}
+                    </button>
+                    <button
+                        className="btn-secondary"
+                        onClick={() => {
+                            const uniqueCats = [...new Set(items.map(i => i.category))];
+                            setCatRenameData({ oldName: uniqueCats[0] || '', newName: '' });
+                            setIsRenamingCategory(true);
+                        }}
+                        style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid #ccc', fontWeight: '700', fontSize: '0.85rem', cursor: 'pointer' }}
+                    >
+                        <i className="fas fa-tags"></i> Edit Categories
                     </button>
                     <button className="btn-primary" onClick={() => openEditor()}>
                         <i className="fas fa-plus"></i> Add New Item
@@ -323,6 +367,48 @@ const MenuManager = () => {
                             <button type="button" className="action-btn" onClick={() => setItemToDelete(null)} style={{ padding: '10px 20px', backgroundColor: 'rgba(0,0,0,0.05)', borderRadius: '8px', color: 'var(--text-main)', fontWeight: 'bold' }}>Cancel</button>
                             <button type="button" className="btn-danger" onClick={confirmDelete}>Confirm Delete</button>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Category Rename Modal */}
+            {isRenamingCategory && (
+                <div className="modal-overlay">
+                    <div className="modal-content animate-fade-scale">
+                        <h3 className="section-title">Bulk Rename Category</h3>
+                        <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '15px' }}>
+                            Choose an existing category and enter its new name. All items in this category will be updated.
+                        </p>
+                        <form onSubmit={handleRenameCategory}>
+                            <div className="form-group">
+                                <label>Old Category Name</label>
+                                <select
+                                    className="premium-select"
+                                    value={catRenameData.oldName}
+                                    onChange={(e) => setCatRenameData({ ...catRenameData, oldName: e.target.value })}
+                                    style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ccc' }}
+                                >
+                                    {[...new Set(items.map(i => i.category))].map(cat => (
+                                        <option key={cat} value={cat}>{cat}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="form-group" style={{ marginTop: '15px' }}>
+                                <label>New Category Name</label>
+                                <input
+                                    type="text"
+                                    className="premium-input-text"
+                                    placeholder="e.g. Italian Crusts"
+                                    value={catRenameData.newName}
+                                    onChange={(e) => setCatRenameData({ ...catRenameData, newName: e.target.value })}
+                                    required
+                                />
+                            </div>
+                            <div className="modal-actions" style={{ marginTop: '25px' }}>
+                                <button type="button" className="action-btn" onClick={() => setIsRenamingCategory(false)} style={{ padding: '8px 15px' }}>Cancel</button>
+                                <button type="submit" className="btn-primary" style={{ padding: '8px 25px' }}>Rename All Items</button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             )}

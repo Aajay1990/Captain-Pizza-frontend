@@ -5,12 +5,14 @@ const UserManager = () => {
     const { user } = useContext(AuthContext);
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
 
     useEffect(() => {
         if (user && user.role === 'admin') fetchUsers();
     }, [user]);
 
     const fetchUsers = async () => {
+        setRefreshing(true);
         try {
             const res = await api.get('/api/auth/users');
             if (res.data.success) {
@@ -19,7 +21,10 @@ const UserManager = () => {
         } catch (error) {
             console.error("Failed to fetch users", error);
         } finally {
-            setLoading(false);
+            setTimeout(() => {
+                setLoading(false);
+                setRefreshing(false);
+            }, 600);
         }
     };
 
@@ -71,9 +76,23 @@ const UserManager = () => {
                 <h3 className="section-title">Registered Users</h3>
                 <button
                     onClick={fetchUsers}
-                    style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 16px', background: '#2b2b2b', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '700', fontSize: '0.85rem' }}
+                    disabled={refreshing}
+                    style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '8px 16px',
+                        background: '#2b2b2b',
+                        color: '#fff',
+                        border: 'none',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        fontWeight: '700',
+                        fontSize: '0.85rem',
+                        opacity: refreshing ? 0.7 : 1
+                    }}
                 >
-                    <i className="fas fa-sync-alt"></i> Refresh
+                    <i className={`fas fa-sync-alt ${refreshing ? 'fa-spin' : ''}`}></i> {refreshing ? 'Refreshing...' : 'Refresh'}
                 </button>
             </div>
 

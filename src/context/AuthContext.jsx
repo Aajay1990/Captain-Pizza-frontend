@@ -17,52 +17,21 @@ export const AuthContext = createContext();
 
 const STORAGE_KEY = 'captain_pizza_user';
 
-const getStorage = (role) => {
-    if (role === 'admin' || role === 'staff' || role === 'pos') {
-        return sessionStorage;
-    }
-    return localStorage;
-};
-
 const readUserFromStorage = () => {
-    // Check sessionStorage first (admin/staff)
-    const sessionUser = sessionStorage.getItem(STORAGE_KEY);
-    if (sessionUser) {
-        try { return JSON.parse(sessionUser); } catch { return null; }
-    }
-    // Then check localStorage (customers)
     const localUser = localStorage.getItem(STORAGE_KEY);
     if (localUser) {
-        try {
-            const parsed = JSON.parse(localUser);
-            // Safety: if a staff/admin token ended up in localStorage, ignore it
-            if (parsed.role === 'admin' || parsed.role === 'staff' || parsed.role === 'pos') {
-                localStorage.removeItem(STORAGE_KEY);
-                return null;
-            }
-            return parsed;
-        } catch { return null; }
+        try { return JSON.parse(localUser); } catch { return null; }
     }
     return null;
 };
 
 const saveUserToStorage = (userData) => {
-    const storage = getStorage(userData.role);
-    storage.setItem(STORAGE_KEY, JSON.stringify(userData));
-    // Ensure the other storage doesn't have a stale copy
-    if (userData.role === 'admin' || userData.role === 'staff' || userData.role === 'pos') {
-        localStorage.removeItem(STORAGE_KEY);
-    } else {
-        sessionStorage.removeItem(STORAGE_KEY);
-    }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(userData));
 };
 
 const clearAllStorage = () => {
-    sessionStorage.removeItem(STORAGE_KEY);
     localStorage.removeItem(STORAGE_KEY);
 };
-
-// ─────────────────────────────────────────────────────────────────────────────
 
 export const AuthProvider = ({ children }) => {
     const navigate = useNavigate();
@@ -76,19 +45,29 @@ export const AuthProvider = ({ children }) => {
 
     useEffect(() => {
         const verifySession = async () => {
+            const currentToken = token || readUserFromStorage()?.token;
+            if (!currentToken) {
+                setAuthLoading(false);
+                return;
+            }
+
             try {
-                const res = await api.get('/api/auth/me');
+                const res = await api.get('/api/auth/me', {
+                    headers: { Authorization: `Bearer ${currentToken}` }
+                });
                 if (res.data.success) {
                     const userData = res.data.user;
                     setUser(userData);
-                    setToken(userData.token || null);
-                    saveUserToStorage(userData);
+                    setToken(userData.token || currentToken);
+                    saveUserToStorage({ ...userData, token: userData.token || currentToken });
                 }
             } catch (err) {
-                // Session invalid — clear everything
-                setUser(null);
-                setToken(null);
-                clearAllStorage();
+                // If 401/403, clear. If network error, maybe keep it?
+                if (err.response?.status === 401 || err.response?.status === 403) {
+                    setUser(null);
+                    setToken(null);
+                    clearAllStorage();
+                }
             } finally {
                 setAuthLoading(false);
             }

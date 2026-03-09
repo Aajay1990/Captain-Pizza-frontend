@@ -96,15 +96,11 @@ const Home = () => {
                 if (data.success) {
                     const findVal = (key, def) => data.data.find(s => s.key === key)?.value || def;
 
-                    // Use the newly fetched dynamic banner if available, else fallback to settings
-                    const hasDynamicOffers = offerData.success && offerData.data.length > 0;
-                    const primaryOffer = hasDynamicOffers ? offerData.data[0] : null;
-
                     setSeasonalOffer({
-                        enabled: hasDynamicOffers ? 'true' : findVal('seasonal_offer_enabled', 'false'),
-                        title: primaryOffer ? primaryOffer.title : findVal('seasonal_offer_title', 'Special Offer'),
-                        desc: primaryOffer ? primaryOffer.description : findVal('seasonal_offer_desc', 'Grab your favorite pizzas!'),
-                        coupon: primaryOffer ? primaryOffer._id : findVal('seasonal_offer_coupon', 'SPECIAL15'), // use ID or specific code if added later
+                        enabled: findVal('seasonal_offer_enabled', 'false'),
+                        title: findVal('seasonal_offer_title', 'Special Offer'),
+                        desc: findVal('seasonal_offer_desc', 'Grab your favorite pizzas!'),
+                        coupon: findVal('seasonal_offer_coupon', 'SPECIAL15'),
                         new_user_discount: findVal('new_user_discount', 20)
                     });
                     setDeliveryInfo({

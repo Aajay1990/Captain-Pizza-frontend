@@ -6,14 +6,15 @@ const ReviewManager = () => {
     const { token } = useContext(AuthContext);
     const [reviews, setReviews] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
 
     useEffect(() => {
         fetchReviews();
     }, []);
 
     const fetchReviews = async () => {
+        setRefreshing(true);
         try {
-            setLoading(true);
             const res = await axios.get('https://pizza-backend-api-a5mm.onrender.com/api/reviews');
             if (res.data.success) {
                 setReviews(res.data.websiteData.reviews || []);
@@ -21,7 +22,10 @@ const ReviewManager = () => {
         } catch (error) {
             console.error('Error fetching reviews:', error);
         } finally {
-            setLoading(false);
+            setTimeout(() => {
+                setLoading(false);
+                setRefreshing(false);
+            }, 600);
         }
     };
 
@@ -49,9 +53,10 @@ const ReviewManager = () => {
                 <h2 style={{ margin: 0 }}>Website Reviews Management</h2>
                 <button
                     onClick={fetchReviews}
-                    style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 16px', background: '#2b2b2b', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '700', fontSize: '0.85rem' }}
+                    disabled={refreshing}
+                    style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 16px', background: '#2b2b2b', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '700', fontSize: '0.85rem', opacity: refreshing ? 0.7 : 1 }}
                 >
-                    <i className="fas fa-sync-alt"></i> Refresh
+                    <i className={`fas fa-sync-alt ${refreshing ? 'fa-spin' : ''}`}></i> {refreshing ? 'Refreshing...' : 'Refresh'}
                 </button>
             </div>
             <div className="table-responsive">

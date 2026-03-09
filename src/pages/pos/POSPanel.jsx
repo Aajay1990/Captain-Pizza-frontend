@@ -16,6 +16,7 @@ const POSPanel = () => {
     const [activeView, setActiveView] = useState('menu'); // 'menu' | 'orders'
     const [orderHistory, setOrderHistory] = useState([]);
     const [ordersLoading, setOrdersLoading] = useState(false);
+    const [posRefreshing, setPosRefreshing] = useState(false);
 
     // Category Icons Mapping
     const catIcons = {
@@ -217,6 +218,7 @@ const POSPanel = () => {
     }, []);
 
     const fetchOrderHistory = async () => {
+        setPosRefreshing(true);
         setOrdersLoading(true);
         try {
             const res = await fetch('https://pizza-backend-api-a5mm.onrender.com/api/orders', {
@@ -227,7 +229,10 @@ const POSPanel = () => {
         } catch (e) {
             console.error('Order history fetch failed', e);
         } finally {
-            setOrdersLoading(false);
+            setTimeout(() => {
+                setOrdersLoading(false);
+                setPosRefreshing(false);
+            }, 600);
         }
     };
 
@@ -237,6 +242,7 @@ const POSPanel = () => {
     };
 
     const fetchMenu = async () => {
+        setPosRefreshing(true);
         try {
             const res = await fetch('https://pizza-backend-api-a5mm.onrender.com/api/menu?all=true');
             const data = await res.json();
@@ -248,10 +254,13 @@ const POSPanel = () => {
                 console.log('POS Unique Categories:', uniqueCats);
                 setCategories(uniqueCats);
             }
-            setLoading(false);
         } catch (error) {
             console.error('Failed to fetch menu:', error);
-            setLoading(false);
+        } finally {
+            setTimeout(() => {
+                setLoading(false);
+                setPosRefreshing(false);
+            }, 600);
         }
     };
 
@@ -279,11 +288,10 @@ const POSPanel = () => {
         setTimeout(() => setIsVibrating(false), 300);
 
         if (item.category === 'pizza' && item.prices && Object.keys(item.prices).length > 0) {
+            // Always open customization modal for pizzas (each entry can have different addons)
             setSelectedItem(item);
-            setSelectedSize('medium'); // Default
+            setSelectedSize('medium');
             setItemQuantity(1);
-
-            // Reset addons
             setSelectedVegToppings({});
             setExtraCheese(null);
             setCheeseBurst(null);
@@ -291,17 +299,22 @@ const POSPanel = () => {
             setKetchupQty(1);
             setExpandedSection('veg');
         } else {
-            // Direct Add
-            const newItem = {
-                id: Date.now().toString(),
-                menuItemId: item._id,
-                name: item.name,
-                price: item.price || (item.prices ? item.prices['medium'] : 0),
-                quantity: 1,
-                size: 'regular',
-                toppings: []
-            };
-            setCart([...cart, newItem]);
+            // For non-pizza items: if already in cart, just increment qty
+            const existing = cart.find(c => c.menuItemId === item._id && c.size === 'regular');
+            if (existing) {
+                setCart(cart.map(c => c.id === existing.id ? { ...c, quantity: c.quantity + 1 } : c));
+            } else {
+                const newItem = {
+                    id: Date.now().toString(),
+                    menuItemId: item._id,
+                    name: item.name,
+                    price: item.price || (item.prices ? item.prices['medium'] : 0),
+                    quantity: 1,
+                    size: 'regular',
+                    toppings: []
+                };
+                setCart([...cart, newItem]);
+            }
         }
     };
 
@@ -430,10 +443,11 @@ const POSPanel = () => {
                         {/* Refresh Button */}
                         <button
                             onClick={() => { fetchMenu(); if (activeView === 'orders') fetchOrderHistory(); }}
-                            style={{ background: 'rgba(183,28,28,0.1)', color: 'var(--pos-primary)', border: 'none', padding: '8px 15px', borderRadius: '10px', cursor: 'pointer', fontWeight: '700', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '6px' }}
+                            disabled={posRefreshing}
+                            style={{ background: 'rgba(183,28,28,0.1)', color: 'var(--pos-primary)', border: 'none', padding: '8px 15px', borderRadius: '10px', cursor: 'pointer', fontWeight: '700', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '6px', opacity: posRefreshing ? 0.7 : 1 }}
                             title="Refresh data"
                         >
-                            <i className="fas fa-sync-alt"></i> Refresh
+                            <i className={`fas fa-sync-alt ${posRefreshing ? 'fa-spin' : ''}`}></i> {posRefreshing ? 'Refreshing...' : 'Refresh'}
                         </button>
                         {/* Order History Toggle */}
                         <button
@@ -475,44 +489,82 @@ const POSPanel = () => {
                         </div>
                         {ordersLoading ? (
                             <div style={{ textAlign: 'center', padding: '60px', fontSize: '1.5rem', color: 'var(--pos-primary)' }}>
-                                <i className="fas fa-spinner fa-spin"></i> Loading...
+                                <i className="fas fa-spinner fa-spin"></i> Loading Orders...
                             </div>
                         ) : orderHistory.length === 0 ? (
-                            <div style={{ textAlign: 'center', padding: '60px', color: 'var(--pos-text-muted)' }}>No orders found.</div>
+                            <div style={{ textAlign: 'center', padding: '60px', color: 'var(--pos-text-muted)', fontSize: '1.1rem', background: 'var(--pos-card-bg)', borderRadius: '15px' }}>
+                                <i className="fas fa-receipt" style={{ fontSize: '3rem', color: '#ddd', marginBottom: '15px', display: 'block' }}></i>
+                                No orders found for today.
+                            </div>
                         ) : (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '20px' }}>
                                 {orderHistory.map(order => (
                                     <div key={order._id} style={{
                                         background: 'var(--pos-card-bg)',
-                                        borderRadius: '12px',
-                                        padding: '18px 22px',
-                                        boxShadow: 'var(--pos-shadow)',
-                                        border: '1px solid var(--pos-border)'
+                                        borderRadius: '16px',
+                                        padding: '20px',
+                                        boxShadow: '0 8px 20px rgba(0,0,0,0.06)',
+                                        border: '1px solid var(--pos-border)',
+                                        display: 'flex', flexDirection: 'column', gap: '15px',
+                                        transition: 'transform 0.2s ease'
                                     }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                                            <strong style={{ color: 'var(--pos-primary)', fontSize: '1rem' }}>#{order._id.slice(-6).toUpperCase()}</strong>
-                                            <span style={{
-                                                background: order.status === 'delivered' ? '#e8f5e9' : order.status === 'cancelled' ? '#ffebee' : '#fff8e1',
-                                                color: order.status === 'delivered' ? '#2e7d32' : order.status === 'cancelled' ? '#c62828' : '#e65100',
-                                                padding: '3px 10px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: '700'
-                                            }}>{order.status.toUpperCase()}</span>
+                                        {/* Header Row */}
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--pos-border)', paddingBottom: '12px' }}>
+                                            <div>
+                                                <strong style={{ color: 'var(--pos-primary)', fontSize: '1.2rem', display: 'block' }}>
+                                                    #{order._id.slice(-6).toUpperCase()}
+                                                </strong>
+                                                <span style={{ fontSize: '0.8rem', color: 'var(--pos-text-muted)' }}>
+                                                    <i className="far fa-clock"></i> {new Date(order.createdAt).toLocaleTimeString()}
+                                                </span>
+                                            </div>
+                                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '5px' }}>
+                                                <span style={{
+                                                    background: order.status === 'delivered' ? '#e8f5e9' : order.status === 'cancelled' ? '#ffebee' : '#e0f2fe',
+                                                    color: order.status === 'delivered' ? '#2e7d32' : order.status === 'cancelled' ? '#c62828' : '#0369a1',
+                                                    padding: '4px 12px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.5px'
+                                                }}>
+                                                    {order.status}
+                                                </span>
+                                                <span style={{ fontSize: '0.75rem', fontWeight: 'bold', color: 'var(--pos-text)', opacity: 0.7 }}>
+                                                    <i className={`fas ${order.paymentMethod === 'online' ? 'fa-globe' : 'fa-money-bill'}`}></i> {order.paymentMethod?.toUpperCase()} | {order.orderType?.toUpperCase()}
+                                                </span>
+                                            </div>
                                         </div>
-                                        <div style={{ fontSize: '0.85rem', color: 'var(--pos-text-muted)', marginBottom: '6px' }}>
-                                            {new Date(order.createdAt).toLocaleString()} &nbsp;|&nbsp; {order.orderType?.toUpperCase()} &nbsp;|&nbsp; {order.paymentMethod?.toUpperCase()}
+
+                                        {/* Customer Row */}
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'rgba(0,0,0,0.02)', padding: '10px 15px', borderRadius: '10px' }}>
+                                            <div style={{ width: '35px', height: '35px', borderRadius: '50%', background: 'var(--pos-primary)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
+                                                {order.customerInfo?.name?.charAt(0) || 'C'}
+                                            </div>
+                                            <div>
+                                                <div style={{ fontWeight: 'bold', color: 'var(--pos-text)', fontSize: '0.95rem' }}>{order.customerInfo?.name || 'Walk-in Customer'}</div>
+                                                <div style={{ color: 'var(--pos-text-muted)', fontSize: '0.8rem' }}><i className="fas fa-phone-alt" style={{ fontSize: '0.7rem' }}></i> {order.customerInfo?.phone || 'No Phone'}</div>
+                                            </div>
                                         </div>
-                                        <div style={{ fontSize: '0.9rem', marginBottom: '6px' }}>
-                                            <strong>Customer:</strong> {order.customerInfo?.name} ({order.customerInfo?.phone})
-                                        </div>
-                                        <div style={{ borderTop: '1px dashed var(--pos-border)', paddingTop: '8px', fontSize: '0.85rem' }}>
+
+                                        {/* Items List */}
+                                        <div style={{ flex: 1, overflowY: 'auto', maxHeight: '150px' }}>
+                                            <div style={{ fontWeight: '800', fontSize: '0.85rem', color: 'var(--pos-text-muted)', marginBottom: '8px', textTransform: 'uppercase' }}>Order Items:</div>
                                             {order.orderItems.map((item, i) => (
-                                                <div key={i} style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                                    <span>{item.quantity}x {item.name} {item.size && item.size !== 'regular' ? `(${item.size})` : ''}</span>
-                                                    <span style={{ color: 'var(--pos-primary)', fontWeight: '700' }}>₹{item.price * item.quantity}</span>
+                                                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', alignItems: 'flex-start', fontSize: '0.9rem' }}>
+                                                    <div style={{ flex: 1, color: 'var(--pos-text)' }}>
+                                                        <span style={{ fontWeight: '700' }}>{item.quantity}x</span> {item.name} {item.size && item.size !== 'regular' ? <span style={{ opacity: 0.7 }}>({item.size})</span> : ''}
+                                                        {item.toppings && item.toppings.length > 0 && (
+                                                            <div style={{ fontSize: '0.75rem', color: 'var(--pos-primary)', marginTop: '2px', fontWeight: '600' }}>
+                                                                + {item.toppings.join(', ')}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <div style={{ fontWeight: '700', color: 'var(--pos-text)', minWidth: '60px', textAlign: 'right' }}>₹{item.price * item.quantity}</div>
                                                 </div>
                                             ))}
                                         </div>
-                                        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '10px' }}>
-                                            <strong style={{ fontSize: '1.1rem', color: 'var(--pos-primary)' }}>Total: ₹{order.totalAmount?.toFixed(2)}</strong>
+
+                                        {/* Total Row */}
+                                        <div style={{ borderTop: '2px dashed var(--pos-border)', paddingTop: '15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto' }}>
+                                            <span style={{ color: 'var(--pos-text-muted)', fontWeight: '600', fontSize: '0.9rem' }}>Total Amount</span>
+                                            <span style={{ fontSize: '1.4rem', fontWeight: '900', color: 'var(--pos-primary)' }}>₹{order.totalAmount?.toFixed(2)}</span>
                                         </div>
                                     </div>
                                 ))}

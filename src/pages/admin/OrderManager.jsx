@@ -49,12 +49,14 @@ const CookingTimer = ({ createdAt, status }) => {
 const OrderManager = () => {
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
 
     useEffect(() => {
         fetchOrders();
     }, []);
 
     const fetchOrders = async () => {
+        setRefreshing(true);
         try {
             const res = await api.get('/api/orders');
             if (res.data.success) {
@@ -63,7 +65,10 @@ const OrderManager = () => {
         } catch (error) {
             console.error("Fetch orders failed", error);
         } finally {
-            setLoading(false);
+            setTimeout(() => {
+                setLoading(false);
+                setRefreshing(false);
+            }, 600);
         }
     };
 
@@ -95,8 +100,13 @@ const OrderManager = () => {
         <div className="order-manager">
             <div className="admin-toolbar">
                 <h3 className="section-title">Live Kitchen Board</h3>
-                <button className="btn-primary" onClick={fetchOrders} style={{ backgroundColor: '#2b2b2b', color: 'white' }}>
-                    <i className="fas fa-sync-alt"></i> Refresh Orders
+                <button
+                    className="btn-primary"
+                    onClick={fetchOrders}
+                    disabled={refreshing}
+                    style={{ backgroundColor: '#2b2b2b', color: 'white', opacity: refreshing ? 0.7 : 1, display: 'flex', alignItems: 'center', gap: '8px' }}
+                >
+                    <i className={`fas fa-sync-alt ${refreshing ? 'fa-spin' : ''}`}></i> {refreshing ? 'Refreshing...' : 'Refresh Orders'}
                 </button>
             </div>
 

@@ -1,11 +1,12 @@
 import React, { useState, useContext } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { CartContext } from '../context/CartContext';
 import { AuthContext } from '../context/AuthContext';
 import './Navbar.css';
 import logo from '../assets/logo.png';
 
 const Navbar = () => {
+    const navigate = useNavigate();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const { cartCount, isIconAnimating, setIsCartOpen } = useContext(CartContext);
     const { user, logoutAuth } = useContext(AuthContext);
@@ -41,7 +42,7 @@ const Navbar = () => {
                         <li className="nav-item">
                             <button
                                 className="nav-link cart-link"
-                                onClick={() => { setIsCartOpen(true); closeMenu(); }}
+                                onClick={() => { navigate('/order'); closeMenu(); }}
                                 style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
                             >
                                 <div className={`cart-icon-wrapper ${isIconAnimating ? 'animate-vibrate' : ''}`}>

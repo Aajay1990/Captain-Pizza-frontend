@@ -6,6 +6,7 @@ import './CartDrawer.css';
 
 const API = 'https://pizza-backend-api-a5mm.onrender.com';
 const KETCHUP_PRICE = 1; // ₹1 per packet
+const TOPPING_TYPES = ['Tomato', 'Corn', 'Onion', 'Capsicum'];
 
 // Addons that use size-based pricing (tap a size card to select/deselect)
 const SIZE_ADDONS = [
@@ -38,7 +39,7 @@ const KetchupStepper = ({ item, updateAddonQty }) => {
 };
 
 // ── Size Addon Card ───────────────────────────────────────────────────────────
-const SizeAddon = ({ item, addon, toggleAddonSML }) => {
+const SizeAddon = ({ item, addon, toggleAddonSML, toggleToppingType }) => {
     const selectedSz = item.toppings?.find(t => t.baseName === addon.name)?.size;
     return (
         <div className="cd-size-addon">
@@ -59,6 +60,27 @@ const SizeAddon = ({ item, addon, toggleAddonSML }) => {
                     </button>
                 ))}
             </div>
+
+            {/* Topping Types (Only for Veg Topping) */}
+            {addon.name === 'Veg Topping' && selectedSz && (
+                <div className="cd-topping-types">
+                    <p className="cd-topping-types-label">Select Veg Type (Required):</p>
+                    <div className="cd-topping-types-grid">
+                        {TOPPING_TYPES.map(type => {
+                            const active = item.toppingTypes?.includes(type);
+                            return (
+                                <button
+                                    key={type}
+                                    className={`cd-type-chip ${active ? 'active' : ''}`}
+                                    onClick={() => toggleToppingType(item.cartItemId, type)}
+                                >
+                                    {active && <i className="fas fa-check" style={{ fontSize: '0.7rem' }}></i>} {type}
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
@@ -67,7 +89,7 @@ const SizeAddon = ({ item, addon, toggleAddonSML }) => {
 const CartDrawer = () => {
     const {
         cartItems, updateQuantity, clearCart,
-        toggleAddonSML, updateAddonQty,
+        toggleAddonSML, updateAddonQty, toggleToppingType,
         isCartOpen, setIsCartOpen, cartCount
     } = useContext(CartContext);
     const { user, refreshUser } = useContext(AuthContext);
@@ -253,7 +275,7 @@ const CartDrawer = () => {
 
                                             {/* Size-based addons — card buttons */}
                                             {SIZE_ADDONS.map(addon => (
-                                                <SizeAddon key={addon.name} item={item} addon={addon} toggleAddonSML={toggleAddonSML} />
+                                                <SizeAddon key={addon.name} item={item} addon={addon} toggleAddonSML={toggleAddonSML} toggleToppingType={toggleToppingType} />
                                             ))}
                                         </div>
 

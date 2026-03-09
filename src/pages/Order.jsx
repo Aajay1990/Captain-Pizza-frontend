@@ -31,12 +31,7 @@ const Order = () => {
     const [deliverySettings, setDeliverySettings] = useState({ charge: 40, threshold: 300 });
     const [adminWhatsApp, setAdminWhatsApp] = useState('919220367325');
 
-    // Enforce Login
-    useEffect(() => {
-        if (!user && !localStorage.getItem('captain_pizza_user')) {
-            navigate('/login?redirect=order');
-        }
-    }, [user, navigate]);
+    // Guests are welcome — no login required
 
     // Initial prefill if user is logged in
     useEffect(() => {

@@ -61,12 +61,32 @@ const SettingsManager = () => {
 
     return (
         <div className="settings-manager card-style animate-fade-in">
-            <div className="settings-header-banner">
-                <i className="fas fa-tools header-icon"></i>
-                <div>
-                    <h3 className="section-title">Global System Configuration</h3>
-                    <p className="section-subtitle">Manage store offers, logistics, and user experience</p>
+            <div className="settings-header-banner" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                    <i className="fas fa-tools header-icon"></i>
+                    <div>
+                        <h3 className="section-title">Global System Configuration</h3>
+                        <p className="section-subtitle">Manage store offers, logistics, and user experience</p>
+                    </div>
                 </div>
+                <button
+                    onClick={fetchSettings}
+                    style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '8px 16px',
+                        background: 'rgba(255,255,255,0.15)',
+                        color: '#fff',
+                        border: '1px solid rgba(255,255,255,0.2)',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        fontWeight: '700',
+                        fontSize: '0.85rem'
+                    }}
+                >
+                    <i className="fas fa-sync-alt"></i> Refresh
+                </button>
             </div>
 
             {message && (

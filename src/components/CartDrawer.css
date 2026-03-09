@@ -739,3 +739,67 @@
     transform: translateY(-2px);
     box-shadow: 0 8px 24px rgba(183, 28, 28, 0.4);
 }
+
+/* ── Veg Topping Type Chips ── */
+.cd-topping-types {
+    margin-top: 12px;
+    padding: 12px;
+    background: #FFF8E1;
+    border-radius: 10px;
+    border: 1px dashed #FFB300;
+}
+
+.cd-topping-types-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #795548;
+    margin: 0 0 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.cd-topping-types-label::after {
+    content: 'Required';
+    font-size: 0.65rem;
+    background: #FF6F00;
+    color: #fff;
+    padding: 2px 6px;
+    border-radius: 20px;
+    font-weight: 800;
+}
+
+.cd-topping-types-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+}
+
+.cd-type-chip {
+    padding: 7px 4px;
+    border-radius: 8px;
+    border: 1.5px solid #E0D0B0;
+    background: #fff;
+    color: #5D4037;
+    font-size: 0.72rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    transition: all 0.15s;
+    font-family: inherit;
+}
+
+.cd-type-chip.active {
+    background: linear-gradient(135deg, #B71C1C, #D32F2F);
+    border-color: #B71C1C;
+    color: #fff;
+    box-shadow: 0 3px 8px rgba(183, 28, 28, 0.25);
+}
+
+.cd-type-chip:hover:not(.active) {
+    border-color: #B71C1C;
+    background: #FFF3E0;
+}

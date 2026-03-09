@@ -120,28 +120,60 @@ const UserProfile = () => {
                 {orders.length === 0 ? (
                     <p style={{ color: 'var(--text-muted)' }}>You haven't ordered anything yet.</p>
                 ) : (
-                    <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '15px' }}>
-                        <thead>
-                            <tr style={{ borderBottom: '2px solid #eee', textAlign: 'left' }}>
-                                <th>Order ID</th>
-                                <th>Date</th>
-                                <th>Amount</th>
-                                <th>Live Status</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {orders.map(o => (
-                                <tr key={o._id} style={{ borderBottom: '1px solid #eee' }}>
-                                    <td style={{ padding: '15px 0' }}>#{o._id.substring(o._id.length - 6).toUpperCase()}</td>
-                                    <td>{new Date(o.createdAt).toLocaleDateString()}</td>
-                                    <td>₹{o.totalAmount}</td>
-                                    <td style={{ fontWeight: 'bold', color: o.status === 'delivered' ? 'green' : (o.status === 'pending' ? 'orange' : '#3b82f6') }}>
-                                        {o.status.toUpperCase()}
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginTop: '15px' }}>
+                        {orders.map(o => (
+                            <div key={o._id} style={{ border: '1px solid #eee', borderRadius: '12px', padding: '16px', backgroundColor: '#fff', boxShadow: '0 4px 10px rgba(0,0,0,0.03)' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #f0f0f0', paddingBottom: '12px', marginBottom: '12px', flexWrap: 'wrap', gap: '10px' }}>
+                                    <div>
+                                        <div style={{ fontWeight: '800', fontSize: '1.1rem' }}>Order #{o._id.substring(o._id.length - 6).toUpperCase()}</div>
+                                        <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{new Date(o.createdAt).toLocaleString()}</div>
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '10px' }}>
+                                        <span style={{
+                                            padding: '4px 12px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 'bold',
+                                            backgroundColor: o.paymentMethod === 'online' ? '#e8f5e9' : '#fff3e0',
+                                            color: o.paymentMethod === 'online' ? '#2e7d32' : '#e65100',
+                                            border: `1px solid ${o.paymentMethod === 'online' ? '#a5d6a7' : '#ffcc80'}`
+                                        }}>
+                                            <i className={`fas ${o.paymentMethod === 'online' ? 'fa-check-circle' : 'fa-money-bill-wave'}`}></i> {o.paymentMethod === 'online' ? 'Prepaid (Online)' : 'Cash / Pay at Store'}
+                                        </span>
+                                        <span style={{
+                                            padding: '4px 12px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 'bold', textTransform: 'uppercase',
+                                            backgroundColor: o.status === 'delivered' ? '#e8f5e9' : (o.status === 'cancelled' ? '#ffebee' : o.status === 'out_for_delivery' ? '#f3e8ff' : '#e0f2fe'),
+                                            color: o.status === 'delivered' ? '#2e7d32' : (o.status === 'cancelled' ? '#c62828' : o.status === 'out_for_delivery' ? '#7e22ce' : '#0369a1')
+                                        }}>
+                                            {o.status === 'out_for_delivery' ? <><i className="fas fa-motorcycle"></i> Out for Delivery</> :
+                                                o.status === 'preparing' ? <><i className="fas fa-fire"></i> Preparing</> :
+                                                    o.status === 'delivered' ? <><i className="fas fa-check-double"></i> Delivered</> :
+                                                        o.status === 'cancelled' ? <><i className="fas fa-times"></i> Cancelled</> :
+                                                            <><i className="fas fa-clock"></i> Order Accepted</>}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '15px' }}>
+                                    <div style={{ flex: 1, minWidth: '200px' }}>
+                                        <div style={{ fontWeight: '700', marginBottom: '5px', fontSize: '0.9rem' }}>Items Ordered:</div>
+                                        <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '0.9rem', color: '#444' }}>
+                                            {o.orderItems.map((item, idx) => (
+                                                <li key={idx} style={{ marginBottom: '4px' }}>
+                                                    <span style={{ fontWeight: '600' }}>{item.quantity}x</span> {item.name} {item.selectedSize ? `(${item.selectedSize})` : ''}
+                                                    {item.toppings && item.toppings.length > 0 && (
+                                                        <div style={{ fontSize: '0.75rem', color: '#888', fontStyle: 'italic', marginTop: '2px' }}>
+                                                            + {item.toppings.map(t => typeof t === 'string' ? t : t.name).join(', ')}
+                                                        </div>
+                                                    )}
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                    <div style={{ textAlign: 'right', minWidth: '120px' }}>
+                                        <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Total Amount Paid</div>
+                                        <div style={{ fontSize: '1.4rem', fontWeight: '800', color: 'var(--primary)' }}>₹{o.totalAmount}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
                 )}
             </div>
         </div>

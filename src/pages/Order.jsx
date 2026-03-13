@@ -38,7 +38,9 @@ const Order = () => {
     const [adminWhatsApp, setAdminWhatsApp] = useState('919220367325');
 
     // WhatsApp confirmation state
-    const [orderConfirm, setOrderConfirm] = useState(null); // { orderId, paymentId, waUrl }
+    const [orderConfirm, setOrderConfirm] = useState(null);
+    const [showWaPermModal, setShowWaPermModal] = useState(false);
+    const [permPendingFn, setPermPendingFn] = useState(null);
     const waUrlRef = useRef('');
 
     useEffect(() => {
@@ -101,8 +103,34 @@ const Order = () => {
         return h.padEnd(24, '0').slice(0, 24);
     };
 
-    const handlePlaceOrder = async (e) => {
-        e.preventDefault();
+    // WhatsApp permission gate — called before real payment handler
+    const handlePlaceOrderWithPermission = (e) => {
+        e.preventDefault(); // Prevent default form submission
+        const alreadyGranted = localStorage.getItem('cp_wa_permission') === 'granted';
+        if (alreadyGranted) {
+            _actualPlaceOrder();
+        } else {
+            // Store the actual order handler to run after user confirms
+            setPermPendingFn(() => _actualPlaceOrder);
+            setShowWaPermModal(true);
+        }
+    };
+
+    const confirmWaPermission = () => {
+        localStorage.setItem('cp_wa_permission', 'granted');
+        setShowWaPermModal(false);
+        if (permPendingFn) { permPendingFn(); setPermPendingFn(null); }
+    };
+
+    const denyWaPermission = () => {
+        localStorage.setItem('cp_wa_permission', 'denied'); // Or just don't set 'granted'
+        setShowWaPermModal(false);
+        // Optionally, proceed with order without WhatsApp, or inform user
+        alert('You chose not to grant WhatsApp permission. We recommend granting it for order updates.');
+        if (permPendingFn) { permPendingFn(); setPermPendingFn(null); } // Still proceed with order
+    };
+
+    const _actualPlaceOrder = async () => {
         if (cartItems.length === 0) return;
 
         // Phone validation — must be exactly 10 digits
@@ -170,26 +198,12 @@ const Order = () => {
                             const waUrl = `https://wa.me/${adminWhatsApp}?text=${encodeURIComponent(waText)}`;
                             waUrlRef.current = waUrl;
 
-                            const waWindow = window.open(waUrl, '_blank');
                             localStorage.setItem('cp_order_phone', phone);
+                            localStorage.setItem('cp_active_track_id', vd.data._id);
                             clearCart();
 
-                            // Track when user comes back to the website from WhatsApp
-                            const checkFocus = () => {
-                                if (document.hidden) return;
-                                setOrderConfirm(prev => prev ? prev : {
-                                    orderId: vd.data._id, waUrl, waBlocked: !waWindow || waWindow.closed
-                                });
-                                document.removeEventListener('visibilitychange', checkFocus);
-                                window.removeEventListener('focus', checkFocus);
-                            };
-                            document.addEventListener('visibilitychange', checkFocus);
-                            window.addEventListener('focus', checkFocus);
-
-                            // Fallback timeout in case browser gets stuck or waPopup blocked
-                            setTimeout(() => {
-                                setOrderConfirm(prev => prev ? prev : { orderId: vd.data._id, waUrl, waBlocked: !waWindow || waWindow.closed });
-                            }, 3500);
+                            // Show confirm modal immediately — let user tap WhatsApp manually (no auto-open)
+                            setOrderConfirm({ orderId: vd.data._id, waUrl });
 
                         } else {
                             alert('Payment verification failed. Please screenshot and contact us.');
@@ -218,6 +232,44 @@ const Order = () => {
 
     return (
         <div className="order-page animate-fade-in">
+            {/* ── WhatsApp Permission Modal ── */}
+            {showWaPermModal && (
+                <div style={{
+                    position: 'fixed', inset: 0, zIndex: 99999,
+                    background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(5px)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px'
+                }}>
+                    <div style={{
+                        background: '#fff', borderRadius: '24px', padding: '32px', maxWidth: '400px', width: '100%',
+                        boxShadow: '0 40px 80px rgba(0,0,0,0.3)', textAlign: 'center',
+                        animation: 'popIn 0.3s cubic-bezier(0.34,1.56,0.64,1)'
+                    }}>
+                        <div style={{ fontSize: '3rem', marginBottom: '16px', color: '#25D366' }}>
+                            <i className="fab fa-whatsapp"></i>
+                        </div>
+                        <h2 style={{ margin: '0 0 12px', fontSize: '1.4rem', fontWeight: '800', color: '#111' }}>
+                            WhatsApp Order Details
+                        </h2>
+                        <p style={{ margin: '0 0 24px', fontSize: '0.95rem', color: '#555', lineHeight: '1.5', fontWeight: '500' }}>
+                            To confirm your order, we need permission to use WhatsApp services.<br/><br/>
+                            If you allow this, your order details (items, amount, and order ID) will be sent to the restaurant through WhatsApp for order confirmation.
+                        </p>
+                        <button
+                            onClick={confirmWaPermission}
+                            style={{
+                                width: '100%', padding: '16px', background: '#25D366', color: '#fff',
+                                border: 'none', borderRadius: '14px', fontWeight: '800', fontSize: '1.05rem',
+                                cursor: 'pointer', boxShadow: '0 8px 16px rgba(37,211,102,0.3)', transition: 'transform 0.2s'
+                            }}
+                            onMouseEnter={e => e.target.style.transform = 'scale(1.02)'}
+                            onMouseLeave={e => e.target.style.transform = 'scale(1)'}
+                        >
+                            Confirm & Continue
+                        </button>
+                    </div>
+                </div>
+            )}
+
             {/* ── Order Confirmed Overlay ── */}
             {orderConfirm && (
                 <div style={{
@@ -239,58 +291,33 @@ const Order = () => {
                             Your payment was successful. We're preparing your order! 🍕
                         </p>
 
-                        {orderConfirm.waBlocked && (
-                            <div style={{ background: '#FFF3E0', border: '1px solid #FFB300', borderRadius: '12px', padding: '12px 16px', marginBottom: '20px', fontSize: '0.83rem', color: '#E65100' }}>
-                                <strong>⚠️ WhatsApp was blocked by your browser.</strong><br />
-                                Click the button below to send your order details to us.
-                            </div>
-                        )}
-
-                        <p style={{ margin: '0 0 16px', fontSize: '0.88rem', color: '#444', fontWeight: '600' }}>
-                            Did your WhatsApp open with order details?
-                        </p>
-                        <div style={{ display: 'flex', gap: '12px', marginBottom: '20px' }}>
-                            <button
-                                onClick={() => { setOrderConfirm(null); navigate('/order-history'); }}
-                                style={{
-                                    flex: 1, padding: '14px', background: 'linear-gradient(135deg, #1B5E20, #2E7D32)',
-                                    color: '#fff', border: 'none', borderRadius: '14px', fontWeight: '900', fontSize: '0.95rem',
-                                    cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 6px 16px rgba(27,94,32,0.3)'
-                                }}
-                            >
-                                Track My Order
-                            </button>
-                            <button
-                                onClick={() => { setOrderConfirm(null); navigate('/'); }}
-                                style={{
-                                    flex: 1, padding: '14px', background: 'linear-gradient(135deg, #1B5E20, #2E7D32)',
-                                    color: '#fff', border: 'none', borderRadius: '14px', fontWeight: '900', fontSize: '0.95rem',
-                                    cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 6px 16px rgba(27,94,32,0.3)'
-                                }}
-                            >
-                                ✅ Yes, All Good!
-                            </button>
-                            <button
-                                onClick={() => {
-                                    // Force open WhatsApp with full pre-filled details
-                                    window.open(orderConfirm.waUrl, '_blank', 'noopener');
-                                    setTimeout(() => { setOrderConfirm(null); navigate('/'); }, 500);
-                                }}
-                                style={{
-                                    flex: 1, padding: '14px',
-                                    background: 'linear-gradient(135deg, #1A6E35, #25D366)',
-                                    color: '#fff', border: 'none', borderRadius: '14px', fontWeight: '900', fontSize: '0.88rem',
-                                    cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 6px 16px rgba(37,211,102,0.3)'
-                                }}
-                            >
-                                <i className="fab fa-whatsapp" style={{ marginRight: '6px' }}></i>No, Open WhatsApp
-                            </button>
-                        </div>
-                        <button
-                            onClick={() => { setOrderConfirm(null); navigate('/'); }}
-                            style={{ background: 'none', border: 'none', color: '#AAA', fontSize: '0.82rem', cursor: 'pointer', fontFamily: 'inherit' }}
+                        <a
+                            href={orderConfirm.waUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{
+                                display: 'block', width: '100%', padding: '16px', background: '#25D366',
+                                color: '#fff', borderRadius: '14px', fontWeight: '900', fontSize: '1.05rem',
+                                textDecoration: 'none', marginBottom: '16px', boxShadow: '0 8px 16px rgba(37,211,102,0.3)',
+                                transition: 'transform 0.2s'
+                            }}
+                            onClick={() => {
+                                setTimeout(() => { setOrderConfirm(null); navigate('/order-history'); }, 500);
+                            }}
                         >
-                            Skip and go to Home
+                            <i className="fab fa-whatsapp" style={{ marginRight: '8px', fontSize: '1.2rem' }}></i>
+                            Send Order to Restaurant
+                        </a>
+
+                        <button
+                            onClick={() => { setOrderConfirm(null); navigate('/order-history'); }}
+                            style={{
+                                width: '100%', padding: '14px', background: '#f5f5f5', color: '#444',
+                                border: '1px solid #ddd', borderRadius: '14px', fontWeight: '800', fontSize: '0.95rem',
+                                cursor: 'pointer', fontFamily: 'inherit', transition: 'background 0.2s'
+                            }}
+                        >
+                            Skip & Track My Order
                         </button>
                     </div>
                 </div>
@@ -494,7 +521,7 @@ const Order = () => {
                             <h2>Delivery Details</h2>
                         </div>
                         <div className="op-card-body">
-                            <form className="op-form" onSubmit={handlePlaceOrder}>
+                            <form className="op-form" onSubmit={handlePlaceOrderWithPermission}>
                                 <div className="op-form-group">
                                     <label><i className="fas fa-user"></i> Full Name</label>
                                     <input type="text" placeholder="e.g. Rahul Sharma" value={name} onChange={e => setName(e.target.value)} required />

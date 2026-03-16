@@ -204,64 +204,6 @@ h4 {
   animation: spin 1s linear infinite;
 }
 
-/* Reset some default styles */
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-/* Main container */
-.app-container {
-  width: 100%;
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 10px;
-}
-
-/* Each item inside container */
-.app-container>* {
-  flex: 1 1 30%;
-  max-width: 32%;
-  background: #ffffff;
-  border-radius: 8px;
-  padding: 10px;
-  text-align: center;
-}
-
-/* Tablet screen */
-@media (max-width: 768px) {
-
-  .app-container {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: space-between;
-  }
-
-  .app-container>* {
-    flex: 1 1 45%;
-    max-width: 48%;
-  }
-
-}
-
-/* Mobile screen */
-@media (max-width: 480px) {
-
-  .app-container {
-    display: flex;
-    flex-direction: column;
-  }
-
-  .app-container>* {
-    flex: 1 1 100%;
-    max-width: 100%;
-  }
-
-}
-
 /* Ensure text wraps on mobile globally */
 .coupon-section, .message-box, .admin-panel {
     word-wrap: break-word;

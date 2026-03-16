@@ -265,108 +265,76 @@
     padding-right: 40px; /* Extra space at end */
 }
 
-.css-marquee-card.dominos-style {
+.css-marquee-card {
     flex: 0 0 240px;
-    height: 320px;
-    background: #111;
-    border-radius: 12px;
+    background: #fff;
+    border-radius: 16px;
     overflow: hidden;
     position: relative;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.09);
     scroll-snap-align: start;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
     display: flex;
     flex-direction: column;
+    border: 1px solid #f0f0f0;
 }
 
-.css-marquee-card.dominos-style:hover {
+.css-marquee-card:hover {
     transform: translateY(-4px);
-    box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.13);
 }
 
-.d-bg-img {
-    position: absolute;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
-    object-fit: cover;
-    z-index: 0;
-    transition: transform 0.5s ease;
-}
-
-.css-marquee-card.dominos-style:hover .d-bg-img {
-    transform: scale(1.05);
-}
-
-.d-badge {
-    position: absolute;
-    top: 0;
-    right: 16px;
-    background: #fbb03b;
-    color: #4a2b00;
-    padding: 6px 8px 10px;
-    font-size: 0.65rem;
-    font-weight: 800;
-    z-index: 2;
-    text-align: center;
-    line-height: 1.2;
-    clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 85%, 0 100%);
-}
-.d-badge span {
-    font-size: 0.8rem;
-    font-weight: 900;
-}
-
-.d-content-wrapper {
-    position: absolute;
-    bottom: 0;
-    left: 0;
+.offer-img-wrapper {
     width: 100%;
-    /* Dark gradient matching Dominos */
-    background: linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.85) 40%, rgba(0,0,0,0.4) 80%, rgba(0,0,0,0) 100%);
-    z-index: 1;
-    padding: 0;
+    height: 155px;
+    position: relative;
+    overflow: hidden;
+    background: #f8f8f8;
+}
+
+.offer-bg-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.4s ease;
+}
+
+.css-marquee-card:hover .offer-bg-img {
+    transform: scale(1.04);
+}
+
+.offer-img-overlay-btn {
+    position: absolute;
+    bottom: 8px;
+    left: 8px;
+    background: rgba(0,0,0,0.45);
+    color: #fff;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    pointer-events: none;
+    backdrop-filter: blur(2px);
+}
+
+.offer-card-body {
+    padding: 12px 14px 14px;
+    flex: 1;
     display: flex;
     flex-direction: column;
 }
 
-.d-custom-wrap {
-    display: flex;
-    justify-content: flex-end;
-    padding: 0 16px 8px;
-}
-
-.d-customise-btn {
-    background: rgba(0,0,0,0.6);
-    color: #fff;
-    border: 1px solid rgba(255,255,255,0.4);
-    padding: 4px 12px;
-    border-radius: 12px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    cursor: pointer;
-    backdrop-filter: blur(4px);
-    transition: background 0.2s;
-}
-.d-customise-btn:hover {
-    background: rgba(0,0,0,0.8);
-}
-
-.d-text-content {
-    padding: 0 16px;
-}
-
-.d-title-group {
+.offer-header-row {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     margin-bottom: 4px;
 }
 
-.d-veg-icon {
+.diet-icon {
     width: 12px;
     height: 12px;
     border: 1px solid #10b981;
-    background: #fff;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -374,93 +342,96 @@
     border-radius: 2px;
     flex-shrink: 0;
 }
-.d-veg-icon::after {
+.diet-icon::after {
     content: '';
-    width: 6px;
-    height: 6px;
+    width: 5px;
+    height: 5px;
     background: #10b981;
     border-radius: 50%;
 }
 
-.d-title {
-    font-size: 1.1rem;
+.offer-title {
+    font-size: 0.95rem;
     font-weight: 800;
-    color: #fff;
+    color: #1a1a1a;
     margin: 0;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    text-shadow: 1px 1px 3px rgba(0,0,0,0.8);
 }
 
-.d-desc {
+.offer-desc {
     font-size: 0.75rem;
-    color: #ddd;
-    margin: 0 0 12px;
+    color: #888;
+    margin: 3px 0 10px;
     line-height: 1.35;
     display: -webkit-box;
     -webkit-line-clamp: 2;
     line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
-    text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
 }
 
-.d-footer {
+.offer-footer-row {
+    margin-top: auto;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 12px 16px;
-    border-top: 1px solid rgba(255,255,255,0.15);
-    background: rgba(0,0,0,0.4);
+    gap: 8px;
 }
 
-.d-price-col {
+.offer-price-col {
     display: flex;
     flex-direction: column;
 }
 
-.d-price {
+.offer-price {
     font-size: 1.1rem;
     font-weight: 900;
-    color: #fff;
+    color: #1a1a1a;
 }
 
-.d-meta {
+.offer-meta {
     font-size: 0.65rem;
     font-weight: 600;
-    color: #ccc;
-    margin-top: 2px;
+    color: #aaa;
+    margin-top: 1px;
 }
 
-.d-add-btn {
-    background: #e31837; /* Dominos Red */
+.premium-add-btn {
+    background: #b71c1c;
     color: #fff;
     border: none;
-    padding: 6px 16px;
-    border-radius: 6px;
+    padding: 7px 14px;
+    border-radius: 8px;
     font-weight: 800;
-    font-size: 0.9rem;
+    font-size: 0.82rem;
     cursor: pointer;
-    transition: background 0.2s;
+    transition: background 0.15s;
     text-decoration: none;
+    white-space: nowrap;
 }
 
-.d-add-btn:hover {
-    background: #c5122b;
+.premium-add-btn:hover {
+    background: #c62828;
 }
 
 @media (min-width: 768px) {
-    .css-marquee-card.dominos-style {
+    .css-marquee-card {
         flex: 0 0 280px;
-        height: 360px;
+        margin-right: 0;
+    }
+    .offer-img-wrapper {
+        height: 170px;
     }
 }
 
 @media (max-width: 480px) {
-    .css-marquee-card.dominos-style {
-        flex: 0 0 240px;
-        height: 320px;
+    .css-marquee-card {
+        flex: 0 0 200px;
+    }
+    .offer-img-wrapper {
+        height: 130px;
     }
 }
 

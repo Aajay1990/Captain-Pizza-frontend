@@ -1,8 +1,8 @@
+import API_URL from '../apiConfig';
 import React, { useContext, useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import './Home.css';
-import API_URL from '../apiConfig';
 import menuImg1 from '../assets/pizza menu 1.png';
 import menuImg2 from '../assets/pizza menu 2.png';
 import offer1 from '../assets/Buy 1 Get 1 FREE.png';
@@ -30,7 +30,7 @@ const Home = () => {
     const [dbItems, setDbItems] = useState([]);
     const [timeLeft, setTimeLeft] = useState(24 * 60 * 60); // 24 hours in seconds
     const [isLoading, setIsLoading] = useState(true);
-    const [seasonalOffer, setSeasonalOffer] = useState({ enabled: 'false', title: '', desc: '', image: '', coupon: '', new_user_discount: 20, badge_text: 'HOT DEAL', badge_visible: 'true' });
+    const [seasonalOffer, setSeasonalOffer] = useState({ enabled: 'false', title: '', desc: '', coupon: '', new_user_discount: 20, badge_text: 'HOT DEAL', badge_visible: 'true' });
     const [deliveryInfo, setDeliveryInfo] = useState({ 
         charge: 40, threshold: 300, 
         marquee_text: '🎉 SPECIAL OFFER: 3 KM FREE DELIVERY ON MINIMUM ORDER OF ₹300! 🚚 ORDER NOW!',
@@ -56,7 +56,7 @@ const Home = () => {
             setIsLoading(false);
         }, 1000);
 
-        fetch(`${API_URL}/api/menu?all=true`)
+        fetch('${API_URL}/api/menu?all=true')
             .then(res => res.json())
             .then(data => { if (data?.success) setDbItems(data.data); })
             .catch(() => {});
@@ -178,11 +178,11 @@ const Home = () => {
         const fetchHomeSettings = async () => {
             try {
                 // Fetch basic settings
-                const res = await fetch(`${API_URL}/api/admin/settings`);
+                const res = await fetch('${API_URL}/api/admin/settings');
                 const data = await res.json();
 
                 // Fetch dynamic active offers
-                const offerRes = await fetch(`${API_URL}/api/offers/active`);
+                const offerRes = await fetch('${API_URL}/api/offers/active');
                 const offerData = await offerRes.json();
 
                 if (offerData.success && offerData.data.length > 0) {
@@ -200,8 +200,7 @@ const Home = () => {
                         badge_text: findVal('hot_deal_badge_text', 'HOT DEAL'),
                         badge_visible: findVal('hot_deal_badge_visible', 'true'),
                         badge_display: findVal('hot_deal_badge_display', 'inline-block'),
-                        badge_color: findVal('hot_deal_badge_color', '#B71C1C'),
-                        image: findVal('seasonal_offer_image', '')
+                        badge_color: findVal('hot_deal_badge_color', '#B71C1C')
                     });
                     setDeliveryInfo({
                         charge: findVal('delivery_charge', 40),
@@ -264,21 +263,12 @@ const Home = () => {
                             </div>
                         )}
                         <h1 className="hero-h1">
-                            {seasonalOffer.enabled === 'true' ? (
-                                <>
-                                    <span className="hero-h1-accent" style={{ fontSize: '3.5rem' }}>{seasonalOffer.title}</span><br />
-                                    <span className="hero-h1-sub" style={{ fontSize: '2.5rem' }}>{seasonalOffer.desc}</span>
-                                </>
-                            ) : (
-                                <>
-                                    <span className="hero-h1-accent">Hot &amp; Fresh</span><br />
-                                    Pizza<br />
-                                    <span className="hero-h1-sub">Delivered Fast.</span>
-                                </>
-                            )}
+                            <span className="hero-h1-accent">Hot &amp; Fresh</span><br />
+                            Pizza<br />
+                            <span className="hero-h1-sub">Delivered Fast.</span>
                         </h1>
                         <p className="hero-para">
-                            {seasonalOffer.enabled === 'true' ? "Special deal for our valued customers. Limited time offer!" : "Premium ingredients. Wood-fired taste. Straight to your door in under 30 minutes."}
+                            Premium ingredients. Wood-fired taste. Straight to your door in under 30 minutes.
                         </p>
                         <div className="hero-cta-row">
                             <Link to="/menu" className="hero-btn-primary">Order Now 🍕</Link>
@@ -294,15 +284,7 @@ const Home = () => {
                     {/* Right: floating pizza image */}
                     <div className="hero-right">
                         <div className="hero-pizza-glow"></div>
-                        <img 
-                            src={
-                                (seasonalOffer.enabled === 'true' && seasonalOffer.image) 
-                                    ? (seasonalOffer.image.startsWith('/uploads') ? `${API_URL}${seasonalOffer.image}` : seasonalOffer.image) 
-                                    : heroPizza
-                            } 
-                            alt="Captain Pizza" 
-                            className="hero-pizza-img" 
-                        />
+                        <img src={heroPizza} alt="Captain Pizza" className="hero-pizza-img" />
                     </div>
                 </section>
 
@@ -336,36 +318,34 @@ const Home = () => {
                         <div className="css-marquee-track">
                             {/* Just list the unique offers, no duplication needed now */}
                             {marqueeOffers.map((off, idx) => (
-                                <div key={`m-${off.id}-${idx}`} className="premium-slider-card css-marquee-card dominos-style">
-                                    <div className="d-badge">Captain's<br/><span>TOP 10</span></div>
-                                    <img src={off.image?.startsWith('/uploads') ? `${API_URL}${off.image}` : off.image} className="d-bg-img" alt={off.title} />
+                                <div key={`m-${off.id}-${idx}`} className="premium-slider-card css-marquee-card">
+                                    <div className="offer-img-wrapper">
+                                        <img src={off.image} className="offer-bg-img" alt={off.title} />
+                                        <div className="offer-img-overlay-btn">Customise <i className="fas fa-chevron-right"></i></div>
+                                    </div>
                                     
-                                    <div className="d-content-wrapper">
-                                        <div className="d-custom-wrap">
-                                            <button className="d-customise-btn">Customise <i className="fas fa-chevron-right"></i></button>
+                                    <div className="offer-card-body">
+                                        <div className="offer-header-row">
+                                            <div className="diet-icon"></div>
+                                            <h3 className="offer-title">{off.title}</h3>
                                         </div>
                                         
-                                        <div className="d-text-content">
-                                            <div className="d-title-group">
-                                                <div className="d-veg-icon"></div>
-                                                <h3 className="d-title">{off.title}</h3>
-                                            </div>
-                                            <p className="d-desc">{off.desc}</p>
-                                        </div>
+                                        <p className="offer-desc">{off.desc}</p>
                                         
-                                        <div className="d-footer">
-                                            <div className="d-price-col">
-                                                <div className="d-price">₹{off.price || 150}</div>
-                                                <div className="d-meta">Regular | New Hand... <i className="fas fa-chevron-right"></i></div>
+                                        <div className="offer-footer-row">
+                                            <div className="offer-price-col">
+                                                <div className="offer-price">₹{off.price || 150}</div>
+                                                <div className="offer-meta">Regular | New Hand Tossed <i className="fas fa-chevron-right"></i></div>
                                             </div>
-                                            <div className="d-actions">
-                                                {off.isWelcome && <Link to="/menu" className="d-add-btn">Add +</Link>}
-                                                {off.isBogo && <button onClick={() => setBogoOpen(true)} className="d-add-btn">Add +</button>}
+                                            
+                                            <div className="offer-actions">
+                                                {off.isWelcome && <Link to="/menu" className="premium-add-btn">Claim +</Link>}
+                                                {off.isBogo && <button onClick={() => setBogoOpen(true)} className="premium-add-btn">BOGO +</button>}
                                                 {off.type === 'action' && !off.isBogo && (
-                                                    <button className="d-add-btn" onClick={() => addToCart(off.item)}>Add +</button>
+                                                    <button className="premium-add-btn" onClick={() => addToCart(off.item)}>Add +</button>
                                                 )}
                                                 {off.type === 'promo' && (
-                                                    <button className="d-add-btn" onClick={() => addToCart(off.item)}>Add +</button>
+                                                    <button className="premium-add-btn" onClick={() => addToCart(off.item)}>Add Deal +</button>
                                                 )}
                                             </div>
                                         </div>

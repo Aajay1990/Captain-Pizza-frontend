@@ -1,5 +1,6 @@
-import { AuthContext } from '../context/AuthContext';
 import API_URL from '../apiConfig';
+import React, { useState, useEffect, useContext } from 'react';
+import { AuthContext } from '../context/AuthContext';
 
 const ReviewsSection = () => {
     const { user } = useContext(AuthContext);
@@ -14,7 +15,7 @@ const ReviewsSection = () => {
 
     const fetchReviews = async () => {
         try {
-            const res = await fetch(`${API_URL}/api/reviews`);
+            const res = await fetch('${API_URL}/api/reviews');
             const data = await res.json();
             if (data.success) {
                 setReviews(data.data);
@@ -32,7 +33,7 @@ const ReviewsSection = () => {
 
         setIsSubmitting(true);
         try {
-            const res = await fetch(`${API_URL}/api/reviews`, {
+            const res = await fetch('${API_URL}/api/reviews', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

@@ -1,5 +1,6 @@
-import { AuthContext } from '../context/AuthContext';
 import API_URL from '../apiConfig';
+import React, { useState, useEffect, useContext } from 'react';
+import { AuthContext } from '../context/AuthContext';
 
 const UserProfile = () => {
     const { user } = useContext(AuthContext);
@@ -42,7 +43,7 @@ const UserProfile = () => {
             });
             const data = await res.json();
             if (data.success) {
-                alert(`Wallet recharged! New Balance: Rs.${data.walletBalance}`);
+                alert(`Wallet recharged! New Balance: ₹${data.walletBalance}`);
                 setAmount('');
                 fetchProfile(); // Refresh
             }
@@ -168,7 +169,7 @@ const UserProfile = () => {
                                     </div>
                                     <div style={{ textAlign: 'right', minWidth: '120px' }}>
                                         <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Total Amount Paid</div>
-                                        <div style={{ fontSize: '1.4rem', fontWeight: '800', color: 'var(--primary)' }}>Rs.{o.totalAmount}</div>
+                                        <div style={{ fontSize: '1.4rem', fontWeight: '800', color: 'var(--primary)' }}>₹{o.totalAmount}</div>
                                     </div>
                                 </div>
                             </div>

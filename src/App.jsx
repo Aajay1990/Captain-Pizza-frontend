@@ -2,6 +2,7 @@ import React from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
+import CartDrawer from './components/CartDrawer';
 import Home from './pages/Home';
 import Menu from './pages/Menu';
 import Order from './pages/Order';
@@ -11,16 +12,14 @@ import VerifyEmail from './pages/VerifyEmail';
 import UserProfile from './pages/UserProfile';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import POSPanel from './pages/pos/POSPanel';
-import OrderHistory from './pages/OrderHistory';
 import AboutUs from './pages/AboutUs';
 import ContactUs from './pages/ContactUs';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import TermsConditions from './pages/TermsConditions';
 import RefundPolicy from './pages/RefundPolicy';
-
+import OfferPopup from './components/OfferPopup';
 import FloatingActions from './components/FloatingActions';
 import ProtectedRoute from './components/ProtectedRoute';
-import BackButton from './components/BackButton';
 import './App.css';
 
 function App() {
@@ -31,9 +30,9 @@ function App() {
 
   return (
     <div className="app-container">
-
+      <OfferPopup />
       <FloatingActions />
-      <BackButton />
+      <CartDrawer />
 
       {!hideHeaderFooter && <Navbar />}
 
@@ -43,7 +42,6 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/menu" element={<Menu />} />
           <Route path="/order" element={<Order />} />
-          <Route path="/order-history" element={<OrderHistory />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/verify-email" element={<VerifyEmail />} />
           <Route path="/about" element={<AboutUs />} />

@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import './OrderHistory.css';
-import API_URL from '../apiConfig';
 
+import API_URL from '../apiConfig';
 const API = API_URL;
 
 const STATUS_INDEX = {

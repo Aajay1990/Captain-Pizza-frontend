@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { CartContext } from '../context/CartContext';
 import { AuthContext } from '../context/AuthContext';
 import './CartDrawer.css';
-import API_URL from '../apiConfig';
 
+import API_URL from '../apiConfig';
 const API = API_URL;
 const KETCHUP_PRICE = 1; // ₹1 per packet
 const TOPPING_TYPES = ['Tomato', 'Corn', 'Onion', 'Capsicum'];
@@ -129,42 +129,16 @@ const CartDrawer = () => {
 
     if (!isCartOpen) return null;
 
-    const generateFingerprint = async () => {
-        const nav = window.navigator;
-        const screen = window.screen;
-        const str = JSON.stringify({
-            userAgent: nav.userAgent,
-            resolution: `${screen.width}x${screen.height}`,
-            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-            language: nav.language,
-            platform: nav.platform
-        });
-        const msgUint8 = new TextEncoder().encode(str);
-        const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
-        const hashArray = Array.from(new Uint8Array(hashBuffer));
-        const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-        return hashHex;
-    };
-
     const handleApplyCoupon = async () => {
         if (!couponCode.trim()) return;
         setApplyingCoupon(true); setCouponMsg('');
-
-        if (localStorage.getItem(`used_coupon_${couponCode.toUpperCase()}`)) {
-            setDiscount(0);
-            setCouponMsg('❌ Coupon already used on this device');
-            setApplyingCoupon(false);
-            return;
-        }
-
         try {
-            const fingerprint_id = await generateFingerprint();
-            const res = await fetch(`${API}/api/coupon/apply`, {
+            const res = await fetch(`${API}/api/admin/coupons/validate`, {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ coupon_code: couponCode, fingerprint_id, timestamp: Date.now(), order_total: cartSubtotal })
+                body: JSON.stringify({ code: couponCode, orderTotal: cartSubtotal })
             });
             const data = await res.json();
-            if (data.success) { setDiscount(data.discount); setCouponMsg(data.message); }
+            if (data.success) { setDiscount(data.discount); setCouponMsg(`✅ ${data.message} (-₹${data.discount})`); }
             else { setDiscount(0); setCouponMsg(`❌ ${data.message}`); }
         } catch { setCouponMsg('❌ Could not validate coupon'); }
         finally { setApplyingCoupon(false); }
@@ -226,16 +200,6 @@ const CartDrawer = () => {
                             body: JSON.stringify({ ...response, orderData })
                         })).json();
                         if (vd.success) {
-                            if (couponCode.trim() && discount > 0) {
-                                try {
-                                    const fingerprint_id = await generateFingerprint();
-                                    await fetch(`${API}/api/coupon/confirm`, {
-                                        method: 'POST', headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({ coupon_code: couponCode, fingerprint_id, order_id: vd.data._id })
-                                    });
-                                    localStorage.setItem(`used_coupon_${couponCode.toUpperCase()}`, 'true');
-                                } catch (e) { console.error('Coupon confirm fail:', e); }
-                            }
                             if (user) refreshUser({ ...user, hasUsedWelcomeOffer: true });
                             clearCart(); setIsCartOpen(false);
                             alert(`🎉 Order Placed! ID: ${vd.data._id}`);

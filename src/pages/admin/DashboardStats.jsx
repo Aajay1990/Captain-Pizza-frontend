@@ -1,6 +1,6 @@
+import API_URL from '../../apiConfig';
 import React, { useState, useEffect, useContext } from 'react';
 import { AuthContext } from '../../context/AuthContext';
-import API_URL from '../../apiConfig';
 
 const DashboardStats = () => {
     const { token } = useContext(AuthContext);
@@ -20,7 +20,7 @@ const DashboardStats = () => {
     const fetchDashboardData = async (isRefresh = false) => {
         if (isRefresh) setRefreshing(true); else setLoading(true);
         try {
-            const res = await fetch(`${API_URL}/api/admin/dashboard`, {
+            const res = await fetch('${API_URL}/api/admin/dashboard', {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const data = await res.json();

@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
 import API_URL from '../../apiConfig';
+import React, { useState, useEffect } from 'react';
 
 const MenuManager = () => {
     const [items, setItems] = useState([]);
@@ -46,7 +46,7 @@ const MenuManager = () => {
     const fetchMenu = async () => {
         setRefreshing(true);
         try {
-            const res = await fetch(`${API_URL}/api/menu?all=true`);
+            const res = await fetch('${API_URL}/api/menu?all=true');
             const result = await res.json();
             if (result.success) {
                 setItems(result.data);
@@ -67,7 +67,7 @@ const MenuManager = () => {
         if (!catRenameData.oldName || !catRenameData.newName) return;
 
         try {
-            const res = await fetch(`${API_URL}/api/menu/category-rename`, {
+            const res = await fetch('${API_URL}/api/menu/category-rename', {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(catRenameData)
@@ -88,7 +88,7 @@ const MenuManager = () => {
 
     // Open/Close Modal
     const openEditor = (item = null) => {
-        const defaultCats = ['pizza', 'burger', 'wrap', 'sandwich', 'side', 'beverage', 'specialOffer'];
+        const defaultCats = ['pizza', 'burger', 'wrap', 'sandwich', 'side'];
         if (item) {
             setFormData(item);
             setIsCustomCategory(!defaultCats.includes(item.category));
@@ -114,7 +114,7 @@ const MenuManager = () => {
         setUploadingImage(true);
 
         try {
-            const res = await fetch(`${API_URL}/api/upload`, {
+            const res = await fetch('${API_URL}/api/upload', {
                 method: 'POST',
                 body: formDataFile
             });
@@ -138,7 +138,7 @@ const MenuManager = () => {
         e.preventDefault();
 
         const method = currentItem ? 'PUT' : 'POST';
-        const url = currentItem ? `${API_URL}/api/menu/${currentItem._id}` : `${API_URL}/api/menu`;
+        const url = currentItem ? `${API_URL}/api/menu/${currentItem._id}` : '${API_URL}/api/menu';
 
         try {
             const res = await fetch(url, {
@@ -217,7 +217,6 @@ const MenuManager = () => {
                         <tr>
                             <th>Item Name</th>
                             <th>Category</th>
-                            <th>Sub Category</th>
                             <th>Description</th>
                             <th>Base Price</th>
                             <th>Stock</th>
@@ -232,7 +231,6 @@ const MenuManager = () => {
                             <tr key={item._id}>
                                 <td><strong>{item.name}</strong></td>
                                 <td><span style={{ textTransform: 'capitalize', padding: '5px 10px', backgroundColor: 'var(--primary)', color: 'white', borderRadius: '15px', fontSize: '0.8rem' }}>{item.category}</span></td>
-                                <td style={{ fontSize: '0.85rem', color: '#666' }}>{item.subCategory || '—'}</td>
                                 <td style={{ maxWidth: '250px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'var(--text-muted)' }}>{item.desc || '—'}</td>
                                 <td>₹{item.category === 'pizza' ? item.prices?.medium || '-' : item.price}</td>
                                 <td>{item.isAvailable ? <span style={{ color: 'green' }}><i className="fas fa-check-circle"></i> In Stock</span> : <span style={{ color: 'red' }}><i className="fas fa-times-circle"></i> Out</span>}</td>
@@ -279,13 +277,11 @@ const MenuManager = () => {
                                             <option value="burger">🍔 Burger</option>
                                             <option value="wrap">🌯 Wrap</option>
                                             <option value="sandwich">🥪 Sandwich</option>
-                                            <option value="side">🍟 Side Order</option>
-                                            <option value="beverage">🥤 Beverage / Shake</option>
-                                            <option value="specialOffer">🎁 Special Offer / BOGO</option>
+                                            <option value="side">🍟 Side Order / Drink</option>
                                         </optgroup>
                                         {/* Existing custom DB categories */}
                                         {(() => {
-                                            const defaultCats = ['pizza', 'burger', 'wrap', 'sandwich', 'side', 'beverage', 'specialOffer'];
+                                            const defaultCats = ['pizza', 'burger', 'wrap', 'sandwich', 'side'];
                                             const customCats = [...new Set(items.map(i => i.category).filter(c => !defaultCats.includes(c.toLowerCase())))];
                                             if (customCats.length === 0) return null;
                                             return (
@@ -332,16 +328,6 @@ const MenuManager = () => {
                                     </label>
                                 </div>
                                 {uploadingImage && <span style={{ fontSize: '0.8rem', color: 'var(--primary)', marginTop: '5px', display: 'block' }}>Uploading Please Wait...</span>}
-                                {formData.image && (
-                                    <div style={{ marginTop: '10px' }}>
-                                        <img 
-                                            src={formData.image.startsWith('/uploads') ? `${API_URL}${formData.image}` : (formData.image.startsWith('http') ? formData.image : `/images/menu/${formData.image}`)} 
-                                            alt="Preview" 
-                                            style={{ height: '80px', borderRadius: '8px', border: '1px solid #ddd' }}
-                                            onError={e => e.target.style.display = 'none'}
-                                        />
-                                    </div>
-                                )}
                             </div>
 
                             <div className="form-group">

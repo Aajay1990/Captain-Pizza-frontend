@@ -6,6 +6,7 @@ import MenuManager from './MenuManager';
 import UserManager from './UserManager';
 import CouponManager from './CouponManager';
 import OrderManager from './OrderManager';
+import ReviewManager from './ReviewManager';
 import SettingsManager from './SettingsManager';
 import OfferManager from './OfferManager';
 import { AuthContext } from '../../context/AuthContext';
@@ -56,6 +57,9 @@ const AdminDashboard = () => {
                     <Link to="/admin/offers" className={`admin-nav-link ${currentTab === 'offers' ? 'active' : ''}`}>
                         <i className="fas fa-bullhorn"></i> Seasonal Offers
                     </Link>
+                    <Link to="/admin/reviews" className={`admin-nav-link ${currentTab === 'reviews' ? 'active' : ''}`}>
+                        <i className="fas fa-star"></i> Reviews Moderation
+                    </Link>
                     <Link to="/admin/settings" className={`admin-nav-link ${currentTab === 'settings' ? 'active' : ''}`}>
                         <i className="fas fa-cog"></i> System Settings
                     </Link>
@@ -90,6 +94,7 @@ const AdminDashboard = () => {
                         <Route path="/users" element={<UserManager />} />
                         <Route path="/coupons" element={<CouponManager />} />
                         <Route path="/offers" element={<OfferManager />} />
+                        <Route path="/reviews" element={<ReviewManager />} />
                         <Route path="/settings" element={<SettingsManager />} />
                     </Routes>
                 </div>

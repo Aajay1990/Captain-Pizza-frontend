@@ -1,8 +1,8 @@
+import API_URL from '../apiConfig';
 import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import './OfferPopup.css';
-import API_URL from '../apiConfig';
 
 const OfferPopup = () => {
     const [isOpen, setIsOpen] = useState(false);
@@ -24,11 +24,11 @@ const OfferPopup = () => {
 
     const fetchSettings = async () => {
         try {
-            const visRes = await fetch(`${API_URL}/api/admin/settings/show_welcome_popup`);
+            const visRes = await fetch('${API_URL}/api/admin/settings/show_welcome_popup');
             const visData = await visRes.json();
             if (visData.success && visData.data?.value === 'false') return;
 
-            const res = await fetch(`${API_URL}/api/admin/settings/new_user_discount`);
+            const res = await fetch('${API_URL}/api/admin/settings/new_user_discount');
             const data = await res.json();
             if (data.success && data.data) {
                 setDiscount(data.data.value);

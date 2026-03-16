@@ -10,7 +10,6 @@ const Login = ({ adminOnly = false, staffOnly = false }) => {
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [showPassword, setShowPassword] = useState(false);
 
     const [message, setMessage] = useState('');
     const [error, setError] = useState('');
@@ -133,27 +132,7 @@ const Login = ({ adminOnly = false, staffOnly = false }) => {
                         </div>
                         <div className="form-group">
                             <label>Password</label>
-                            <div style={{ position: 'relative' }}>
-                                <input
-                                    type={showPassword ? 'text' : 'password'}
-                                    placeholder="Enter password"
-                                    required
-                                    value={password}
-                                    onChange={e => setPassword(e.target.value)}
-                                    style={{ paddingRight: '44px' }}
-                                />
-                                <button
-                                    type="button"
-                                    onClick={() => setShowPassword(p => !p)}
-                                    style={{
-                                        position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)',
-                                        background: 'none', border: 'none', cursor: 'pointer', color: '#888', fontSize: '0.95rem', padding: '4px'
-                                    }}
-                                    title={showPassword ? 'Hide password' : 'Show password'}
-                                >
-                                    <i className={`fas ${showPassword ? 'fa-eye-slash' : 'fa-eye'}`}></i>
-                                </button>
-                            </div>
+                            <input type="password" placeholder="Enter password" required value={password} onChange={e => setPassword(e.target.value)} />
                         </div>
 
                         {isLogin && (

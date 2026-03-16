@@ -1,13 +1,13 @@
+import API_URL from '../../apiConfig';
 import React, { useState, useEffect, useContext } from 'react';
-import { AuthContext, api } from '../../context/AuthContext';
+import { AuthContext } from '../../context/AuthContext';
+import axios from 'axios';
 
 const ReviewManager = () => {
     const { token } = useContext(AuthContext);
     const [reviews, setReviews] = useState([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
-    const [replyingTo, setReplyingTo] = useState(null);
-    const [replyText, setReplyText] = useState('');
 
     useEffect(() => {
         fetchReviews();
@@ -16,7 +16,7 @@ const ReviewManager = () => {
     const fetchReviews = async () => {
         setRefreshing(true);
         try {
-            const res = await api.get('/api/reviews');
+            const res = await axios.get('${API_URL}/api/reviews');
             if (res.data.success) {
                 setReviews(res.data.websiteData.reviews || []);
             }
@@ -34,40 +34,15 @@ const ReviewManager = () => {
         if (!window.confirm("Are you sure you want to delete this review?")) return;
 
         try {
-            const res = await api.delete(`/api/reviews/${id}`);
+            const res = await axios.delete(`${API_URL}/api/reviews/${id}`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
             if (res.data.success) {
                 setReviews(reviews.filter(r => r._id !== id));
             }
         } catch (error) {
             console.error('Error deleting review:', error);
             alert('Failed to delete review');
-        }
-    };
-
-    const handleReply = async (id) => {
-        if (!replyText.trim()) return alert('Reply text cannot be empty.');
-        try {
-            // api instance auto-attaches Bearer token from localStorage
-            const res = await api.put(`/api/reviews/${id}/reply`, { reply: replyText, replyText });
-            if (res.data.success) {
-                setReviews(reviews.map(r => r._id === id ? { ...r, adminReply: replyText } : r));
-                setReplyingTo(null);
-                setReplyText('');
-                alert('Reply sent! ✅');
-            } else {
-                alert(res.data.message || 'Failed to send reply');
-            }
-        } catch (error) {
-            console.error('Error replying to review:', error);
-            // Try fallback with POST if PUT fails
-            try {
-                const res2 = await api.post(`/api/reviews/${id}/reply`, { reply: replyText, replyText });
-                if (res2.data.success) {
-                    setReviews(reviews.map(r => r._id === id ? { ...r, adminReply: replyText } : r));
-                    setReplyingTo(null); setReplyText('');
-                    alert('Reply sent! ✅');
-                } else { alert('Failed to send reply: ' + (res2.data.message || 'unknown error')); }
-            } catch (err2) { alert('Network error. Failed to send reply.'); }
         }
     };
 
@@ -109,38 +84,12 @@ const ReviewManager = () => {
                                         </div>
                                     </td>
                                     <td>{"⭐".repeat(Math.round(review.rating))}</td>
-                                    <td style={{ maxWidth: '300px' }}>
-                                        <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{review.text}</div>
-                                        {review.adminReply && (
-                                            <div style={{ marginTop: '8px', padding: '8px', background: '#f5f5f5', borderRadius: '6px', fontSize: '0.85rem', color: '#555', borderLeft: '3px solid #B71C1C' }}>
-                                                <strong>Admin Reply: </strong> {review.adminReply}
-                                            </div>
-                                        )}
-                                        {replyingTo === review._id && (
-                                            <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                                <textarea 
-                                                    value={replyText} 
-                                                    onChange={e => setReplyText(e.target.value)}
-                                                    placeholder="Type your reply to the customer..."
-                                                    style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #ccc', resize: 'vertical', minHeight: '60px' }}
-                                                />
-                                                <div style={{ display: 'flex', gap: '8px' }}>
-                                                    <button onClick={() => handleReply(review._id)} style={{ padding: '6px 12px', background: '#2E7D32', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem' }}>Send Reply</button>
-                                                    <button onClick={() => { setReplyingTo(null); setReplyText(''); }} style={{ padding: '6px 12px', background: '#f1f1f1', color: '#333', border: '1px solid #ccc', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem' }}>Cancel</button>
-                                                </div>
-                                            </div>
-                                        )}
-                                    </td>
+                                    <td style={{ maxWidth: '300px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{review.text}</td>
                                     <td>{new Date(review.createdAt).toLocaleDateString()}</td>
                                     <td>
-                                        <div style={{ display: 'flex', gap: '10px' }}>
-                                            <button className="btn-icon" onClick={() => { setReplyingTo(review._id); setReplyText(review.adminReply || ''); }} title="Reply to Review">
-                                                <i className="fas fa-reply" style={{ color: '#007BFF' }}></i>
-                                            </button>
-                                            <button className="btn-icon" onClick={() => handleDelete(review._id)} title="Delete Review">
-                                                <i className="fas fa-trash" style={{ color: 'red' }}></i>
-                                            </button>
-                                        </div>
+                                        <button className="btn-icon" onClick={() => handleDelete(review._id)} title="Delete Review">
+                                            <i className="fas fa-trash" style={{ color: 'red' }}></i>
+                                        </button>
                                     </td>
                                 </tr>
                             ))

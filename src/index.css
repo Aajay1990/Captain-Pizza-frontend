@@ -203,18 +203,3 @@ h4 {
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
-
-/* Ensure text wraps on mobile globally */
-.coupon-section, .message-box, .admin-panel {
-    word-wrap: break-word;
-    overflow-wrap: break-word;
-    max-width: 100%;
-    box-sizing: border-box;
-    padding: 0 10px;
-}
-
-/* For tables or long strings */
-.coupon-code {
-    white-space: normal;
-    word-break: break-all;
-}

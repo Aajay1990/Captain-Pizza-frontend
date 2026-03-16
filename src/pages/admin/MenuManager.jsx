@@ -46,7 +46,7 @@ const MenuManager = () => {
     const fetchMenu = async () => {
         setRefreshing(true);
         try {
-            const res = await fetch('${API_URL}/api/menu?all=true');
+            const res = await fetch(`${API_URL}/api/menu?all=true`);
             const result = await res.json();
             if (result.success) {
                 setItems(result.data);
@@ -67,7 +67,7 @@ const MenuManager = () => {
         if (!catRenameData.oldName || !catRenameData.newName) return;
 
         try {
-            const res = await fetch('${API_URL}/api/menu/category-rename', {
+            const res = await fetch(`${API_URL}/api/menu/category-rename`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(catRenameData)
@@ -114,7 +114,7 @@ const MenuManager = () => {
         setUploadingImage(true);
 
         try {
-            const res = await fetch('${API_URL}/api/upload', {
+            const res = await fetch(`${API_URL}/api/upload`, {
                 method: 'POST',
                 body: formDataFile
             });
@@ -138,7 +138,7 @@ const MenuManager = () => {
         e.preventDefault();
 
         const method = currentItem ? 'PUT' : 'POST';
-        const url = currentItem ? `${API_URL}/api/menu/${currentItem._id}` : '${API_URL}/api/menu';
+        const url = currentItem ? `${API_URL}/api/menu/${currentItem._id}` : `${API_URL}/api/menu`;
 
         try {
             const res = await fetch(url, {

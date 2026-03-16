@@ -56,7 +56,7 @@ const Home = () => {
             setIsLoading(false);
         }, 1000);
 
-        fetch('${API_URL}/api/menu?all=true')
+        fetch(`${API_URL}/api/menu?all=true`)
             .then(res => res.json())
             .then(data => { if (data?.success) setDbItems(data.data); })
             .catch(() => {});
@@ -178,11 +178,11 @@ const Home = () => {
         const fetchHomeSettings = async () => {
             try {
                 // Fetch basic settings
-                const res = await fetch('${API_URL}/api/admin/settings');
+                const res = await fetch(`${API_URL}/api/admin/settings`);
                 const data = await res.json();
 
                 // Fetch dynamic active offers
-                const offerRes = await fetch('${API_URL}/api/offers/active');
+                const offerRes = await fetch(`${API_URL}/api/offers/active`);
                 const offerData = await offerRes.json();
 
                 if (offerData.success && offerData.data.length > 0) {

@@ -19,7 +19,7 @@ const CouponManager = () => {
     const fetchCoupons = async () => {
         setRefreshing(true);
         try {
-            const res = await fetch('${API_URL}/api/admin/coupons');
+            const res = await fetch(`${API_URL}/api/admin/coupons`);
             const data = await res.json();
             if (data.success) {
                 setCoupons(data.data);
@@ -60,7 +60,7 @@ const CouponManager = () => {
         e.preventDefault();
 
         const method = currentCoupon ? 'PUT' : 'POST';
-        const url = currentCoupon ? `${API_URL}/api/admin/coupons/${currentCoupon._id}` : '${API_URL}/api/admin/coupons';
+        const url = currentCoupon ? `${API_URL}/api/admin/coupons/${currentCoupon._id}` : `${API_URL}/api/admin/coupons`;
 
         try {
             const res = await fetch(url, {

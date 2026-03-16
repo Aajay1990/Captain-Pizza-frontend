@@ -37,26 +37,7 @@ const Navbar = () => {
                         <Link to="/menu" className="nav-link" onClick={closeMenu}>Menu</Link>
                     </li>
 
-                    {/* Cart Icon — only for customers/guests */}
-                    {isPublicUser && (
-                        <li className="nav-item">
-                            <button
-                                className="nav-link cart-link"
-                                onClick={() => { navigate('/order'); closeMenu(); }}
-                                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
-                            >
-                                <div className={`cart-icon-wrapper ${isIconAnimating ? 'animate-vibrate' : ''}`}>
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
-                                        strokeLinecap="round" strokeLinejoin="round" className="cart-svg">
-                                        <circle cx="9" cy="21" r="1.5"></circle>
-                                        <circle cx="20" cy="21" r="1.5"></circle>
-                                        <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
-                                    </svg>
-                                    {cartCount > 0 && <span className="custom-cart-badge">{cartCount}</span>}
-                                </div>
-                            </button>
-                        </li>
-                    )}
+                    {/* Cart Icon removed as per request */}
 
                     {user ? (
                         <>
@@ -78,7 +59,13 @@ const Navbar = () => {
                                 </button>
                             </li>
                         </>
-                    ) : null}
+                    ) : (
+                        <li className="nav-item">
+                            <Link to="/login" className="nav-link login-btn" onClick={closeMenu}>
+                                <i className="fas fa-sign-in-alt"></i> Login
+                            </Link>
+                        </li>
+                    )}
 
                 </ul>
             </div>

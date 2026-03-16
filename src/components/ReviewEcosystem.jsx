@@ -21,7 +21,7 @@ const ReviewEcosystem = () => {
     const fetchReviews = async () => {
         try {
             setLoading(true);
-            const res = await fetch('${API_URL}/api/reviews');
+            const res = await fetch(`${API_URL}/api/reviews`);
             const data = await res.json();
             if (data.success) {
                 setReviewsData({
@@ -86,7 +86,7 @@ const ReviewEcosystem = () => {
 
         setIsSubmitting(true);
         try {
-            const res = await fetch('${API_URL}/api/reviews', {
+            const res = await fetch(`${API_URL}/api/reviews`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

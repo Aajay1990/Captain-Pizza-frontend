@@ -26,7 +26,7 @@ const Menu = () => {
     const bogoOfferItem = useRef(null);
 
     useEffect(() => {
-        fetch('${API_URL}/api/menu?all=true')
+        fetch(`${API_URL}/api/menu?all=true`)
             .then(res => res.json())
             .then(data => {
                 if (data.success && data.data.length > 0) {

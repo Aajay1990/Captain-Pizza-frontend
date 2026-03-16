@@ -16,7 +16,7 @@ const ReviewManager = () => {
     const fetchReviews = async () => {
         setRefreshing(true);
         try {
-            const res = await axios.get('${API_URL}/api/reviews');
+            const res = await axios.get(`${API_URL}/api/reviews`);
             if (res.data.success) {
                 setReviews(res.data.websiteData.reviews || []);
             }

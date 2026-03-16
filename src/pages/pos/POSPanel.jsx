@@ -156,7 +156,7 @@ const POSPanel = () => {
         };
 
         try {
-            const res = await fetch('${API_URL}/api/orders', {
+            const res = await fetch(`${API_URL}/api/orders`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -222,7 +222,7 @@ const POSPanel = () => {
         setPosRefreshing(true);
         setOrdersLoading(true);
         try {
-            const res = await fetch('${API_URL}/api/orders', {
+            const res = await fetch(`${API_URL}/api/orders`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             const data = await res.json();
@@ -245,7 +245,7 @@ const POSPanel = () => {
     const fetchMenu = async () => {
         setPosRefreshing(true);
         try {
-            const res = await fetch('${API_URL}/api/menu?all=true');
+            const res = await fetch(`${API_URL}/api/menu?all=true`);
             const data = await res.json();
             console.log('POS Menu Data:', data);
             if (data.success) {

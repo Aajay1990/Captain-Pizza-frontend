@@ -15,7 +15,7 @@ const ReviewsSection = () => {
 
     const fetchReviews = async () => {
         try {
-            const res = await fetch('${API_URL}/api/reviews');
+            const res = await fetch(`${API_URL}/api/reviews`);
             const data = await res.json();
             if (data.success) {
                 setReviews(data.data);
@@ -33,7 +33,7 @@ const ReviewsSection = () => {
 
         setIsSubmitting(true);
         try {
-            const res = await fetch('${API_URL}/api/reviews', {
+            const res = await fetch(`${API_URL}/api/reviews`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

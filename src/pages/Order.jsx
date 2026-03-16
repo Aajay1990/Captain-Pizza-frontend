@@ -9,8 +9,9 @@ import shakeImg from '../assets/BUTTER SCOTCH SHAKE .png';
 import offer2 from '../assets/Super Value Friends Meal.png';
 import offer3 from '../assets/Family Combo.png';
 import garlic from '../assets/CHEESY GARLIC BREAD.png';
+import API_URL from '../apiConfig';
 
-const API = 'https://pizza-backend-api-a5mm.onrender.com';
+const API = API_URL;
 const TOPPING_TYPES = ['Tomato', 'Corn', 'Onion', 'Capsicum'];
 const SIZE_ADDONS = [
     { name: 'Veg Topping', prices: { small: 25, medium: 35, large: 45 } },
@@ -33,6 +34,8 @@ const Order = () => {
     const [discount, setDiscount] = useState(0);
     const [couponMessage, setCouponMessage] = useState('');
     const [isApplying, setIsApplying] = useState(false);
+    const [couponApplied, setCouponApplied] = useState(false);  // ← tracks confirmed apply
+    const [fingerprintId, setFingerprintId] = useState('');      // ← device fingerprint hash
     const [orderPlacing, setOrderPlacing] = useState(false);
     const [deliverySettings, setDeliverySettings] = useState({ charge: 40, threshold: 300 });
     const [adminWhatsApp, setAdminWhatsApp] = useState('919220367325');
@@ -42,6 +45,31 @@ const Order = () => {
     const [showWaPermModal, setShowWaPermModal] = useState(false);
     const [permPendingFn, setPermPendingFn] = useState(null);
     const waUrlRef = useRef('');
+
+    // ── Generate device fingerprint on mount ──────────────────────────────────
+    useEffect(() => {
+        const generateFingerprint = async () => {
+            const raw = JSON.stringify({
+                ua: navigator.userAgent,
+                res: `${screen.width}x${screen.height}`,
+                tz: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                lang: navigator.language,
+                platform: navigator.platform
+            });
+            try {
+                const enc = new TextEncoder().encode(raw);
+                const buf = await crypto.subtle.digest('SHA-256', enc);
+                const hash = Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+                setFingerprintId(hash);
+            } catch {
+                // Fallback: use stored device ID if crypto not available
+                let did = localStorage.getItem('cp_device_id');
+                if (!did) { did = `DEV-${Math.random().toString(36).substr(2,9)}-${Date.now()}`; localStorage.setItem('cp_device_id', did); }
+                setFingerprintId(did);
+            }
+        };
+        generateFingerprint();
+    }, []);
 
     useEffect(() => {
         if (user) { setName(user.name || ''); setPhone(user.phone || ''); }
@@ -80,19 +108,71 @@ const Order = () => {
         return text;
     };
 
+    // ── Fingerprint-guarded coupon apply ──────────────────────────────────────
     const handleApplyCoupon = async () => {
         if (!couponCode.trim()) return;
+        const code = couponCode.toUpperCase().trim();
+
+        // Step 1: localStorage pre-check
+        if (localStorage.getItem(`used_coupon_${code}`) === 'true') {
+            setCouponMessage('⚠️ Coupon already used on this device.');
+            setDiscount(0);
+            return;
+        }
+
         setIsApplying(true); setCouponMessage('');
         try {
-            const res = await fetch(`${API}/api/admin/coupons/validate`, {
+            const res = await fetch(`${API}/api/coupon/apply`, {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ code: couponCode, orderTotal: cartSubtotal })
+                body: JSON.stringify({
+                    coupon_code: code,
+                    fingerprint_id: fingerprintId,
+                    order_total: cartSubtotal,
+                    timestamp: Date.now()
+                })
             });
             const data = await res.json();
-            if (data.success) { setDiscount(data.discount); setCouponMessage(`✅ ${data.message} (-Rs.${data.discount})`); }
-            else { setDiscount(0); setCouponMessage(`❌ ${data.message}`); }
-        } catch { setCouponMessage('❌ Error validating coupon'); }
+            if (data.success) {
+                setDiscount(data.discount || 0);
+                setCouponMessage(data.message);
+                setCouponApplied(true);
+            } else {
+                setDiscount(0);
+                setCouponApplied(false);
+                setCouponMessage(`❌ ${data.message}`);
+            }
+        } catch { setCouponMessage('❌ Network error. Try again.'); }
         finally { setIsApplying(false); }
+    };
+
+    // Called when user removes coupon from cart
+    const handleRemoveCoupon = async () => {
+        const code = couponCode.toUpperCase().trim();
+        try {
+            await fetch(`${API}/api/coupon/cancel`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ coupon_code: code, fingerprint_id: fingerprintId })
+            });
+        } catch {/* best-effort */}
+        setCouponCode('');
+        setDiscount(0);
+        setCouponMessage('');
+        setCouponApplied(false);
+    };
+
+    // Called AFTER payment success to permanently mark coupon as used
+    const confirmCouponUsage = async (orderId) => {
+        if (!couponApplied || !couponCode) return;
+        const code = couponCode.toUpperCase().trim();
+        try {
+            const res = await fetch(`${API}/api/coupon/confirm`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ coupon_code: code, fingerprint_id: fingerprintId, order_id: orderId })
+            });
+            if (res.ok) {
+                localStorage.setItem(`used_coupon_${code}`, 'true'); // frontend guard for future
+            }
+        } catch {/* best-effort — backend pending record expires automatically */}
     };
 
     const makeObjectId = (id) => {
@@ -200,9 +280,13 @@ const Order = () => {
 
                             localStorage.setItem('cp_order_phone', phone);
                             localStorage.setItem('cp_active_track_id', vd.data._id);
+
+                            // Mark coupon as permanently used after payment ✅
+                            await confirmCouponUsage(vd.data._id);
+
                             clearCart();
 
-                            // Show confirm modal immediately — let user tap WhatsApp manually (no auto-open)
+                            // Show confirm modal immediately — let user tap WhatsApp manually
                             setOrderConfirm({ orderId: vd.data._id, waUrl });
 
                         } else {
@@ -455,21 +539,45 @@ const Order = () => {
                                     })}
 
                                     {/* Coupon */}
-                                    <div className="op-coupon">
+                                    <div className="op-coupon" style={{ wordWrap: 'break-word', overflowWrap: 'break-word', maxWidth: '100%', boxSizing: 'border-box' }}>
                                         <div className="op-coupon-title">🎟️ Have a Promo Code?</div>
-                                        <div className="op-coupon-row">
-                                            <input
-                                                type="text"
-                                                placeholder="ENTER CODE"
-                                                className="op-coupon-input"
-                                                value={couponCode}
-                                                onChange={e => setCouponCode(e.target.value.toUpperCase())}
-                                            />
-                                            <button className="op-coupon-btn" onClick={handleApplyCoupon} disabled={isApplying || !couponCode}>
-                                                {isApplying ? '...' : 'Apply'}
-                                            </button>
-                                        </div>
-                                        {couponMessage && <p className={`op-coupon-msg ${discount > 0 ? 'ok' : 'err'}`}>{couponMessage}</p>}
+                                        {!couponApplied ? (
+                                            <div className="op-coupon-row">
+                                                <input
+                                                    type="text"
+                                                    placeholder="ENTER CODE"
+                                                    className="op-coupon-input"
+                                                    value={couponCode}
+                                                    onChange={e => setCouponCode(e.target.value.toUpperCase())}
+                                                    style={{ textTransform: 'uppercase' }}
+                                                />
+                                                <button className="op-coupon-btn" onClick={handleApplyCoupon} disabled={isApplying || !couponCode}>
+                                                    {isApplying ? '...' : 'Apply'}
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <div className="op-coupon-row" style={{ alignItems: 'center' }}>
+                                                <div style={{
+                                                    flex: 1, padding: '8px 12px', background: '#e8f5e9', border: '1px solid #4caf50',
+                                                    borderRadius: '8px', fontWeight: 700, color: '#1b5e20', fontSize: '0.88rem',
+                                                    wordBreak: 'break-all'
+                                                }}>
+                                                    ✅ {couponCode} Applied — −₹{discount}
+                                                </div>
+                                                <button
+                                                    onClick={handleRemoveCoupon}
+                                                    style={{
+                                                        marginLeft: '8px', padding: '8px 12px', background: '#fff', border: '1px solid #e53935',
+                                                        borderRadius: '8px', color: '#e53935', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer'
+                                                    }}
+                                                >✕ Remove</button>
+                                            </div>
+                                        )}
+                                        {couponMessage && !couponApplied && (
+                                            <p className={`op-coupon-msg ${discount > 0 ? 'ok' : 'err'}`} style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>
+                                                {couponMessage}
+                                            </p>
+                                        )}
                                     </div>
                                 </>
                             )}

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import './Login.css';
+import API_URL from '../apiConfig';
 
 const VerifyEmail = () => {
     const navigate = useNavigate();
@@ -18,7 +19,7 @@ const VerifyEmail = () => {
         setMessage('');
 
         try {
-            const res = await fetch('https://pizza-backend-api-a5mm.onrender.com/api/auth/verify-email', {
+            const res = await fetch(`${API_URL}/api/auth/verify-email`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, code })
@@ -51,7 +52,7 @@ const VerifyEmail = () => {
         setMessage('');
 
         try {
-            const res = await fetch('https://pizza-backend-api-a5mm.onrender.com/api/auth/resend-verification-code', {
+            const res = await fetch(`${API_URL}/api/auth/resend-verification-code`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email })

@@ -1,0 +1,36 @@
+.universal-back-btn {
+    position: fixed;
+    top: 90px;
+    left: 20px;
+    width: 44px;
+    height: 44px;
+    background: #ffffff;
+    border: none;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+    z-index: 1000;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.universal-back-btn:hover {
+    transform: scale(1.1) translateX(-3px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+}
+
+.universal-back-btn:active {
+    transform: scale(0.95);
+}
+
+@media (max-width: 960px) {
+    .universal-back-btn {
+        top: 15px;
+        left: 15px;
+        width: 40px;
+        height: 40px;
+        z-index: 9999; /* Above navbar on mobile */
+    }
+}

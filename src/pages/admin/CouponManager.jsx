@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import API_URL from '../../apiConfig';
 
 const CouponManager = () => {
     const [coupons, setCoupons] = useState([]);
@@ -18,7 +19,7 @@ const CouponManager = () => {
     const fetchCoupons = async () => {
         setRefreshing(true);
         try {
-            const res = await fetch('https://pizza-backend-api-a5mm.onrender.com/api/admin/coupons');
+            const res = await fetch(`${API_URL}/api/admin/coupons`);
             const data = await res.json();
             if (data.success) {
                 setCoupons(data.data);
@@ -59,7 +60,7 @@ const CouponManager = () => {
         e.preventDefault();
 
         const method = currentCoupon ? 'PUT' : 'POST';
-        const url = currentCoupon ? `https://pizza-backend-api-a5mm.onrender.com/api/admin/coupons/${currentCoupon._id}` : 'https://pizza-backend-api-a5mm.onrender.com/api/admin/coupons';
+        const url = currentCoupon ? `${API_URL}/api/admin/coupons/${currentCoupon._id}` : `${API_URL}/api/admin/coupons`;
 
         try {
             const res = await fetch(url, {
@@ -82,14 +83,32 @@ const CouponManager = () => {
     };
 
     const handleDelete = async (id) => {
-        if (!window.confirm("Delete this coupon permanently?")) return;
+        if (!window.confirm("Delete this coupon AND all its usage history permanently?")) return;
         try {
-            const res = await fetch(`https://pizza-backend-api-a5mm.onrender.com/api/admin/coupons/${id}`, { method: 'DELETE' });
+            const res = await fetch(`${API_URL}/api/admin/coupons/${id}`, { method: 'DELETE' });
             if ((await res.json()).success) {
                 fetchCoupons();
+                alert('Coupon deleted and all usage records cleared.');
             }
         } catch (error) {
             console.error(error);
+        }
+    };
+
+    const handleDeactivate = async (id) => {
+        if (!window.confirm("Deactivate this coupon and clear all usage records? Users can no longer use this code.")) return;
+        try {
+            const res = await fetch(`${API_URL}/api/admin/coupons/${id}/deactivate`, { method: 'POST' });
+            const data = await res.json();
+            if (data.success) {
+                fetchCoupons();
+                alert('Coupon deactivated and all device usage records cleared.');
+            } else {
+                alert(data.message || 'Error deactivating coupon.');
+            }
+        } catch (error) {
+            console.error(error);
+            alert('Network error when deactivating.');
         }
     };
 
@@ -129,16 +148,23 @@ const CouponManager = () => {
 
                         {coupons.map(coupon => (
                             <tr key={coupon._id}>
-                                <td><strong style={{ letterSpacing: '1px' }}>{coupon.code}</strong></td>
+                                <td><strong style={{ letterSpacing: '1px', wordBreak: 'break-all' }}>{coupon.code}</strong></td>
                                 <td>{coupon.discountType === 'AMOUNT' ? `₹${coupon.discountValue} OFF` : `${coupon.discountValue}% OFF`}</td>
                                 <td>₹{coupon.minOrderAmount}</td>
                                 <td>{coupon.usageCount} times</td>
                                 <td>
                                     {coupon.isActive ? <span style={{ color: 'green', fontWeight: 'bold' }}>Active</span> : <span style={{ color: 'red' }}>Disabled</span>}
                                 </td>
-                                <td style={{ display: 'flex', gap: '15px' }}>
-                                    <button className="action-btn edit" onClick={() => openEditor(coupon)}><i className="fas fa-edit"></i></button>
-                                    <button className="action-btn delete" onClick={() => handleDelete(coupon._id)}><i className="fas fa-trash"></i></button>
+                                <td style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                    <button className="action-btn edit" onClick={() => openEditor(coupon)} title="Edit"><i className="fas fa-edit"></i></button>
+                                    {coupon.isActive && (
+                                        <button
+                                            onClick={() => handleDeactivate(coupon._id)}
+                                            title="Deactivate & clear usage"
+                                            style={{ background: '#ff9800', color: '#fff', border: 'none', borderRadius: '6px', padding: '6px 10px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 700 }}
+                                        >⏸ Deactivate</button>
+                                    )}
+                                    <button className="action-btn delete" onClick={() => handleDelete(coupon._id)} title="Delete permanently"><i className="fas fa-trash"></i></button>
                                 </td>
                             </tr>
                         ))}

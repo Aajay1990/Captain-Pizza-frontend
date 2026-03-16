@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../context/AuthContext';
+import API_URL from '../../apiConfig';
 
 const OfferManager = () => {
     const [offers, setOffers] = useState([]);
@@ -48,7 +49,7 @@ const OfferManager = () => {
         setUploadingImage(true);
 
         try {
-            const res = await fetch('https://pizza-backend-api-a5mm.onrender.com/api/upload', {
+            const res = await fetch(`${API_URL}/api/upload`, {
                 method: 'POST',
                 body: formDataFile
             });
@@ -159,7 +160,7 @@ const OfferManager = () => {
                                 <tr key={offer._id}>
                                     <td>
                                         {offer.bannerImage ? (
-                                            <img src={offer.bannerImage} alt="offer banner" style={{ width: '80px', height: '40px', objectFit: 'cover', borderRadius: '4px' }} />
+                                            <img src={offer.bannerImage.startsWith('/uploads') ? `${API_URL}${offer.bannerImage}` : offer.bannerImage} alt="offer banner" style={{ width: '80px', height: '40px', objectFit: 'cover', borderRadius: '4px' }} />
                                         ) : (
                                             <span style={{ color: '#999', fontSize: '0.8rem' }}>No Image</span>
                                         )}

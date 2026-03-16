@@ -2,6 +2,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import { AuthContext } from '../../context/AuthContext';
 import './POSPanel.css';
 import logo from '../../assets/logo.png';
+import API_URL from '../../apiConfig';
 
 const POSPanel = () => {
     const { user, token, logoutAuth } = useContext(AuthContext);
@@ -100,14 +101,14 @@ const POSPanel = () => {
                     ${order.orderItems.map(i => `
                         <div class="item">
                             <span>${i.quantity}x ${i.name} ${i.size !== 'regular' ? `(${i.size})` : ''}</span>
-                            <span>₹${i.price * i.quantity}</span>
+                            <span>Rs.${i.price * i.quantity}</span>
                         </div>
                         ${i.toppings && i.toppings.length > 0 ? `<div style="font-size: 0.8rem; text-align: left; padding-left: 20px;">+ ${i.toppings.join(', ')}</div>` : ''}
                     `).join('')}
                     <div class="line"></div>
-                    <div class="item"><span>Subtotal</span><span>₹${order.subTotal.toFixed(2)}</span></div>
-                    ${order.discount ? `<div class="item"><span>Discount</span><span>-₹${order.discount}</span></div>` : ''}
-                    <div class="total">TOTAL: ₹${order.totalAmount.toFixed(2)}</div>
+                    <div class="item"><span>Subtotal</span><span>Rs.${order.subTotal.toFixed(2)}</span></div>
+                    ${order.discount ? `<div class="item"><span>Discount</span><span>-Rs.${order.discount}</span></div>` : ''}
+                    <div class="total">TOTAL: Rs.${order.totalAmount.toFixed(2)}</div>
                     <div class="line"></div>
                     <p>Payment: ${order.paymentMethod.toUpperCase()}</p>
                     <p>Staff: ${user?.name || 'POS'}</p>
@@ -155,7 +156,7 @@ const POSPanel = () => {
         };
 
         try {
-            const res = await fetch('https://pizza-backend-api-a5mm.onrender.com/api/orders', {
+            const res = await fetch(`${API_URL}/api/orders`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -221,7 +222,7 @@ const POSPanel = () => {
         setPosRefreshing(true);
         setOrdersLoading(true);
         try {
-            const res = await fetch('https://pizza-backend-api-a5mm.onrender.com/api/orders', {
+            const res = await fetch(`${API_URL}/api/orders`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             const data = await res.json();
@@ -244,7 +245,7 @@ const POSPanel = () => {
     const fetchMenu = async () => {
         setPosRefreshing(true);
         try {
-            const res = await fetch('https://pizza-backend-api-a5mm.onrender.com/api/menu?all=true');
+            const res = await fetch(`${API_URL}/api/menu?all=true`);
             const data = await res.json();
             console.log('POS Menu Data:', data);
             if (data.success) {
@@ -556,7 +557,7 @@ const POSPanel = () => {
                                                             </div>
                                                         )}
                                                     </div>
-                                                    <div style={{ fontWeight: '700', color: 'var(--pos-text)', minWidth: '60px', textAlign: 'right' }}>₹{item.price * item.quantity}</div>
+                                                    <div style={{ fontWeight: '700', color: 'var(--pos-text)', minWidth: '60px', textAlign: 'right' }}>Rs.{item.price * item.quantity}</div>
                                                 </div>
                                             ))}
                                         </div>
@@ -564,7 +565,7 @@ const POSPanel = () => {
                                         {/* Total Row */}
                                         <div style={{ borderTop: '2px dashed var(--pos-border)', paddingTop: '15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto' }}>
                                             <span style={{ color: 'var(--pos-text-muted)', fontWeight: '600', fontSize: '0.9rem' }}>Total Amount</span>
-                                            <span style={{ fontSize: '1.4rem', fontWeight: '900', color: 'var(--pos-primary)' }}>₹{order.totalAmount?.toFixed(2)}</span>
+                                            <span style={{ fontSize: '1.4rem', fontWeight: '900', color: 'var(--pos-primary)' }}>Rs.{order.totalAmount?.toFixed(2)}</span>
                                         </div>
                                     </div>
                                 ))}
@@ -604,7 +605,7 @@ const POSPanel = () => {
                                         <div className="pos-text-bottom">
                                             <span className={`pos-tag ${item.category.toLowerCase()}`}>{item.category.toUpperCase()}</span>
                                             <span className="pos-text-price">
-                                                ₹{item.price || (item.prices && item.prices['medium']) || 0}
+                                                Rs.{item.price || (item.prices && item.prices['medium']) || 0}
                                             </span>
                                         </div>
                                     </div>
@@ -627,7 +628,7 @@ const POSPanel = () => {
                                                         + {c.toppings.join(', ')}
                                                     </div>
                                                 )}
-                                                <div className="cart-item-price">₹{c.price * c.quantity}</div>
+                                                <div className="cart-item-price">Rs.{c.price * c.quantity}</div>
                                             </div>
                                             <div className="cart-item-controls">
                                                 <button onClick={() => decrementQuantity(c.id)}>-</button>
@@ -642,7 +643,7 @@ const POSPanel = () => {
                                 <div className="billing-summary">
                                     <div className="summary-row total-row" style={{ borderTop: 'none', paddingTop: '0' }}>
                                         <span>Subtotal</span>
-                                        <span>₹{subTotal.toFixed(2)}</span>
+                                        <span>Rs.{subTotal.toFixed(2)}</span>
                                     </div>
                                     <div className="summary-row discount-row">
                                         <span>Discount</span>
@@ -655,7 +656,7 @@ const POSPanel = () => {
                                     </div>
                                     <div className="summary-row total-row">
                                         <span>Grand Total</span>
-                                        <span>₹{finalTotal > 0 ? finalTotal.toFixed(2) : 0}</span>
+                                        <span>Rs.{finalTotal > 0 ? finalTotal.toFixed(2) : 0}</span>
                                     </div>
                                 </div>
 
@@ -724,7 +725,7 @@ const POSPanel = () => {
                                                 onClick={() => setSelectedSize(sz)}
                                             >
                                                 <div style={{ fontWeight: 'bold', textTransform: 'capitalize', fontSize: '1.1rem' }}>{sz}</div>
-                                                <div style={{ color: 'var(--pos-primary)', marginTop: '5px' }}>₹{selectedItem.prices[sz]}</div>
+                                                <div style={{ color: 'var(--pos-primary)', marginTop: '5px' }}>Rs.{selectedItem.prices[sz]}</div>
                                             </div>
                                         );
                                     })}
@@ -740,7 +741,7 @@ const POSPanel = () => {
                                         <div>
                                             <strong>🍅 Ketchup Packets</strong>
                                             <div className="selected-preview">
-                                                {ketchupEnabled ? `x${ketchupQty} +₹${ketchupQty * ADDON_PRICES.ketchup}` : 'Not Added'}
+                                                {ketchupEnabled ? `x${ketchupQty} +Rs.${ketchupQty * ADDON_PRICES.ketchup}` : 'Not Added'}
                                             </div>
                                         </div>
                                         <i className={`fas fa-chevron-${expandedSection === 'ketchup' ? 'up' : 'down'}`}></i>
@@ -748,7 +749,7 @@ const POSPanel = () => {
                                     {expandedSection === 'ketchup' && (
                                         <div className="dropdown-list">
                                             <div style={{ padding: '12px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                                <span style={{ fontSize: '0.85rem', color: '#555', fontWeight: '600' }}>₹{ADDON_PRICES.ketchup} per packet</span>
+                                                <span style={{ fontSize: '0.85rem', color: '#555', fontWeight: '600' }}>Rs.{ADDON_PRICES.ketchup} per packet</span>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                                     <button
                                                         onClick={() => { const nq = Math.max(0, ketchupQty - 1); setKetchupQty(nq); if (nq === 0) setKetchupEnabled(false); }}
@@ -759,7 +760,7 @@ const POSPanel = () => {
                                                         onClick={() => { setKetchupQty(q => q + 1); setKetchupEnabled(true); }}
                                                         style={{ width: '34px', height: '34px', borderRadius: '50%', border: '2px solid var(--pos-primary)', background: 'var(--pos-primary)', fontSize: '1.1rem', fontWeight: '900', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', transition: 'all 0.15s' }}
                                                     >+</button>
-                                                    {ketchupEnabled && ketchupQty > 0 && <span style={{ fontSize: '0.85rem', fontWeight: '700', color: 'var(--pos-primary)' }}>+₹{ketchupQty * ADDON_PRICES.ketchup}</span>}
+                                                    {ketchupEnabled && ketchupQty > 0 && <span style={{ fontSize: '0.85rem', fontWeight: '700', color: 'var(--pos-primary)' }}>+Rs.{ketchupQty * ADDON_PRICES.ketchup}</span>}
                                                 </div>
                                             </div>
                                         </div>
@@ -773,7 +774,7 @@ const POSPanel = () => {
                                             <strong>Veg Toppings</strong>
                                             <div className="selected-preview">
                                                 {Object.keys(selectedVegToppings).length > 0
-                                                    ? `${Object.keys(selectedVegToppings).length} selected (+₹${Object.values(selectedVegToppings).reduce((acc, sz) => acc + ADDON_PRICES.veg[sz], 0)})`
+                                                    ? `${Object.keys(selectedVegToppings).length} selected (+Rs.${Object.values(selectedVegToppings).reduce((acc, sz) => acc + ADDON_PRICES.veg[sz], 0)})`
                                                     : 'Not Selected'}
                                             </div>
                                         </div>
@@ -786,7 +787,7 @@ const POSPanel = () => {
                                                     <div style={{ fontSize: '0.88rem', fontWeight: '700', color: '#1A1A1A', marginBottom: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                                         <span>{topping.name}</span>
                                                         {selectedVegToppings[topping.id] && (
-                                                            <span style={{ fontSize: '0.75rem', color: 'var(--pos-primary)', fontWeight: '700' }}>+₹{ADDON_PRICES.veg[selectedVegToppings[topping.id]]}</span>
+                                                            <span style={{ fontSize: '0.75rem', color: 'var(--pos-primary)', fontWeight: '700' }}>+Rs.{ADDON_PRICES.veg[selectedVegToppings[topping.id]]}</span>
                                                         )}
                                                     </div>
                                                     <div style={{ display: 'flex', gap: '8px' }}>
@@ -812,7 +813,7 @@ const POSPanel = () => {
                                                                     }}
                                                                 >
                                                                     <span style={{ fontSize: '0.78rem' }}>{sz === 'small' ? 'S' : sz === 'medium' ? 'M' : 'L'}</span>
-                                                                    <span style={{ fontSize: '0.7rem', opacity: 0.85 }}>+₹{ADDON_PRICES.veg[sz]}</span>
+                                                                    <span style={{ fontSize: '0.7rem', opacity: 0.85 }}>+Rs.{ADDON_PRICES.veg[sz]}</span>
                                                                 </button>
                                                             );
                                                         })}
@@ -829,7 +830,7 @@ const POSPanel = () => {
                                         <div>
                                             <strong>Extra Cheese Topping</strong>
                                             <div className="selected-preview">
-                                                {extraCheese ? `✓ (${extraCheese.charAt(0).toUpperCase()}) +₹${ADDON_PRICES.cheese[extraCheese]}` : 'Not Selected'}
+                                                {extraCheese ? `✓ (${extraCheese.charAt(0).toUpperCase()}) +Rs.${ADDON_PRICES.cheese[extraCheese]}` : 'Not Selected'}
                                             </div>
                                         </div>
                                         <i className={`fas fa-chevron-${expandedSection === 'cheese' ? 'up' : 'down'}`}></i>
@@ -853,7 +854,7 @@ const POSPanel = () => {
                                                             }}
                                                         >
                                                             <span style={{ fontSize: '0.85rem' }}>{sz.charAt(0).toUpperCase() + sz.slice(1)}</span>
-                                                            <span style={{ fontSize: '0.75rem', opacity: 0.85 }}>+₹{ADDON_PRICES.cheese[sz]}</span>
+                                                            <span style={{ fontSize: '0.75rem', opacity: 0.85 }}>+Rs.{ADDON_PRICES.cheese[sz]}</span>
                                                         </button>
                                                     ))}
                                                 </div>
@@ -868,7 +869,7 @@ const POSPanel = () => {
                                         <div>
                                             <strong>Cheese Burst Crust</strong>
                                             <div className="selected-preview">
-                                                {cheeseBurst ? `✓ (${cheeseBurst.charAt(0).toUpperCase()}) +₹${ADDON_PRICES.burst[cheeseBurst]}` : 'Not Selected'}
+                                                {cheeseBurst ? `✓ (${cheeseBurst.charAt(0).toUpperCase()}) +Rs.${ADDON_PRICES.burst[cheeseBurst]}` : 'Not Selected'}
                                             </div>
                                         </div>
                                         <i className={`fas fa-chevron-${expandedSection === 'burst' ? 'up' : 'down'}`}></i>
@@ -892,7 +893,7 @@ const POSPanel = () => {
                                                             }}
                                                         >
                                                             <span style={{ fontSize: '0.85rem' }}>{sz.charAt(0).toUpperCase() + sz.slice(1)}</span>
-                                                            <span style={{ fontSize: '0.75rem', opacity: 0.85 }}>+₹{ADDON_PRICES.burst[sz]}</span>
+                                                            <span style={{ fontSize: '0.75rem', opacity: 0.85 }}>+Rs.{ADDON_PRICES.burst[sz]}</span>
                                                         </button>
                                                     ))}
                                                 </div>
@@ -915,7 +916,7 @@ const POSPanel = () => {
                         <div className="pos-modal-actions" style={{ borderTop: '1px solid #eee', paddingTop: '20px', display: 'flex', flexDirection: 'column', gap: '15px' }}>
                             <div className="modal-total-preview" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.2rem', fontWeight: 'bold' }}>
                                 <span>Grand Total:</span>
-                                <span>₹{calculateModalTotal()}</span>
+                                <span>Rs.{calculateModalTotal()}</span>
                             </div>
                             <div className="action-btns" style={{ display: 'flex', gap: '10px' }}>
                                 <button className="btn-cancel" onClick={() => setSelectedItem(null)} style={{ flex: 1, padding: '15px', border: '1px solid #ccc', borderRadius: '8px', background: '#fff', fontSize: '1.1rem', cursor: 'pointer' }}>Go Back</button>

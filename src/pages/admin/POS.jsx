@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import API_URL from '../../apiConfig';
 
 const POS = () => {
     const [menuItems, setMenuItems] = useState([]);
@@ -13,7 +14,7 @@ const POS = () => {
 
     const fetchMenu = async () => {
         try {
-            const res = await fetch('https://pizza-backend-api-a5mm.onrender.com/api/menu');
+            const res = await fetch(`${API_URL}/api/menu`);
             const data = await res.json();
             if (data.success) {
                 setMenuItems(data.data.filter(i => i.availability));
@@ -63,7 +64,7 @@ const POS = () => {
         };
 
         try {
-            const res = await fetch('https://pizza-backend-api-a5mm.onrender.com/api/orders', {
+            const res = await fetch(`${API_URL}/api/orders`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(orderData)

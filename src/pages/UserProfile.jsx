@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
+import API_URL from '../apiConfig';
 
 const UserProfile = () => {
     const { user } = useContext(AuthContext);
@@ -19,7 +19,7 @@ const UserProfile = () => {
 
     const fetchProfile = async () => {
         try {
-            const res = await fetch(`https://pizza-backend-api-a5mm.onrender.com/api/users/${user._id}/profile`);
+            const res = await fetch(`${API_URL}/api/users/${user._id}/profile`);
             const data = await res.json();
             if (data.success) {
                 setProfile(data.data);
@@ -35,14 +35,14 @@ const UserProfile = () => {
     const handleRecharge = async (e) => {
         e.preventDefault();
         try {
-            const res = await fetch(`https://pizza-backend-api-a5mm.onrender.com/api/users/${user._id}/wallet`, {
+            const res = await fetch(`${API_URL}/api/users/${user._id}/wallet`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ amount })
             });
             const data = await res.json();
             if (data.success) {
-                alert(`Wallet recharged! New Balance: ₹${data.walletBalance}`);
+                alert(`Wallet recharged! New Balance: Rs.${data.walletBalance}`);
                 setAmount('');
                 fetchProfile(); // Refresh
             }
@@ -54,7 +54,7 @@ const UserProfile = () => {
     const handleAddAddress = async (e) => {
         e.preventDefault();
         try {
-            const res = await fetch(`https://pizza-backend-api-a5mm.onrender.com/api/users/${user._id}/address`, {
+            const res = await fetch(`${API_URL}/api/users/${user._id}/address`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(addressForm)
@@ -168,7 +168,7 @@ const UserProfile = () => {
                                     </div>
                                     <div style={{ textAlign: 'right', minWidth: '120px' }}>
                                         <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Total Amount Paid</div>
-                                        <div style={{ fontSize: '1.4rem', fontWeight: '800', color: 'var(--primary)' }}>₹{o.totalAmount}</div>
+                                        <div style={{ fontSize: '1.4rem', fontWeight: '800', color: 'var(--primary)' }}>Rs.{o.totalAmount}</div>
                                     </div>
                                 </div>
                             </div>

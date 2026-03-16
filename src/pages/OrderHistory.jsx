@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import './OrderHistory.css';
+import API_URL from '../apiConfig';
 
-const API = 'https://pizza-backend-api-a5mm.onrender.com';
+const API = API_URL;
 
 const STATUS_INDEX = {
     'pending': 0,

@@ -118,7 +118,7 @@ const OrderManager = () => {
                             <th>Customer Info</th>
                             <th>Items Passed</th>
                             <th>Amount Paid</th>
-                            <th>Progress Status</th>
+                            <th>Status</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -137,8 +137,6 @@ const OrderManager = () => {
                                     {order.orderType === 'pos' && (
                                         <span style={{ backgroundColor: '#2b2b2b', color: '#fff', fontSize: '0.7rem', padding: '2px 5px', borderRadius: '3px', marginTop: '5px', display: 'inline-block' }}>POS Walk-in</span>
                                     )}
-                                    <br />
-                                    <CookingTimer createdAt={order.createdAt} status={order.status} />
                                 </td>
                                 <td>
                                     <strong>{order.customerInfo.name}</strong><br />
@@ -163,26 +161,29 @@ const OrderManager = () => {
                                     <span style={{ fontSize: '0.8rem', textTransform: 'uppercase' }}>{order.paymentMethod}</span>
                                 </td>
                                 <td>
-                                    <select
-                                        value={order.status}
+                                    <select 
+                                        value={order.status} 
                                         onChange={(e) => handleStatusChange(order._id, e.target.value)}
-                                        style={{
-                                            padding: '8px 12px',
-                                            borderRadius: '5px',
+                                        style={{ 
+                                            padding: '6px 10px', 
+                                            borderRadius: '6px', 
+                                            border: '1px solid #ddd',
                                             fontWeight: 'bold',
-                                            border: `2px solid ${getStatusColor(order.status)}`,
-                                            backgroundColor: `${getStatusColor(order.status)}10`,
-                                            color: getStatusColor(order.status),
-                                            outline: 'none',
-                                            cursor: 'pointer'
+                                            color: '#fff',
+                                            backgroundColor: order.status === 'pending' ? '#f59e0b' :
+                                                             order.status === 'preparing' ? '#3b82f6' :
+                                                             order.status === 'out_for_delivery' ? '#8b5cf6' :
+                                                             order.status === 'delivered' ? '#10b981' :
+                                                             order.status === 'cancelled' ? '#ef4444' : '#6b7280',
+                                            cursor: 'pointer',
+                                            outline: 'none'
                                         }}
                                     >
-                                        <option value="pending">Pending Auth</option>
-                                        <option value="confirmed">Confirmed</option>
-                                        <option value="preparing">In Kitchen</option>
-                                        <option value="out_for_delivery">Out for Delivery</option>
-                                        <option value="delivered">Delivered Done</option>
-                                        <option value="cancelled">Cancelled</option>
+                                        <option value="pending" style={{ color: '#000', backgroundColor: '#fff' }}>Pending</option>
+                                        <option value="preparing" style={{ color: '#000', backgroundColor: '#fff' }}>Preparing</option>
+                                        <option value="out_for_delivery" style={{ color: '#000', backgroundColor: '#fff' }}>Out for Delivery</option>
+                                        <option value="delivered" style={{ color: '#000', backgroundColor: '#fff' }}>Delivered</option>
+                                        <option value="cancelled" style={{ color: '#000', backgroundColor: '#fff' }}>Cancelled</option>
                                     </select>
                                 </td>
                             </tr>

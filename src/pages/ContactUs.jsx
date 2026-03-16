@@ -7,7 +7,7 @@ const ContactUs = () => {
         address: 'F-11 Main Road Dayalpur, Opposite Rajmandir Hypermarket, Near Hero Bike Showroom\nNew Delhi, Delhi - 110094 (India)',
         phone1: '+91 9220367325',
         phone2: '+91 9220367425',
-        email: 'support@captainpizza.in',
+        email: 'support@captainpizza.online',
         hours: 'Monday to Sunday, 11:00 AM to 11:00 PM'
     });
 

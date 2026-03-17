@@ -215,21 +215,36 @@ const MenuManager = () => {
                 <table className="admin-table">
                     <thead>
                         <tr>
+                            <th>Image</th>
                             <th>Item Name</th>
                             <th>Category</th>
                             <th>Description</th>
                             <th>Base Price</th>
                             <th>Stock</th>
                             <th>Actions</th>
+
                         </tr>
                     </thead>
                     <tbody>
-                        {loading && <tr><td colSpan="6" style={{ textAlign: 'center' }}>Loading database records...</td></tr>}
-                        {!loading && items.length === 0 && <tr><td colSpan="6" style={{ textAlign: 'center' }}>No items in database yet. Add some to get started!</td></tr>}
+                        {loading && <tr><td colSpan="7" style={{ textAlign: 'center' }}>Loading database records...</td></tr>}
+                        {!loading && items.length === 0 && <tr><td colSpan="7" style={{ textAlign: 'center' }}>No items in database yet. Add some to get started!</td></tr>}
 
                         {items.map(item => (
                             <tr key={item._id}>
+                                <td>
+                                    <img 
+                                        src={item.image && (item.image.startsWith('http') || item.image.startsWith('data:')) 
+                                            ? item.image 
+                                            : item.image && item.image.startsWith('/uploads') 
+                                                ? `${API_URL}${item.image}` 
+                                                : `/images/menu/${item.image}`}
+                                        alt={item.name} 
+                                        style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '4px' }} 
+                                        onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1541745537411-b8046f4d5092?w=50'; }}
+                                    />
+                                </td>
                                 <td><strong>{item.name}</strong></td>
+
                                 <td><span style={{ textTransform: 'capitalize', padding: '5px 10px', backgroundColor: 'var(--primary)', color: 'white', borderRadius: '15px', fontSize: '0.8rem' }}>{item.category}</span></td>
                                 <td style={{ maxWidth: '250px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'var(--text-muted)' }}>{item.desc || '—'}</td>
                                 <td>₹{item.category === 'pizza' ? item.prices?.medium || '-' : item.price}</td>
@@ -321,7 +336,21 @@ const MenuManager = () => {
                             <div className="form-group">
                                 <label>Image Filename / URL</label>
                                 <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                                    <input type="text" value={formData.image || ''} onChange={(e) => setFormData({ ...formData, image: e.target.value })} style={{ flex: 1 }} placeholder="Enter URL or filename..." />
+                                <input type="text" value={formData.image || ''} onChange={(e) => setFormData({ ...formData, image: e.target.value })} style={{ flex: 1 }} placeholder="Enter URL or filename..." />
+                                {formData.image && (
+                                    <div style={{ marginRight: '10px' }}>
+                                        <img 
+                                            src={formData.image && (formData.image.startsWith('http') || formData.image.startsWith('data:')) 
+                                                ? formData.image 
+                                                : formData.image && formData.image.startsWith('/uploads') 
+                                                    ? `${API_URL}${formData.image}` 
+                                                    : `/images/menu/${formData.image}`}
+                                            alt="Preview" 
+                                            style={{ height: '38px', width: '38px', objectFit: 'cover', borderRadius: '4px', border: '1px solid #ddd' }} 
+                                        />
+                                    </div>
+                                )}
+
                                     <label className="btn-secondary" style={{ padding: '10px 15px', cursor: 'pointer', margin: 0, backgroundColor: 'rgba(0,0,0,0.05)', borderRadius: '8px', border: '1px solid #ccc', fontSize: '0.9rem' }}>
                                         <i className="fas fa-upload"></i> Browse...
                                         <input type="file" style={{ display: 'none' }} accept="image/*" onChange={handleImageUpload} />

@@ -213,7 +213,11 @@ const Menu = () => {
                             <div className="item-image-container">
                                 {isBestseller && <span className="bestseller-badge">Bestseller</span>}
                                 <img
-                                    src={pizza.image && (pizza.image.startsWith('http') || pizza.image.startsWith('data:') || pizza.image.startsWith('/')) ? pizza.image : `/images/menu/${pizza.image}`}
+                                    src={pizza.image && (pizza.image.startsWith('http') || pizza.image.startsWith('data:'))
+                                        ? pizza.image
+                                        : pizza.image && pizza.image.startsWith('/uploads')
+                                            ? `${API_URL}${pizza.image}`
+                                            : `/images/menu/${pizza.image}`}
                                     onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1541745537411-b8046f4d5092?ixlib=rb-1.2.1&w=300&q=80' }}
                                     alt={pizza.name}
                                     className="item-image" loading="lazy"
@@ -255,7 +259,11 @@ const Menu = () => {
                             <div className="item-image-container">
                                 {isBestseller && <span className="bestseller-badge">Bestseller</span>}
                                 <img
-                                    src={item.image && (item.image.startsWith('http') || item.image.startsWith('data:') || item.image.startsWith('/')) ? item.image : `/images/menu/${item.image}`}
+                                    src={item.image && (item.image.startsWith('http') || item.image.startsWith('data:'))
+                                        ? item.image
+                                        : item.image && item.image.startsWith('/uploads')
+                                            ? `${API_URL}${item.image}`
+                                            : `/images/menu/${item.image}`}
                                     onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1541745537411-b8046f4d5092?ixlib=rb-1.2.1&w=300&q=80' }}
                                     alt={item.name}
                                     className="item-image" loading="lazy"
@@ -308,7 +316,7 @@ const Menu = () => {
             name: `ðŸŽ BOGO (${bogoOpen}): ${bogoSel.pizza1.name} + ${bogoSel.pizza2.name}`,
             desc: `Buy 1 Get 1 â€” ${bogoSel.size} size`,
             price: offerPrice,
-            image: bogoSel.pizza1.image || 'https://images.unsplash.com/photo-1541745537411-b8046f4d5092?w=300',
+            image: bogoSel.pizza1.image && bogoSel.pizza1.image.startsWith('/uploads') ? `${API_URL}${bogoSel.pizza1.image}` : bogoSel.pizza1.image || 'https://images.unsplash.com/photo-1541745537411-b8046f4d5092?w=300',
             cartId: `bogo-${Date.now()}`,
             selectedSize: bogoSel.size,
         });
@@ -513,7 +521,11 @@ const Menu = () => {
                                                                     }}
                                                                 >
                                                                     <img
-                                                                        src={(p.image?.startsWith('http') || p.image?.startsWith('/') || p.image?.startsWith('data:')) ? p.image : `/images/menu/${p.image}`}
+                                                                        src={(p.image?.startsWith('http') || p.image?.startsWith('data:'))
+                                                                            ? p.image
+                                                                            : p.image?.startsWith('/uploads')
+                                                                                ? `${API_URL}${p.image}`
+                                                                                : `/images/menu/${p.image}`}
                                                                         alt={p.name}
                                                                         style={{ width: '44px', height: '44px', objectFit: 'cover', borderRadius: '9px', flexShrink: 0, boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}
                                                                         onError={e => { e.target.src = 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=100'; }}

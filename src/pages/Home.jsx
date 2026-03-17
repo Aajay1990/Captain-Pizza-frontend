@@ -99,7 +99,11 @@ const Home = () => {
                     ...staticItem,
                     name: live?.name || staticItem.name,
                     price: live?.prices || live?.price || staticItem.price,
-                    image: live?.image?.startsWith('http') || live?.image?.startsWith('data:') ? live.image : staticItem.image
+                    image: live?.image?.startsWith('http') || live?.image?.startsWith('data:') 
+                        ? live.image 
+                        : live?.image?.startsWith('/uploads') 
+                            ? `${API_URL}${live.image}` 
+                            : staticItem.image
                 };
             });
         };
@@ -133,7 +137,7 @@ const Home = () => {
             name: `🎁 BOGO (${bogoSel.category}): ${bogoSel.pizza1.name} + ${bogoSel.pizza2.name}`,
             desc: `Buy 1 Get 1 — ${bogoSel.size} size`,
             price: finalPrice,
-            image: bogoSel.pizza1.image || 'https://images.unsplash.com/photo-1541745537411-b8046f4d5092?w=300',
+            image: bogoSel.pizza1.image && bogoSel.pizza1.image.startsWith('/uploads') ? `${API_URL}${bogoSel.pizza1.image}` : bogoSel.pizza1.image || 'https://images.unsplash.com/photo-1541745537411-b8046f4d5092?w=300',
             cartId: `bogo-${Date.now()}`,
             selectedSize: bogoSel.size,
         });
@@ -150,9 +154,24 @@ const Home = () => {
             { id: 'friends', type: 'action', title: 'Super Value Friends Meal', desc: 'Burger + Fries + Coke', image: offer2, badge: 'Limited Deal', badgeClass: 'limit', price: 100, item: { id: 'combo1', name: 'Friends Meal', price: 100, image: offer2 } },
             { id: 'family', type: 'action', title: 'Family Combo Special', desc: 'Pizza + Burgers + Coke', image: offer3, badge: 'Best Seller', badgeClass: 'highlight', price: 340, item: { id: 'combo2', name: 'Family Combo', price: 340, image: offer3 } }
         ];
-        const dynamic = (activeOffers || []).map((o, idx) => ({
-            id: o._id || `db-off-${idx}`, type: 'promo', title: o.title, desc: o.description, image: o.bannerImage || offer1, badge: 'DEAL', badgeClass: 'highlight', price: o.discountValue, item: { id: o._id, name: o.title, price: o.discountValue || 100, image: o.bannerImage || offer1 }
-        }));
+        const dynamic = (activeOffers || []).map((o, idx) => {
+            const imgSrc = o.bannerImage && (o.bannerImage.startsWith('http') || o.bannerImage.startsWith('data:')) 
+                ? o.bannerImage 
+                : o.bannerImage && o.bannerImage.startsWith('/uploads') 
+                    ? `${API_URL}${o.bannerImage}` 
+                    : offer1;
+            return {
+                id: o._id || `db-off-${idx}`, 
+                type: 'promo', 
+                title: o.title, 
+                desc: o.description, 
+                image: imgSrc, 
+                badge: 'DEAL', 
+                badgeClass: 'highlight', 
+                price: o.discountValue, 
+                item: { id: o._id, name: o.title, price: o.discountValue || 100, image: imgSrc }
+            };
+        });
         const full = [...staticOffers, ...dynamic];
         // Triple clone for infinite swipe
         return [...full, ...full, ...full];
@@ -559,7 +578,14 @@ const Home = () => {
                                                             background: isSel ? bg : '#FFF', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', transition: 'all 0.2s', position: 'relative'
                                                         }}>
                                                         {isSel && <div style={{ position: 'absolute', top: '-8px', right: '-8px', background: primaryColor, color: '#fff', width: '24px', height: '24px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '0.8rem', boxShadow: '0 2px 5px rgba(0,0,0,0.2)' }}>✓</div>}
-                                                        <img src={pz.image} alt={pz.name} style={{ width: '70px', height: '70px', objectFit: 'contain', marginBottom: '8px' }} />
+                                                        <img 
+                                                            src={pz.image && (pz.image.startsWith('http') || pz.image.startsWith('data:'))
+                                                                ? pz.image
+                                                                : pz.image?.startsWith('/uploads')
+                                                                    ? `${API_URL}${pz.image}`
+                                                                    : pz.image} 
+                                                            alt={pz.name} 
+                                                            style={{ width: '70px', height: '70px', objectFit: 'contain', marginBottom: '8px' }} />
                                                         <span style={{ fontSize: '0.85rem', fontWeight: 800, textAlign: 'center', lineHeight: '1.2', marginBottom: '4px', color: '#333' }}>{pz.name}</span>
                                                         <span style={{ fontSize: '0.8rem', fontWeight: 800, color: '#FF5722' }}>Rs.{pP}</span>
                                                     </div>

@@ -13,32 +13,14 @@ const MenuManager = () => {
     const [isRenamingCategory, setIsRenamingCategory] = useState(false);
     const [catRenameData, setCatRenameData] = useState({ oldName: '', newName: '' });
 
-    // Lock background scroll when any modal open
-    useEffect(() => {
-        const adminMain = document.querySelector('.admin-main');
-        const lockScroll = isEditing || itemToDelete || isRenamingCategory;
-
-        if (lockScroll) {
-            if (adminMain) adminMain.style.overflow = 'hidden';
-            document.body.style.overflow = 'hidden';
-        } else {
-            if (adminMain) adminMain.style.overflow = 'auto';
-            document.body.style.overflow = 'unset';
-        }
-        return () => {
-            if (adminMain) adminMain.style.overflow = 'auto';
-            document.body.style.overflow = 'unset';
-        };
-    }, [isEditing, itemToDelete, isRenamingCategory]);
-
-    // Initial Form State
-    const defaultFormState = {
-        name: '', category: 'pizza', subCategory: '', desc: '', price: '',
-        prices: { small: '', medium: '', large: '' }, image: ''
+    const getImgSrc = (img) => {
+        if (!img) return 'https://images.unsplash.com/photo-1541745537411-b8046f4d5092?w=100';
+        if (typeof img !== 'string') return img;
+        if (img.startsWith('http') || img.startsWith('data:')) return img;
+        if (img.startsWith('/uploads')) return `${API_URL}${img}`;
+        return img.startsWith('/') ? img : `/images/menu/${img}`;
     };
-    const [formData, setFormData] = useState(defaultFormState);
 
-    // Fetch complete database load
     useEffect(() => {
         fetchMenu();
     }, []);
@@ -48,24 +30,16 @@ const MenuManager = () => {
         try {
             const res = await fetch(`${API_URL}/api/menu?all=true`);
             const result = await res.json();
-            if (result.success) {
-                setItems(result.data);
-            }
+            if (result.success) setItems(result.data);
         } catch (error) {
-            console.error("Failed to fetch menu items", error);
+            console.error(error);
         } finally {
-            // Keep spinner for at least 600ms for visual comfort
-            setTimeout(() => {
-                setLoading(false);
-                setRefreshing(false);
-            }, 600);
+            setTimeout(() => { setLoading(false); setRefreshing(false); }, 600);
         }
     };
 
     const handleRenameCategory = async (e) => {
         e.preventDefault();
-        if (!catRenameData.oldName || !catRenameData.newName) return;
-
         try {
             const res = await fetch(`${API_URL}/api/menu/category-rename`, {
                 method: 'PUT',
@@ -76,22 +50,22 @@ const MenuManager = () => {
             if (data.success) {
                 alert(data.message);
                 setIsRenamingCategory(false);
-                setCatRenameData({ oldName: '', newName: '' });
                 fetchMenu();
-            } else {
-                alert(data.message);
             }
-        } catch (error) {
-            alert("Error renaming category");
-        }
+        } catch (error) { alert("Error renaming"); }
     };
 
-    // Open/Close Modal
+    const defaultFormState = {
+        name: '', category: 'pizza', subCategory: '', desc: '', price: '',
+        prices: { small: '', medium: '', large: '' }, image: ''
+    };
+    const [formData, setFormData] = useState(defaultFormState);
+
     const openEditor = (item = null) => {
-        const defaultCats = ['pizza', 'burger', 'wrap', 'sandwich', 'side'];
+        const standard = ['pizza', 'burger', 'wrap', 'sandwich', 'side'];
         if (item) {
             setFormData(item);
-            setIsCustomCategory(!defaultCats.includes(item.category));
+            setIsCustomCategory(!standard.includes(item.category));
         } else {
             setFormData(defaultFormState);
             setIsCustomCategory(false);
@@ -100,156 +74,83 @@ const MenuManager = () => {
         setCurrentItem(item);
     };
 
-    const closeEditor = () => {
-        setIsEditing(false);
-        setCurrentItem(null);
-    };
-
     const handleImageUpload = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
-
-        const formDataFile = new FormData();
-        formDataFile.append('image', file);
+        const fd = new FormData();
+        fd.append('image', file);
         setUploadingImage(true);
-
         try {
-            const res = await fetch(`${API_URL}/api/upload`, {
-                method: 'POST',
-                body: formDataFile
-            });
+            const res = await fetch(`${API_URL}/api/upload`, { method: 'POST', body: fd });
             const result = await res.json();
-            if (result.success) {
-                setFormData(prev => ({ ...prev, image: result.image }));
-            } else {
-                alert(result.message || 'Image upload failed');
-            }
-        } catch (error) {
-            console.error('Upload Error:', error);
-            alert('Failed to upload image. Please ensure backend is running.');
-        } finally {
-            setUploadingImage(false);
-            e.target.value = null; // Reset input
-        }
+            if (result.success) setFormData(prev => ({ ...prev, image: result.image }));
+        } catch (err) { alert('Upload failed'); }
+        finally { setUploadingImage(false); }
     };
 
-    // Generic Request Handler
     const handleSave = async (e) => {
         e.preventDefault();
-
         const method = currentItem ? 'PUT' : 'POST';
         const url = currentItem ? `${API_URL}/api/menu/${currentItem._id}` : `${API_URL}/api/menu`;
-
         try {
             const res = await fetch(url, {
-                method,
-                headers: { 'Content-Type': 'application/json' },
+                method, headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(formData)
             });
             const result = await res.json();
-            if (result.success) {
-                fetchMenu();
-                closeEditor();
-            } else {
-                alert(result.message);
-            }
-        } catch (error) {
-            console.error(error);
-            alert("Error saving item");
-        }
-    };
-
-    const initiateDelete = (item) => {
-        setItemToDelete(item);
+            if (result.success) { fetchMenu(); setIsEditing(false); }
+            else alert(result.message);
+        } catch (err) { alert("Error saving"); }
     };
 
     const confirmDelete = async () => {
-        if (!itemToDelete) return;
-
         try {
-            const res = await fetch(`${API_URL}/api/menu/${itemToDelete._id}`, {
-                method: 'DELETE'
-            });
+            const res = await fetch(`${API_URL}/api/menu/${itemToDelete._id}`, { method: 'DELETE' });
             const result = await res.json();
-            if (result.success) {
-                fetchMenu();
-            }
-        } catch (error) {
-            alert("Error deleting item");
-            console.error(error);
-        } finally {
-            setItemToDelete(null);
-        }
+            if (result.success) fetchMenu();
+        } catch (err) { alert("Error deleting"); }
+        finally { setItemToDelete(null); }
     };
 
     return (
-        <div className="menu-manager">
-            <div className="admin-toolbar">
-                <h3 className="section-title">Database Menu Items</h3>
+        <div className="menu-manager" style={{ padding: '20px' }}>
+            <div className="admin-toolbar" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px', alignItems: 'center' }}>
+                <h3 className="section-title">Menu Database</h3>
                 <div style={{ display: 'flex', gap: '10px' }}>
-                    <button
-                        onClick={fetchMenu}
-                        disabled={refreshing}
-                        style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 16px', background: '#2b2b2b', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '700', fontSize: '0.85rem', opacity: refreshing ? 0.7 : 1 }}
-                    >
-                        <i className={`fas fa-sync-alt ${refreshing ? 'fa-spin' : ''}`}></i> {refreshing ? 'Refreshing...' : 'Refresh'}
+                    <button onClick={fetchMenu} className="btn-refresh" style={{ padding: '10px 15px', borderRadius: '8px', border: '1px solid #ccc', background: '#f5f5f5', cursor: 'pointer' }}>
+                        <i className={`fas fa-sync ${refreshing ? 'fa-spin' : ''}`}></i>
                     </button>
-                    <button
-                        className="btn-secondary"
-                        onClick={() => {
-                            const uniqueCats = [...new Set(items.map(i => i.category))];
-                            setCatRenameData({ oldName: uniqueCats[0] || '', newName: '' });
-                            setIsRenamingCategory(true);
-                        }}
-                        style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid #ccc', fontWeight: '700', fontSize: '0.85rem', cursor: 'pointer' }}
-                    >
-                        <i className="fas fa-tags"></i> Edit Categories
-                    </button>
-                    <button className="btn-primary" onClick={() => openEditor()}>
-                        <i className="fas fa-plus"></i> Add New Item
+                    <button className="btn-primary" onClick={() => openEditor()} style={{ background: '#B71C1C', color: '#fff', padding: '10px 20px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: 'bold' }}>
+                        + Add Item
                     </button>
                 </div>
             </div>
 
-            <div className="admin-table-container">
-                <table className="admin-table">
-                    <thead>
+            <div className="admin-table-container" style={{ overflowX: 'auto', background: '#fff', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
+                <table className="admin-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <thead style={{ background: '#f8f9fa', textAlign: 'left' }}>
                         <tr>
-                            <th>Image</th>
-                            <th>Item Name</th>
+                            <th style={{ padding: '15px' }}>Item</th>
                             <th>Category</th>
-                            <th>Description</th>
-                            <th>Base Price</th>
-                            <th>Stock</th>
+                            <th>Price</th>
+                            <th>Status</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {loading && <tr><td colSpan="7" style={{ textAlign: 'center' }}>Loading database records...</td></tr>}
-                        {!loading && items.length === 0 && <tr><td colSpan="7" style={{ textAlign: 'center' }}>No items in database yet. Add some to get started!</td></tr>}
-
-                        {items.map(item => (
-                            <tr key={item._id}>
-                                <td>
-                                    <img 
-                                        src={item.image && (item.image.startsWith('http') || item.image.startsWith('data:')) 
-                                            ? item.image 
-                                            : item.image && item.image.startsWith('/uploads') 
-                                                ? `${API_URL}${item.image}` 
-                                                : `/images/menu/${item.image}`}
-                                        alt={item.name} 
-                                        style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '4px' }} 
-                                        onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1541745537411-b8046f4d5092?w=50'; }}
-                                    />
+                        {loading ? <tr><td colSpan="5" style={{ textAlign: 'center', padding: '40px' }}>Loading...</td></tr> : 
+                        items.map(item => (
+                            <tr key={item._id} style={{ borderTop: '1px solid #eee' }}>
+                                <td style={{ padding: '15px', display: 'flex', alignItems: 'center', gap: '15px' }}>
+                                    <img src={getImgSrc(item.image)} alt={item.name} style={{ width: '50px', height: '50px', borderRadius: '8px', objectFit: 'cover' }} />
+                                    <strong>{item.name}</strong>
                                 </td>
-                                <td><strong>{item.name}</strong></td>
-                                <td><span style={{ textTransform: 'capitalize', padding: '5px 10px', backgroundColor: 'var(--primary)', color: 'white', borderRadius: '15px', fontSize: '0.8rem' }}>{item.category}</span></td>
-                                <td style={{ maxWidth: '250px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'var(--text-muted)' }}>{item.desc || '—'}</td>
-                                <td>₹{item.category === 'pizza' ? item.prices?.medium || '-' : item.price}</td>
-                                <td>{item.isAvailable ? <span style={{ color: 'green' }}><i className="fas fa-check-circle"></i> In Stock</span> : <span style={{ color: 'red' }}><i className="fas fa-times-circle"></i> Out</span>}</td>
-                                <td style={{ display: 'flex', gap: '15px' }}>
-                                    <button className="action-btn edit" onClick={() => openEditor(item)} title="Edit"><i className="fas fa-edit"></i></button>
-                                    <button className="action-btn delete" onClick={() => initiateDelete(item)} title="Delete"><i className="fas fa-trash"></i></button>
+                                <td>{item.category}</td>
+                                <td>₹{item.category === 'pizza' ? (item.prices?.medium || item.price) : item.price}</td>
+                                <td>{item.isAvailable ? '✅ In Stock' : '❌ Out'}</td>
+                                <td style={{ display: 'flex', gap: '10px', padding: '15px' }}>
+                                    <button onClick={() => openEditor(item)} style={{ background: '#e3f2fd', color: '#1976d2', border: 'none', padding: '8px', borderRadius: '4px', cursor: 'pointer' }}><i className="fas fa-edit"></i></button>
+                                    <button onClick={() => setItemToDelete(item)} style={{ background: '#ffebee', color: '#c62828', border: 'none', padding: '8px', borderRadius: '4px', cursor: 'pointer' }}><i className="fas fa-trash"></i></button>
                                 </td>
                             </tr>
                         ))}
@@ -257,236 +158,85 @@ const MenuManager = () => {
                 </table>
             </div>
 
-            {/* Editing Modal UI Overlay */}
+            {/* Editor Modal */}
             {isEditing && (
-                <div className="modal-overlay">
-                    <div className="modal-content animate-fade-scale">
-                        <h3 className="section-title">{currentItem ? `Edit Database Item: ${currentItem.name}` : 'Add New Menu Item'}</h3>
+                <div className="modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div className="modal-content" style={{ background: '#fff', padding: '30px', borderRadius: '16px', width: '100%', maxWidth: '600px', maxHeight: '90vh', overflowY: 'auto' }}>
+                        <h3 style={{ marginBottom: '20px' }}>{currentItem ? 'Edit Item' : 'New Item'}</h3>
                         <form onSubmit={handleSave}>
+                            <div className="form-group" style={{ marginBottom: '15px' }}>
+                                <label>Name</label>
+                                <input type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} required style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }} />
+                            </div>
+                            
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-                                <div className="form-group">
-                                    <label>Name</label>
-                                    <input type="text" value={formData.name || ''} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required />
-                                </div>
-                                <div className="form-group">
+                                <div className="form-group" style={{ marginBottom: '15px' }}>
                                     <label>Category</label>
-                                    <select
-                                        value={isCustomCategory ? 'custom' : formData.category}
-                                        onChange={(e) => {
-                                            if (e.target.value === 'custom') {
-                                                setIsCustomCategory(true);
-                                                setFormData({ ...formData, category: '' });
-                                            } else {
-                                                setIsCustomCategory(false);
-                                                setFormData({ ...formData, category: e.target.value });
-                                            }
-                                        }}
-                                        required={!isCustomCategory}
-                                        style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ccc' }}
-                                    >
-                                        <optgroup label="Standard Categories">
-                                            <option value="pizza">🍕 Pizza</option>
-                                            <option value="burger">🍔 Burger</option>
-                                            <option value="wrap">🌯 Wrap</option>
-                                            <option value="sandwich">🥪 Sandwich</option>
-                                            <option value="side">🍟 Side Order / Drink</option>
-                                        </optgroup>
-                                        {(() => {
-                                            const defaultCats = ['pizza', 'burger', 'wrap', 'sandwich', 'side'];
-                                            const customCats = [...new Set(items.map(i => i.category).filter(c => !defaultCats.includes(c.toLowerCase())))];
-                                            if (customCats.length === 0) return null;
-                                            return (
-                                                <optgroup label="Your Custom Categories">
-                                                    {customCats.map(cat => (
-                                                        <option key={cat} value={cat}>📁 {cat.charAt(0).toUpperCase() + cat.slice(1)}</option>
-                                                    ))}
-                                                </optgroup>
-                                            );
-                                        })()}
-                                        <optgroup label="Other">
-                                            <option value="custom">✏️ Create New Category...</option>
-                                        </optgroup>
+                                    <select value={isCustomCategory ? 'custom' : formData.category} onChange={e => {
+                                        if(e.target.value === 'custom') { setIsCustomCategory(true); setFormData({...formData, category: ''}); }
+                                        else { setIsCustomCategory(false); setFormData({...formData, category: e.target.value}); }
+                                    }} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }}>
+                                        <option value="pizza">Pizza</option>
+                                        <option value="burger">Burger</option>
+                                        <option value="wrap">Wrap</option>
+                                        <option value="sandwich">Sandwich</option>
+                                        <option value="side">Sides/Drinks</option>
+                                        <option value="custom">Create New...</option>
                                     </select>
-
-                                    {isCustomCategory && (
-                                        <input
-                                            type="text"
-                                            placeholder="Type new category name..."
-                                            value={formData.category || ''}
-                                            onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                                            required
-                                            style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #B71C1C', marginTop: '10px', boxSizing: 'border-box' }}
-                                        />
-                                    )}
+                                    {isCustomCategory && <input type="text" value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})} placeholder="Category name..." style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #B71C1C', marginTop: '10px' }} />}
                                 </div>
-                            </div>
-
-                            {formData.category === 'pizza' && (
                                 <div className="form-group">
-                                    <label>Pizza Sub-Category (e.g. Simple Veg, Premium Non-Veg)</label>
-                                    <input type="text" value={formData.subCategory || ''} onChange={(e) => setFormData({ ...formData, subCategory: e.target.value })} />
-                                </div>
-                            )}
-
-                            <div className="form-group">
-                                <label>Product Image</label>
-                                <div 
-                                    className="admin-upload-zone"
-                                    onClick={() => document.getElementById('item-image-upload').click()}
-                                    style={{
-                                        border: '2px dashed #ddd',
-                                        borderRadius: '12px',
-                                        padding: '24px',
-                                        textAlign: 'center',
-                                        cursor: 'pointer',
-                                        background: '#fcfcfc',
-                                        marginBottom: '10px',
-                                        transition: 'all 0.2s'
-                                    }}
-                                >
-                                    <input 
-                                        type="file" 
-                                        id="item-image-upload" 
-                                        style={{ display: 'none' }} 
-                                        accept="image/*" 
-                                        onChange={handleImageUpload} 
-                                    />
-                                    {uploadingImage ? (
-                                        <div style={{ padding: '10px' }}>
-                                            <i className="fas fa-spinner fa-spin" style={{ fontSize: '2rem', color: 'var(--primary)' }}></i>
-                                            <p style={{ marginTop: '10px', fontSize: '0.9rem', color: '#666' }}>Uploading...</p>
-                                        </div>
-                                    ) : formData.image ? (
-                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                                            <img 
-                                                src={formData.image && (formData.image.startsWith('http') || formData.image.startsWith('data:')) 
-                                                    ? formData.image 
-                                                    : formData.image && formData.image.startsWith('/uploads') 
-                                                        ? `${API_URL}${formData.image}` 
-                                                        : `/images/menu/${formData.image}`}
-                                                alt="Preview" 
-                                                style={{ height: '140px', maxWidth: '100%', borderRadius: '12px', objectFit: 'contain', boxShadow: '0 8px 24px rgba(0,0,0,0.12)' }} 
-                                            />
-                                            <p style={{ marginTop: '12px', fontSize: '0.85rem', color: 'var(--primary)', fontWeight: '700' }}>Click to Change Image</p>
-                                        </div>
-                                    ) : (
-                                        <div style={{ padding: '10px' }}>
-                                            <i className="fas fa-image" style={{ fontSize: '3rem', color: '#eee', marginBottom: '10px', display: 'block' }}></i>
-                                            <p style={{ margin: 0, fontWeight: '700', color: '#555' }}>Click to Upload Product Image</p>
-                                            <p style={{ margin: '4px 0 0', fontSize: '0.75rem', color: '#aaa' }}>PNG, JPG or WEBP encouraged</p>
-                                        </div>
-                                    )}
-                                </div>
-                                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', opacity: 0.8 }}>
-                                    <span style={{ fontSize: '0.7rem', color: '#666', fontWeight: 'bold' }}>PATH:</span>
-                                    <input 
-                                        type="text" 
-                                        value={formData.image || ''} 
-                                        onChange={(e) => setFormData({ ...formData, image: e.target.value })} 
-                                        style={{ fontSize: '0.75rem', flex: 1, padding: '6px', borderRadius: '4px', border: '1px solid #eee' }} 
-                                        placeholder="Path or external link" 
-                                    />
+                                    <label>Availability</label>
+                                    <select value={formData.isAvailable ? 'true' : 'false'} onChange={e => setFormData({...formData, isAvailable: e.target.value === 'true'})} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }}>
+                                        <option value="true">In Stock</option>
+                                        <option value="false">Out of Stock</option>
+                                    </select>
                                 </div>
                             </div>
 
-                            <div className="form-group">
-                                <label>Short Description</label>
-                                <input type="text" value={formData.desc || ''} onChange={(e) => setFormData({ ...formData, desc: e.target.value })} />
+                            <div className="form-group" style={{ marginBottom: '15px' }}>
+                                <label>Image</label>
+                                <div onClick={() => document.getElementById('file-up').click()} style={{ border: '2px dashed #ddd', padding: '20px', textAlign: 'center', borderRadius: '12px', cursor: 'pointer', background: '#fcfcfc' }}>
+                                    {uploadingImage ? 'Uploading...' : formData.image ? <img src={getImgSrc(formData.image)} style={{ height: '100px', borderRadius: '8px' }} /> : 'Click to upload image'}
+                                    <input type="file" id="file-up" style={{ display: 'none' }} onChange={handleImageUpload} />
+                                </div>
+                                <input type="text" value={formData.image} onChange={e => setFormData({...formData, image: e.target.value})} placeholder="Or enter URL/path here" style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #eee', marginTop: '8px', fontSize: '0.8rem' }} />
+                            </div>
+
+                            <div className="form-group" style={{ marginBottom: '15px' }}>
+                                <label>Description</label>
+                                <textarea value={formData.desc} onChange={e => setFormData({...formData, desc: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }} />
                             </div>
 
                             {formData.category === 'pizza' ? (
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '15px', padding: '15px', backgroundColor: 'rgba(0,0,0,0.02)', borderRadius: '8px' }}>
-                                    <div className="form-group">
-                                        <label>Small Price</label>
-                                        <input type="number" value={formData.prices?.small || ''} onChange={(e) => setFormData({ ...formData, prices: { ...formData.prices, small: e.target.value } })} required />
-                                    </div>
-                                    <div className="form-group">
-                                        <label>Medium Price</label>
-                                        <input type="number" value={formData.prices?.medium || ''} onChange={(e) => setFormData({ ...formData, prices: { ...formData.prices, medium: e.target.value } })} required />
-                                    </div>
-                                    <div className="form-group">
-                                        <label>Large Price</label>
-                                        <input type="number" value={formData.prices?.large || ''} onChange={(e) => setFormData({ ...formData, prices: { ...formData.prices, large: e.target.value } })} required />
-                                    </div>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
+                                    <div><label>Small</label><input type="number" value={formData.prices?.small} onChange={e => setFormData({...formData, prices: {...formData.prices, small: e.target.value}})} style={{ width: '100%', padding: '8px' }} /></div>
+                                    <div><label>Medium</label><input type="number" value={formData.prices?.medium} onChange={e => setFormData({...formData, prices: {...formData.prices, medium: e.target.value}})} style={{ width: '100%', padding: '8px' }} /></div>
+                                    <div><label>Large</label><input type="number" value={formData.prices?.large} onChange={e => setFormData({...formData, prices: {...formData.prices, large: e.target.value}})} style={{ width: '100%', padding: '8px' }} /></div>
                                 </div>
                             ) : (
-                                <div className="form-group">
-                                    <label>Unified Regular Price (₹)</label>
-                                    <input type="number" value={formData.price || ''} onChange={(e) => setFormData({ ...formData, price: e.target.value })} required />
-                                </div>
+                                <div><label>Price</label><input type="number" value={formData.price} onChange={e => setFormData({...formData, price: e.target.value})} style={{ width: '100%', padding: '10px' }} /></div>
                             )}
 
-                            <div className="form-group" style={{ marginTop: '15px' }}>
-                                <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
-                                    <input type="checkbox" checked={formData.isAvailable !== false} onChange={(e) => setFormData({ ...formData, isAvailable: e.target.checked })} />
-                                    Currently In Stock
-                                </label>
-                            </div>
-
-                            <div className="modal-actions">
-                                <button type="button" className="action-btn" onClick={closeEditor} style={{ padding: '8px 15px' }}>Cancel</button>
-                                <button type="submit" className="btn-primary" style={{ padding: '8px 25px' }}>{currentItem ? 'Update Item' : 'Add to Database'}</button>
+                            <div style={{ display: 'flex', gap: '10px', marginTop: '30px' }}>
+                                <button type="submit" style={{ flex: 1, padding: '12px', background: '#B71C1C', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>Save Item</button>
+                                <button type="button" onClick={() => setIsEditing(false)} style={{ flex: 1, padding: '12px', background: '#eee', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Cancel</button>
                             </div>
                         </form>
                     </div>
                 </div>
             )}
 
-            {/* Custom Delete Confirmation Modal */}
+            {/* Delete Confirmation */}
             {itemToDelete && (
-                <div className="modal-overlay">
-                    <div className="modal-content delete-modal-content animate-fade-scale">
-                        <i className="fas fa-exclamation-triangle"></i>
-                        <h3 className="section-title">Delete Menu Item</h3>
-                        <p style={{ color: 'var(--text-muted)', marginBottom: '30px' }}>
-                            Are you sure you want to permanently delete <strong>{itemToDelete.name}</strong>? This action cannot be undone.
-                        </p>
-                        <div className="modal-actions" style={{ justifyContent: 'center' }}>
-                            <button type="button" className="action-btn" onClick={() => setItemToDelete(null)} style={{ padding: '10px 20px', backgroundColor: 'rgba(0,0,0,0.05)', borderRadius: '8px', color: 'var(--text-main)', fontWeight: 'bold' }}>Cancel</button>
-                            <button type="button" className="btn-danger" onClick={confirmDelete}>Confirm Delete</button>
+                <div className="modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div className="modal-content" style={{ background: '#fff', padding: '30px', borderRadius: '16px', textAlign: 'center' }}>
+                        <h3>Delete {itemToDelete.name}?</h3>
+                        <p>This cannot be undone.</p>
+                        <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+                            <button onClick={confirmDelete} style={{ flex: 1, padding: '10px', background: '#c62828', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Delete</button>
+                            <button onClick={() => setItemToDelete(null)} style={{ flex: 1, padding: '10px', background: '#eee', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Cancel</button>
                         </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Category Rename Modal */}
-            {isRenamingCategory && (
-                <div className="modal-overlay">
-                    <div className="modal-content animate-fade-scale">
-                        <h3 className="section-title">Bulk Rename Category</h3>
-                        <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '15px' }}>
-                            Choose an existing category and enter its new name. All items in this category will be updated.
-                        </p>
-                        <form onSubmit={handleRenameCategory}>
-                            <div className="form-group">
-                                <label>Old Category Name</label>
-                                <select
-                                    className="premium-select"
-                                    value={catRenameData.oldName}
-                                    onChange={(e) => setCatRenameData({ ...catRenameData, oldName: e.target.value })}
-                                    style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ccc' }}
-                                >
-                                    {[...new Set(items.map(i => i.category))].map(cat => (
-                                        <option key={cat} value={cat}>{cat}</option>
-                                    ))}
-                                </select>
-                            </div>
-                            <div className="form-group" style={{ marginTop: '15px' }}>
-                                <label>New Category Name</label>
-                                <input
-                                    type="text"
-                                    className="premium-input-text"
-                                    placeholder="e.g. Italian Crusts"
-                                    value={catRenameData.newName}
-                                    onChange={(e) => setCatRenameData({ ...catRenameData, newName: e.target.value })}
-                                    required
-                                />
-                            </div>
-                            <div className="modal-actions" style={{ marginTop: '25px' }}>
-                                <button type="button" className="action-btn" onClick={() => setIsRenamingCategory(false)} style={{ padding: '8px 15px' }}>Cancel</button>
-                                <button type="submit" className="btn-primary" style={{ padding: '8px 25px' }}>Rename All Items</button>
-                            </div>
-                        </form>
                     </div>
                 </div>
             )}

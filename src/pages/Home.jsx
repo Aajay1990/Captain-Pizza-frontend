@@ -30,7 +30,7 @@ const Home = () => {
     const [dbItems, setDbItems] = useState([]);
     const [timeLeft, setTimeLeft] = useState(24 * 60 * 60); 
     const [isLoading, setIsLoading] = useState(true);
-    const [seasonalOffer, setSeasonalOffer] = useState({ enabled: 'false', title: '', desc: '', image: '', coupon: '', new_user_discount: 20, badge_text: 'HOT DEAL', badge_visible: 'true' });
+    const [seasonalOffer, setSeasonalOffer] = useState({ enabled: 'false', title: '', desc: '', coupon: '', new_user_discount: 20, badge_text: 'HOT DEAL', badge_visible: 'true' });
     const [deliveryInfo, setDeliveryInfo] = useState({ 
         charge: 40, threshold: 300, 
         marquee_text: '🎉 SPECIAL OFFER: 3 KM FREE DELIVERY ON MINIMUM ORDER OF ₹300! 🚚 ORDER NOW!',
@@ -47,7 +47,6 @@ const Home = () => {
         if (img.startsWith('http') || img.startsWith('data:')) return img;
         if (img.startsWith('/uploads')) return `${API_URL}${img}`;
         
-        // If it's just a filename without path info, favor static asset if available
         if (!img.includes('/') && !img.includes('\\') && staticFallback) {
             return staticFallback;
         }
@@ -108,9 +107,7 @@ const Home = () => {
                     ...staticItem,
                     name: live?.name || staticItem.name,
                     price: live?.prices || live?.price || staticItem.price,
-                    image: live?.image && (live.image.startsWith('/uploads') || live.image.startsWith('http')) 
-                        ? getImgSrc(live.image) 
-                        : staticItem.image
+                    image: live?.image ? getImgSrc(live.image, staticItem.image) : staticItem.image
                 };
             });
         };
@@ -126,6 +123,13 @@ const Home = () => {
         return price;
     };
 
+    const formatTime = (seconds) => {
+        const h = Math.floor(seconds / 3600);
+        const m = Math.floor((seconds % 3600) / 60);
+        const s = seconds % 60;
+        return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    };
+
     const handleBogoAddToCart = () => {
         if (!bogoSel.pizza1 || !bogoSel.pizza2 || !bogoSel.category) return;
         const p1P = bogoSel.pizza1.price?.[bogoSel.size] || getDisplayPrice(bogoSel.pizza1.price);
@@ -137,7 +141,7 @@ const Home = () => {
             name: `🎁 BOGO (${bogoSel.category}): ${bogoSel.pizza1.name} + ${bogoSel.pizza2.name}`,
             desc: `Buy 1 Get 1 — ${bogoSel.size} size`,
             price: finalPrice,
-            image: getImgSrc(bogoSel.pizza1.image),
+            image: getImgSrc(bogoSel.pizza1.image, pizzaImg1),
             cartId: `bogo-${Date.now()}`,
             selectedSize: bogoSel.size,
         });
@@ -153,11 +157,11 @@ const Home = () => {
             { id: 'family', type: 'action', title: 'Family Combo Special', desc: 'Pizza + Burgers + Coke', image: offer3, badge: 'Best Seller', badgeClass: 'highlight', price: 340, item: { id: 'combo2', name: 'Family Combo', price: 340, image: offer3 } }
         ];
         const dynamic = (activeOffers || []).map((o, idx) => ({
-            id: o._id || `db-off-${idx}`, type: 'promo', title: o.title, desc: o.description, image: getImgSrc(o.bannerImage), badge: 'DEAL', badgeClass: 'highlight', price: o.discountValue, item: { id: o._id, name: o.title, price: o.discountValue || 100, image: getImgSrc(o.bannerImage) }
+            id: o._id || `db-off-${idx}`, type: 'promo', title: o.title, desc: o.description, image: getImgSrc(o.bannerImage, offer1), badge: 'DEAL', badgeClass: 'highlight', price: o.discountValue, item: { id: o._id, name: o.title, price: o.discountValue || 100, image: getImgSrc(o.bannerImage, offer1) }
         }));
         const full = [...staticOffers, ...dynamic];
         return [...full, ...full, ...full];
-    }, [seasonalOffer, activeOffers]);
+    }, [seasonalOffer, activeOffers]); 
 
     useEffect(() => {
         if (isDragging) return;
@@ -184,8 +188,10 @@ const Home = () => {
                 if (offerData.success && offerData.data.length > 0) {
                     setActiveOffers(offerData.data);
                 }
+
                 if (data.success) {
                     const findVal = (key, def) => data.data.find(s => s.key === key)?.value || def;
+
                     setSeasonalOffer({
                         enabled: findVal('seasonal_offer_enabled', 'false'),
                         title: findVal('seasonal_offer_title', 'Special Offer'),
@@ -194,8 +200,7 @@ const Home = () => {
                         badge_text: findVal('hot_deal_badge_text', 'HOT DEAL'),
                         badge_visible: findVal('hot_deal_badge_visible', 'true'),
                         badge_display: findVal('hot_deal_badge_display', 'inline-block'),
-                        badge_color: findVal('hot_deal_badge_color', '#B71C1C'),
-                        image: findVal('seasonal_offer_image', '')
+                        badge_color: findVal('hot_deal_badge_color', '#B71C1C')
                     });
                     setDeliveryInfo({
                         charge: findVal('delivery_charge', 40),
@@ -246,21 +251,12 @@ const Home = () => {
                             </div>
                         )}
                         <h1 className="hero-h1">
-                            {seasonalOffer.enabled === 'true' ? (
-                                <>
-                                    <span className="hero-h1-accent" style={{ fontSize: '3.5rem' }}>{seasonalOffer.title}</span><br />
-                                    <span className="hero-h1-sub" style={{ fontSize: '2.5rem' }}>{seasonalOffer.desc}</span>
-                                </>
-                            ) : (
-                                <>
-                                    <span className="hero-h1-accent">Hot &amp; Fresh</span><br />
-                                    Pizza<br />
-                                    <span className="hero-h1-sub">Delivered Fast.</span>
-                                </>
-                            )}
+                            <span className="hero-h1-accent">Hot &amp; Fresh</span><br />
+                            Pizza<br />
+                            <span className="hero-h1-sub">Delivered Fast.</span>
                         </h1>
                         <p className="hero-para">
-                            {seasonalOffer.enabled === 'true' ? "Special deal for our valued customers. Limited time offer!" : "Premium ingredients. Wood-fired taste. Straight to your door in under 30 minutes."}
+                            Premium ingredients. Wood-fired taste. Straight to your door in under 30 minutes.
                         </p>
                         <div className="hero-cta-row">
                             <Link to="/menu" className="hero-btn-primary">Order Now 🍕</Link>
@@ -275,15 +271,7 @@ const Home = () => {
 
                     <div className="hero-right">
                         <div className="hero-pizza-glow"></div>
-                        <img 
-                            src={
-                                (seasonalOffer.enabled === 'true' && seasonalOffer.image) 
-                                    ? getImgSrc(seasonalOffer.image)
-                                    : heroPizza
-                            } 
-                            alt="Captain Pizza" 
-                            className="hero-pizza-img" 
-                        />
+                        <img src={heroPizza} alt="Captain Pizza" className="hero-pizza-img" />
                     </div>
                 </section>
 
@@ -313,33 +301,34 @@ const Home = () => {
                     >
                         <div className="css-marquee-track">
                             {marqueeOffers.map((off, idx) => (
-                                <div key={`m-${off.id}-${idx}`} className="premium-slider-card css-marquee-card dominos-style">
-                                    <div className="d-badge">Captain's<br/><span>TOP 10</span></div>
-                                    <img src={getImgSrc(off.image)} className="d-bg-img" alt={off.title} />
+                                <div key={`m-${off.id}-${idx}`} className="premium-slider-card css-marquee-card">
+                                    <div className="offer-img-wrapper">
+                                        <img src={getImgSrc(off.image)} className="offer-bg-img" alt={off.title} />
+                                        <div className="offer-img-overlay-btn">Customise <i className="fas fa-chevron-right"></i></div>
+                                    </div>
                                     
-                                    <div className="d-content-wrapper">
-                                        <div className="d-custom-wrap">
-                                            <button className="d-customise-btn">Customise <i className="fas fa-chevron-right"></i></button>
+                                    <div className="offer-card-body">
+                                        <div className="offer-header-row">
+                                            <div className="diet-icon"></div>
+                                            <h3 className="offer-title">{off.title}</h3>
                                         </div>
                                         
-                                        <div className="d-text-content">
-                                            <div className="d-title-group">
-                                                <div className="d-veg-icon"></div>
-                                                <h3 className="d-title">{off.title}</h3>
-                                            </div>
-                                            <p className="d-desc">{off.desc}</p>
-                                        </div>
+                                        <p className="offer-desc">{off.desc}</p>
                                         
-                                        <div className="d-footer">
-                                            <div className="d-price-col">
-                                                <div className="d-price">₹{off.price || 150}</div>
-                                                <div className="d-meta">Regular | New Hand... <i className="fas fa-chevron-right"></i></div>
+                                        <div className="offer-footer-row">
+                                            <div className="offer-price-col">
+                                                <div className="offer-price">₹{off.price || 150}</div>
+                                                <div className="offer-meta">Regular | New Hand Tossed <i className="fas fa-chevron-right"></i></div>
                                             </div>
-                                            <div className="d-actions">
-                                                {off.isWelcome && <Link to="/menu" className="d-add-btn">Add +</Link>}
-                                                {off.isBogo && <button onClick={() => setBogoOpen(true)} className="d-add-btn">Add +</button>}
-                                                {(off.type === 'action' || off.type === 'promo') && !off.isBogo && (
-                                                    <button className="d-add-btn" onClick={() => addToCart(off.item)}>Add +</button>
+                                            
+                                            <div className="offer-actions">
+                                                {off.isWelcome && <Link to="/menu" className="premium-add-btn">Claim +</Link>}
+                                                {off.isBogo && <button onClick={() => setBogoOpen(true)} className="premium-add-btn">BOGO +</button>}
+                                                {off.type === 'action' && !off.isBogo && (
+                                                    <button className="premium-add-btn" onClick={() => addToCart(off.item)}>Add +</button>
+                                                )}
+                                                {off.type === 'promo' && (
+                                                    <button className="premium-add-btn" onClick={() => addToCart(off.item)}>Add Deal +</button>
                                                 )}
                                             </div>
                                         </div>
@@ -353,6 +342,7 @@ const Home = () => {
                 <section className="trending-section">
                     <h2 className="section-title">Trending 🔥</h2>
                     <div className="trending-slider">
+
                         <div className="trending-card">
                             <img src={pizzaImg1} alt="Margherita" className="trending-img" />
                             <div className="trending-info">
@@ -394,6 +384,7 @@ const Home = () => {
                                 </div>
                             </div>
                         </div>
+
                     </div>
                 </section>
 
@@ -474,6 +465,7 @@ const Home = () => {
                             </div>
 
                             <div style={{ padding: '20px', overflowY: 'auto', flex: 1 }}>
+
                                 <div style={{ marginBottom: '20px' }}>
                                     <div style={{ fontWeight: 800, fontSize: '0.75rem', color: '#888', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '10px' }}>
                                         Step 1 — Choose Pizza Category
@@ -555,7 +547,7 @@ const Home = () => {
                                             {bogoSel.pizza1.name} + {bogoSel.pizza2.name} ({bogoSel.size}) • Pay only <strong style={{ color: primaryColor }}>Rs.{oP}</strong>
                                         </div>
                                         <button onClick={handleBogoAddToCart} style={{ width: '100%', padding: '15px', border: 'none', borderRadius: '14px', background: grad, color: '#fff', fontWeight: 900, fontSize: '1rem', cursor: 'pointer' }}>
-                                            🎉 Add BOGO Deal — Pay Rs.{oP}
+                                            🎁 Add BOGO Deal — Pay Rs.{oP}
                                         </button>
                                     </div>
                                 ) : (

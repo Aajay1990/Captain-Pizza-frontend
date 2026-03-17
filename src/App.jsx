@@ -6,6 +6,7 @@ import CartDrawer from './components/CartDrawer';
 import Home from './pages/Home';
 import Menu from './pages/Menu';
 import Order from './pages/Order';
+import OrderHistory from './pages/OrderHistory';
 import Login from './pages/Login';
 import ForgotPassword from './pages/ForgotPassword';
 import VerifyEmail from './pages/VerifyEmail';
@@ -42,6 +43,7 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/menu" element={<Menu />} />
           <Route path="/order" element={<Order />} />
+          <Route path="/order-history" element={<OrderHistory />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/verify-email" element={<VerifyEmail />} />
           <Route path="/about" element={<AboutUs />} />
@@ -50,15 +52,11 @@ function App() {
           <Route path="/terms" element={<TermsConditions />} />
           <Route path="/refund-policy" element={<RefundPolicy />} />
 
-          {/* ── Login Routes ──────────────────────────────────────── */}
-          {/* Customer + general login */}
-          <Route path="/login" element={<Login />} />
-          {/* Hidden admin login URL — NOT shown in navbar */}
+          {/* ── Login Routes (Staff/Admin Only) ─────────────────────── */}
           <Route path="/admin-login" element={<Login adminOnly />} />
-          {/* Hidden staff/POS login URL */}
           <Route path="/staff-login" element={<Login staffOnly />} />
 
-          {/* ── Protected Customer Routes ─────────────────────────── */}
+          {/* ── Protected Customer Routes (Fallback) ────────────────── */}
           <Route path="/profile" element={
             <ProtectedRoute allowedRoles={['customer', 'user']}>
               <UserProfile />
@@ -66,7 +64,6 @@ function App() {
           } />
 
           {/* ── Protected Admin Routes ────────────────────────────── */}
-          {/* Admin accesses panel via /admin or /admin-login */}
           <Route path="/admin/*" element={
             <ProtectedRoute allowedRoles={['admin']} redirectTo="/admin-login">
               <AdminDashboard />
@@ -74,7 +71,6 @@ function App() {
           } />
 
           {/* ── Protected POS Routes ──────────────────────────────── */}
-          {/* Staff accesses POS via /pos or /staff-login */}
           <Route path="/pos" element={
             <ProtectedRoute allowedRoles={['staff', 'pos', 'admin']} redirectTo="/staff-login">
               <POSPanel />

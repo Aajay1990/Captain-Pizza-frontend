@@ -37,37 +37,8 @@ const Navbar = () => {
                         <Link to="/menu" className="nav-link" onClick={closeMenu}>Menu</Link>
                     </li>
                     <li className="nav-item">
-                        <Link to="/order" className="nav-link" onClick={closeMenu}>Order History</Link>
+                        <Link to="/order-history" className="nav-link" onClick={closeMenu}>Order History</Link>
                     </li>
-
-                    {user ? (
-                        <>
-                            {/* Customer profile link */}
-                            {isPublicUser && (
-                                <li className="nav-item">
-                                    <Link to="/profile" className="nav-link profile-link" onClick={closeMenu}>
-                                        <i className="fas fa-user-circle"></i> {user.name?.split(' ')[0] || 'Profile'}
-                                    </Link>
-                                </li>
-                            )}
-
-                            <li className="nav-item">
-                                <button
-                                    onClick={() => { logoutAuth(); closeMenu(); }}
-                                    className="nav-link logout-btn"
-                                >
-                                    <i className="fas fa-sign-out-alt"></i> Logout
-                                </button>
-                            </li>
-                        </>
-                    ) : (
-                        <li className="nav-item">
-                            <Link to="/login" className="nav-link login-btn" onClick={closeMenu}>
-                                <i className="fas fa-sign-in-alt"></i> Login
-                            </Link>
-                        </li>
-                    )}
-
                 </ul>
             </div>
 

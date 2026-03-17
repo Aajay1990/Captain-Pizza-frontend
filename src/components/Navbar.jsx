@@ -36,8 +36,9 @@ const Navbar = () => {
                     <li className="nav-item">
                         <Link to="/menu" className="nav-link" onClick={closeMenu}>Menu</Link>
                     </li>
-
-                    {/* Cart Icon removed as per request */}
+                    <li className="nav-item">
+                        <Link to="/order" className="nav-link" onClick={closeMenu}>Order History</Link>
+                    </li>
 
                     {user ? (
                         <>

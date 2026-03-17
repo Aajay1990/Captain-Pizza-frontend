@@ -41,13 +41,17 @@ const Home = () => {
     const [activeOffers, setActiveOffers] = useState([]);
     const sliderRef = useRef(null);
 
-    const getImgSrc = (img) => {
-        if (!img) return 'https://images.unsplash.com/photo-1541745537411-b8046f4d5092?w=300';
+    const getImgSrc = (img, staticFallback = null) => {
+        if (!img) return staticFallback || 'https://images.unsplash.com/photo-1541745537411-b8046f4d5092?w=300';
         if (typeof img !== 'string') return img; 
         if (img.startsWith('http') || img.startsWith('data:')) return img;
         if (img.startsWith('/uploads')) return `${API_URL}${img}`;
-        // Fallback for local paths without leading slash
-        if (img.includes('assets/') || img.includes('images/')) return img;
+        
+        // If it's just a filename without path info, favor static asset if available
+        if (!img.includes('/') && !img.includes('\\') && staticFallback) {
+            return staticFallback;
+        }
+        
         return img;
     };
 
@@ -104,7 +108,9 @@ const Home = () => {
                     ...staticItem,
                     name: live?.name || staticItem.name,
                     price: live?.prices || live?.price || staticItem.price,
-                    image: live?.image ? getImgSrc(live.image) : staticItem.image
+                    image: live?.image && (live.image.startsWith('/uploads') || live.image.startsWith('http')) 
+                        ? getImgSrc(live.image) 
+                        : staticItem.image
                 };
             });
         };

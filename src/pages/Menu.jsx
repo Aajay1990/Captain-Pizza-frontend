@@ -19,12 +19,18 @@ const Menu = () => {
     const [bogoOpen, setBogoOpen] = useState(false);
     const [bogoSel, setBogoSel] = useState({ category: null, size: 'medium', pizza1: null, pizza2: null });
 
-    const getImgSrc = (img) => {
-        if (!img) return 'https://images.unsplash.com/photo-1541745537411-b8046f4d5092?w=300';
+    const getImgSrc = (img, staticFallback = null) => {
+        if (!img) return staticFallback || 'https://images.unsplash.com/photo-1541745537411-b8046f4d5092?w=300';
         if (typeof img !== 'string') return img; 
         if (img.startsWith('http') || img.startsWith('data:')) return img;
         if (img.startsWith('/uploads')) return `${API_URL}${img}`;
-        // For bundled assets or direct public folder paths
+        
+        // If it's just a filename (e.g. "MERGHERITA.png") without path info, 
+        // it's likely a legacy DB entry. If we have a static fallback (bundled asset), use it.
+        if (!img.includes('/') && !img.includes('\\') && staticFallback) {
+            return staticFallback;
+        }
+        
         return img;
     };
 
@@ -89,7 +95,9 @@ const Menu = () => {
                             desc: live.desc || staticItem.desc,
                             price: live.prices || live.price || staticItem.price,
                             isAvailable: live.isAvailable,
-                            image: live.image ? getImgSrc(live.image) : staticItem.image
+                            image: live.image && (live.image.startsWith('/uploads') || live.image.startsWith('http')) 
+                                ? getImgSrc(live.image) 
+                                : staticItem.image
                         };
                     }
                     return staticItem;

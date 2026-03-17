@@ -29,7 +29,7 @@ const MenuManager = () => {
             if (adminMain) adminMain.style.overflow = 'auto';
             document.body.style.overflow = 'unset';
         };
-    }, [isEditing, itemToDelete]);
+    }, [isEditing, itemToDelete, isRenamingCategory]);
 
     // Initial Form State
     const defaultFormState = {
@@ -222,7 +222,6 @@ const MenuManager = () => {
                             <th>Base Price</th>
                             <th>Stock</th>
                             <th>Actions</th>
-
                         </tr>
                     </thead>
                     <tbody>
@@ -244,7 +243,6 @@ const MenuManager = () => {
                                     />
                                 </td>
                                 <td><strong>{item.name}</strong></td>
-
                                 <td><span style={{ textTransform: 'capitalize', padding: '5px 10px', backgroundColor: 'var(--primary)', color: 'white', borderRadius: '15px', fontSize: '0.8rem' }}>{item.category}</span></td>
                                 <td style={{ maxWidth: '250px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'var(--text-muted)' }}>{item.desc || '—'}</td>
                                 <td>₹{item.category === 'pizza' ? item.prices?.medium || '-' : item.price}</td>
@@ -286,7 +284,6 @@ const MenuManager = () => {
                                         required={!isCustomCategory}
                                         style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ccc' }}
                                     >
-                                        {/* Standard categories */}
                                         <optgroup label="Standard Categories">
                                             <option value="pizza">🍕 Pizza</option>
                                             <option value="burger">🍔 Burger</option>
@@ -294,7 +291,6 @@ const MenuManager = () => {
                                             <option value="sandwich">🥪 Sandwich</option>
                                             <option value="side">🍟 Side Order / Drink</option>
                                         </optgroup>
-                                        {/* Existing custom DB categories */}
                                         {(() => {
                                             const defaultCats = ['pizza', 'burger', 'wrap', 'sandwich', 'side'];
                                             const customCats = [...new Set(items.map(i => i.category).filter(c => !defaultCats.includes(c.toLowerCase())))];
@@ -325,7 +321,6 @@ const MenuManager = () => {
                                 </div>
                             </div>
 
-                            {/* Pizza Sub Category for Custom Tabs mapping */}
                             {formData.category === 'pizza' && (
                                 <div className="form-group">
                                     <label>Pizza Sub-Category (e.g. Simple Veg, Premium Non-Veg)</label>
@@ -334,29 +329,64 @@ const MenuManager = () => {
                             )}
 
                             <div className="form-group">
-                                <label>Image Filename / URL</label>
-                                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                                <input type="text" value={formData.image || ''} onChange={(e) => setFormData({ ...formData, image: e.target.value })} style={{ flex: 1 }} placeholder="Enter URL or filename..." />
-                                {formData.image && (
-                                    <div style={{ marginRight: '10px' }}>
-                                        <img 
-                                            src={formData.image && (formData.image.startsWith('http') || formData.image.startsWith('data:')) 
-                                                ? formData.image 
-                                                : formData.image && formData.image.startsWith('/uploads') 
-                                                    ? `${API_URL}${formData.image}` 
-                                                    : `/images/menu/${formData.image}`}
-                                            alt="Preview" 
-                                            style={{ height: '38px', width: '38px', objectFit: 'cover', borderRadius: '4px', border: '1px solid #ddd' }} 
-                                        />
-                                    </div>
-                                )}
-
-                                    <label className="btn-secondary" style={{ padding: '10px 15px', cursor: 'pointer', margin: 0, backgroundColor: 'rgba(0,0,0,0.05)', borderRadius: '8px', border: '1px solid #ccc', fontSize: '0.9rem' }}>
-                                        <i className="fas fa-upload"></i> Browse...
-                                        <input type="file" style={{ display: 'none' }} accept="image/*" onChange={handleImageUpload} />
-                                    </label>
+                                <label>Product Image</label>
+                                <div 
+                                    className="admin-upload-zone"
+                                    onClick={() => document.getElementById('item-image-upload').click()}
+                                    style={{
+                                        border: '2px dashed #ddd',
+                                        borderRadius: '12px',
+                                        padding: '24px',
+                                        textAlign: 'center',
+                                        cursor: 'pointer',
+                                        background: '#fcfcfc',
+                                        marginBottom: '10px',
+                                        transition: 'all 0.2s'
+                                    }}
+                                >
+                                    <input 
+                                        type="file" 
+                                        id="item-image-upload" 
+                                        style={{ display: 'none' }} 
+                                        accept="image/*" 
+                                        onChange={handleImageUpload} 
+                                    />
+                                    {uploadingImage ? (
+                                        <div style={{ padding: '10px' }}>
+                                            <i className="fas fa-spinner fa-spin" style={{ fontSize: '2rem', color: 'var(--primary)' }}></i>
+                                            <p style={{ marginTop: '10px', fontSize: '0.9rem', color: '#666' }}>Uploading...</p>
+                                        </div>
+                                    ) : formData.image ? (
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                            <img 
+                                                src={formData.image && (formData.image.startsWith('http') || formData.image.startsWith('data:')) 
+                                                    ? formData.image 
+                                                    : formData.image && formData.image.startsWith('/uploads') 
+                                                        ? `${API_URL}${formData.image}` 
+                                                        : `/images/menu/${formData.image}`}
+                                                alt="Preview" 
+                                                style={{ height: '140px', maxWidth: '100%', borderRadius: '12px', objectFit: 'contain', boxShadow: '0 8px 24px rgba(0,0,0,0.12)' }} 
+                                            />
+                                            <p style={{ marginTop: '12px', fontSize: '0.85rem', color: 'var(--primary)', fontWeight: '700' }}>Click to Change Image</p>
+                                        </div>
+                                    ) : (
+                                        <div style={{ padding: '10px' }}>
+                                            <i className="fas fa-image" style={{ fontSize: '3rem', color: '#eee', marginBottom: '10px', display: 'block' }}></i>
+                                            <p style={{ margin: 0, fontWeight: '700', color: '#555' }}>Click to Upload Product Image</p>
+                                            <p style={{ margin: '4px 0 0', fontSize: '0.75rem', color: '#aaa' }}>PNG, JPG or WEBP encouraged</p>
+                                        </div>
+                                    )}
                                 </div>
-                                {uploadingImage && <span style={{ fontSize: '0.8rem', color: 'var(--primary)', marginTop: '5px', display: 'block' }}>Uploading Please Wait...</span>}
+                                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', opacity: 0.8 }}>
+                                    <span style={{ fontSize: '0.7rem', color: '#666', fontWeight: 'bold' }}>PATH:</span>
+                                    <input 
+                                        type="text" 
+                                        value={formData.image || ''} 
+                                        onChange={(e) => setFormData({ ...formData, image: e.target.value })} 
+                                        style={{ fontSize: '0.75rem', flex: 1, padding: '6px', borderRadius: '4px', border: '1px solid #eee' }} 
+                                        placeholder="Path or external link" 
+                                    />
+                                </div>
                             </div>
 
                             <div className="form-group">

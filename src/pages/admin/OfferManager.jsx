@@ -232,24 +232,58 @@ const OfferManager = () => {
                             </div>
 
                             <div className="form-group">
-                                <label>Banner Image (Opt.)</label>
-                                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                                    <input type="text" value={formData.bannerImage || ''} onChange={(e) => setFormData({ ...formData, bannerImage: e.target.value })} style={{ flex: 1 }} placeholder="URL or upload image..." />
-                                    {formData.bannerImage && (
-                                        <div style={{ marginRight: '10px' }}>
+                                <label>Campaign Banner Image</label>
+                                <div 
+                                    className="admin-upload-zone"
+                                    onClick={() => document.getElementById('offer-image-upload').click()}
+                                    style={{
+                                        border: '2px dashed #ddd',
+                                        borderRadius: '12px',
+                                        padding: '24px',
+                                        textAlign: 'center',
+                                        cursor: 'pointer',
+                                        background: '#fcfcfc',
+                                        marginBottom: '10px'
+                                    }}
+                                >
+                                    <input 
+                                        type="file" 
+                                        id="offer-image-upload" 
+                                        style={{ display: 'none' }} 
+                                        accept="image/*" 
+                                        onChange={handleImageUpload} 
+                                    />
+                                    {uploadingImage ? (
+                                        <div style={{ padding: '10px' }}>
+                                            <i className="fas fa-spinner fa-spin" style={{ fontSize: '2rem', color: 'var(--primary)' }}></i>
+                                            <p style={{ marginTop: '10px' }}>Uploading...</p>
+                                        </div>
+                                    ) : formData.bannerImage ? (
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                                             <img 
                                                 src={formData.bannerImage.startsWith('/uploads') ? `${API_URL}${formData.bannerImage}` : formData.bannerImage} 
                                                 alt="Preview" 
-                                                style={{ height: '38px', width: '38px', objectFit: 'cover', borderRadius: '4px', border: '1px solid #ddd' }} 
+                                                style={{ height: '120px', maxWidth: '100%', borderRadius: '12px', objectFit: 'contain', boxShadow: '0 8px 24px rgba(0,0,0,0.12)' }} 
                                             />
+                                            <p style={{ marginTop: '12px', fontSize: '0.85rem', color: 'var(--primary)', fontWeight: '700' }}>Change Banner</p>
+                                        </div>
+                                    ) : (
+                                        <div style={{ padding: '10px' }}>
+                                            <i className="fas fa-cloud-upload-alt" style={{ fontSize: '3rem', color: '#eee', marginBottom: '10px', display: 'block' }}></i>
+                                            <p style={{ margin: 0, fontWeight: '700', color: '#555' }}>Click to Upload Banner Image</p>
                                         </div>
                                     )}
-                                    <label className="btn-secondary" style={{ padding: '10px 15px', cursor: 'pointer', margin: 0, backgroundColor: 'rgba(0,0,0,0.05)', borderRadius: '8px', border: '1px solid #ccc', fontSize: '0.9rem' }}>
-                                        <i className="fas fa-upload"></i> Browse...
-                                        <input type="file" style={{ display: 'none' }} accept="image/*" onChange={handleImageUpload} />
-                                    </label>
                                 </div>
-                                {uploadingImage && <span style={{ fontSize: '0.8rem', color: 'var(--primary)', marginTop: '5px' }}>Uploading...</span>}
+                                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', opacity: 0.8 }}>
+                                    <span style={{ fontSize: '0.7rem', color: '#666', fontWeight: 'bold' }}>BANNER URL/PATH:</span>
+                                    <input 
+                                        type="text" 
+                                        value={formData.bannerImage || ''} 
+                                        onChange={(e) => setFormData({ ...formData, bannerImage: e.target.value })} 
+                                        style={{ fontSize: '0.75rem', flex: 1, padding: '6px', borderRadius: '4px', border: '1px solid #eee' }} 
+                                        placeholder="Path or external link" 
+                                    />
+                                </div>
                             </div>
 
                             <div className="form-group">

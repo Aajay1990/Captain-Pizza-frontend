@@ -10,7 +10,7 @@ import { ShoppingCart } from 'lucide-react';
 const Menu = () => {
     const location = useLocation();
     const navigate = useNavigate();
-    const [activeSection, setActiveSection] = useState('simple-veg');
+    const [activeSection, setActiveSection] = useState('specialOffers');
     const { addToCart, setIsCartOpen } = useContext(CartContext);
     const sectionRefs = useRef({});
     const [dbItems, setDbItems] = useState([]);
@@ -21,7 +21,7 @@ const Menu = () => {
     const [bogoSel, setBogoSel] = useState({ category: null, size: 'medium', pizza1: null, pizza2: null });
 
     const getImgSrc = (img, staticFallback = null) => {
-        if (!img) return staticFallback || 'https://images.unsplash.com/photo-1541745537411-b8046f4d5092?w=300';
+        if (!img) return staticFallback || 'https://images.unsplash.com/photo-1541745537411-b8046f4d5092?w=500';
         if (typeof img !== 'string') return img; 
         
         let normalizedImg = img.replace(/\\/g, '/');
@@ -220,6 +220,8 @@ const Menu = () => {
 
     const handleAddToCart = (item) => { addToCart(item); };
 
+    const isBestseller = (name) => ['Farm House', 'Extravaganza Veg', 'Margherita', 'Monster Club Burger', 'Family Combo', 'Double Cheese Margherita'].includes(name);
+
     const renderPizzaSection = (category) => (
         <div key={category.id} id={category.id} className="menu-section" ref={el => sectionRefs.current[category.id] = el}>
             <h3 className="category-title">{category.category}</h3>
@@ -270,8 +272,20 @@ const Menu = () => {
                                 </div>
                             </div>
                         </div>
-                    );
-                })}
+                        <div className="size-selector-row">
+                            {['small', 'medium', 'large'].map(sz => {
+                                const p = pizza.price?.[sz];
+                                if (!p) return null;
+                                return (
+                                    <div key={sz} className="size-btn-v2" onClick={() => handleAddToCartWithCheck(pizza, sz)}>
+                                        <span className="letter">{sz.charAt(0).toUpperCase()}</span>
+                                        <span className="price">₹{p}</span>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                ))}
             </div>
         </div>
     );
@@ -316,6 +330,21 @@ const Menu = () => {
                                         </div>
                                     </div>
                                 </div>
+                            </div>
+                            <div className="offer-actions">
+                                <span className="offer-price">₹{typeof item.price === 'object' ? (item.price.medium || item.price.regular) : item.price}</span>
+                                {item.name.includes('Deluxe Veg') ? (
+                                    <button className="red-add-btn" onClick={() => openBogo('Deluxe Veg')}>Select +</button>
+                                ) : item.name.includes('Supreme Veg') ? (
+                                    <button className="red-add-btn" onClick={() => openBogo('Supreme Veg')}>Select +</button>
+                                ) : item.name === 'Buy 1 Get 1 FREE' ? (
+                                    <div style={{ display: 'flex', gap: '8px' }}>
+                                        <button className="red-add-btn" style={{ padding: '8px 12px', fontSize: '0.75rem' }} onClick={() => openBogo('Deluxe Veg')}>Deluxe +</button>
+                                        <button className="red-add-btn" style={{ padding: '8px 12px', fontSize: '0.75rem' }} onClick={() => openBogo('Supreme Veg')}>Supreme +</button>
+                                    </div>
+                                ) : (
+                                    <button className="red-add-btn" onClick={() => handleAddToCartWithCheck(item)}>Add +</button>
+                                )}
                             </div>
                         </div>
                     );
@@ -478,8 +507,8 @@ const Menu = () => {
                             </div>
                         </div>
                     </div>
-                );
-            })()}
+                </div>
+            )}
         </div>
     );
 };

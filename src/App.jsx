@@ -61,12 +61,10 @@ function App() {
           {/* Hidden admin login URL — NOT shown in navbar */}
           {/* Hidden admin login URL — NOT shown in navbar */}
           <Route path="/admin-login" element={<Login adminOnly />} />
-          {/* Hidden staff/POS login URL */}
           <Route path="/staff-login" element={<Login staffOnly />} />
 
 
           {/* ── Protected Admin Routes ────────────────────────────── */}
-          {/* Admin accesses panel via /admin or /admin-login */}
           <Route path="/admin/*" element={
             <ProtectedRoute allowedRoles={['admin']} redirectTo="/admin-login">
               <AdminDashboard />
@@ -74,7 +72,6 @@ function App() {
           } />
 
           {/* ── Protected POS Routes ──────────────────────────────── */}
-          {/* Staff accesses POS via /pos or /staff-login */}
           <Route path="/pos" element={
             <ProtectedRoute allowedRoles={['staff', 'pos', 'admin']} redirectTo="/staff-login">
               <POSPanel />

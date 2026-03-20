@@ -109,7 +109,7 @@ const CouponManager = () => {
         try {
             const res = await fetch(`${API_URL}/api/admin/coupons/${id}`, {
                 method: 'DELETE',
-                credentials: 'omit', // Keep matching other files but add omit or include if backend responds. Let's use omit to match OfferManager or include for session
+                credentials: 'include',
                 headers: { ...(token ? { 'Authorization': `Bearer ${token}` } : {}) }
             });
             const data = await res.json();

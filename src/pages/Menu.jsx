@@ -272,20 +272,8 @@ const Menu = () => {
                                 </div>
                             </div>
                         </div>
-                        <div className="size-selector-row">
-                            {['small', 'medium', 'large'].map(sz => {
-                                const p = pizza.price?.[sz];
-                                if (!p) return null;
-                                return (
-                                    <div key={sz} className="size-btn-v2" onClick={() => handleAddToCartWithCheck(pizza, sz)}>
-                                        <span className="letter">{sz.charAt(0).toUpperCase()}</span>
-                                        <span className="price">₹{p}</span>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    </div>
-                ))}
+                    );
+                })}
             </div>
         </div>
     );
@@ -507,8 +495,8 @@ const Menu = () => {
                             </div>
                         </div>
                     </div>
-                </div>
-            )}
+                );
+            })()}
         </div>
     );
 };

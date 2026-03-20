@@ -30,7 +30,7 @@ function App() {
   const hideHeaderFooter = isAdminRoute || isPosRoute;
 
   React.useEffect(() => {
-    console.log("%c🚀 PIZZA WING LIVE - VERSION: MARCH 20-REVISED-V1", "color: #ff0000; font-size: 16px; font-weight: bold; background: #000; padding: 5px;");
+    console.log("%c🚀 PIZZA WING LIVE - VERSION: MARCH 20-MASTER-V2", "color: #fff; font-size: 20px; font-weight: bold; background: #ff0000; padding: 10px; border-radius: 5px;");
     if (!localStorage.getItem('cp_guest_id')) {
       const gId = 'guest_' + Math.random().toString(36).substring(2, 9) + Date.now().toString(36);
       localStorage.setItem('cp_guest_id', gId);

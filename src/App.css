@@ -14,7 +14,7 @@
 /* Global Floating Buttons Styles */
 .floating-whatsapp {
     position: fixed;
-    bottom: 25px;
+    bottom: 60px;
     right: 25px;
     background: #25D366;
     color: white;
@@ -55,7 +55,7 @@
 .floating-cart-bucket {
     position: fixed;
     right: 25px;
-    bottom: 100px; /* Positioned above WhatsApp */
+    bottom: 145px; /* Positioned above WhatsApp */
     width: 65px;
     height: 65px;
     background: linear-gradient(135deg, #ff416c, #ff4b2b);
@@ -97,7 +97,7 @@
 
 @media (max-width: 768px) {
     .floating-whatsapp {
-        bottom: 20px;
+        bottom: 100px;
         right: 20px;
         width: 55px;
         height: 55px;
@@ -105,7 +105,7 @@
     }
 
     .floating-cart-bucket {
-        bottom: 85px; /* Above WhatsApp on mobile */
+        bottom: 175px; /* Above WhatsApp on mobile */
         right: 20px;
         width: 55px;
         height: 55px;

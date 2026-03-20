@@ -1,5 +1,5 @@
-import API_URL from '../../apiConfig';
 import React, { useState, useEffect } from 'react';
+import { api } from '../../context/AuthContext';
 
 const OfferManager = () => {
     const [offers, setOffers] = useState([]);
@@ -43,9 +43,8 @@ const OfferManager = () => {
 
     const fetchOffers = async () => {
         try {
-            const res = await fetch(`${API_URL}/api/admin/offers`);
-            const data = await res.json();
-            if (data.success) setOffers(data.data);
+            const res = await api.get('/api/admin/offers');
+            if (res.data.success) setOffers(res.data.data);
             else setOffers([]);
         } catch (err) { setOffers([]); }
         finally { setLoading(false); }
@@ -89,39 +88,17 @@ const OfferManager = () => {
 
     const closeEditor = () => { setIsEditing(false); setCurrentOffer(null); };
 
-    const getToken = () => {
-        try {
-            const s = sessionStorage.getItem('captain_pizza_user') || localStorage.getItem('captain_pizza_user');
-            if (s) {
-                const parsed = JSON.parse(s);
-                if (parsed?.token) return parsed.token;
-            }
-        } catch (_) {}
-        return localStorage.getItem('adminToken') || localStorage.getItem('token') || sessionStorage.getItem('token') || null;
-    };
-
     const handleSave = async (e) => {
         e.preventDefault();
-        const method = currentOffer ? 'PUT' : 'POST';
+        const method = currentOffer ? 'put' : 'post';
         const url = currentOffer
-            ? `${API_URL}/api/admin/offers/${currentOffer._id}`
-            : `${API_URL}/api/admin/offers`;
-        
-        const token = getToken();
+            ? `/api/admin/offers/${currentOffer._id}`
+            : `/api/admin/offers`;
         
         try {
-            const res = await fetch(url, {
-                method,
-                credentials: 'include',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-                },
-                body: JSON.stringify(formData)
-            });
-            const data = await res.json();
-            if (data.success) { fetchOffers(); closeEditor(); }
-            else alert('Save failed: ' + (data.message || 'Unknown error'));
+            const res = await api[method](url, formData);
+            if (res.data.success) { fetchOffers(); closeEditor(); }
+            else alert('Save failed: ' + (res.data.message || 'Unknown error'));
         } catch { alert('Network error saving offer.'); }
     };
 
@@ -138,18 +115,12 @@ const OfferManager = () => {
         }
 
         try {
-            const token = getToken();
-            const res = await fetch(`${API_URL}/api/admin/offers/${id}`, { 
-                method: 'DELETE', 
-                credentials: 'include',
-                headers: { ...(token ? { 'Authorization': `Bearer ${token}` } : {}) }
-            });
-            const data = await res.json();
-            if (data.success) {
+            const res = await api.delete(`/api/admin/offers/${id}`);
+            if (res.data.success) {
                 alert('✅ Offer deleted!');
                 setOffers(prev => prev.filter(o => o._id !== id));
             } else {
-                alert('❌ Delete failed: ' + (data.message || 'Unknown error'));
+                alert('❌ Delete failed: ' + (res.data.message || 'Unknown error'));
             }
         } catch { alert('❌ Network error deleting offer.'); }
     };

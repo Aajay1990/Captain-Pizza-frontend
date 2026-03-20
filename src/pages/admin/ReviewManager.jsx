@@ -1,7 +1,5 @@
-import API_URL from '../../apiConfig';
 import React, { useState, useEffect, useContext } from 'react';
-import { AuthContext } from '../../context/AuthContext';
-import axios from 'axios';
+import { AuthContext, api } from '../../context/AuthContext';
 
 const ReviewManager = () => {
     const { token } = useContext(AuthContext);
@@ -16,7 +14,7 @@ const ReviewManager = () => {
     const fetchReviews = async () => {
         setRefreshing(true);
         try {
-            const res = await axios.get(`${API_URL}/api/reviews`);
+            const res = await api.get('/api/reviews');
             if (res.data.success) {
                 setReviews(res.data.websiteData.reviews || []);
             }
@@ -34,9 +32,7 @@ const ReviewManager = () => {
         if (!window.confirm("Are you sure you want to delete this review?")) return;
 
         try {
-            const res = await axios.delete(`${API_URL}/api/reviews/${id}`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            const res = await api.delete(`/api/reviews/${id}`);
             if (res.data.success) {
                 setReviews(reviews.filter(r => r._id !== id));
             }

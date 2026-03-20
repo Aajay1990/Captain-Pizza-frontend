@@ -1,6 +1,5 @@
-import API_URL from '../../apiConfig';
 import React, { useState, useEffect, useContext } from 'react';
-import { AuthContext } from '../../context/AuthContext';
+import { AuthContext, api } from '../../context/AuthContext';
 import './POSPanel.css';
 import logo from '../../assets/logo.png';
 
@@ -156,15 +155,8 @@ const POSPanel = () => {
         };
 
         try {
-            const res = await fetch(`${API_URL}/api/orders`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`
-                },
-                body: JSON.stringify(orderData)
-            });
-            const data = await res.json();
+            const res = await api.post('/api/orders', orderData);
+            const data = res.data;
             if (data.success) {
                 printReceipt(data.data);
                 // Reset cart
@@ -222,11 +214,8 @@ const POSPanel = () => {
         setPosRefreshing(true);
         setOrdersLoading(true);
         try {
-            const res = await fetch(`${API_URL}/api/orders`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            const data = await res.json();
-            if (data.success) setOrderHistory(data.data);
+            const res = await api.get('/api/orders');
+            if (res.data.success) setOrderHistory(res.data.data);
         } catch (e) {
             console.error('Order history fetch failed', e);
         } finally {
@@ -245,8 +234,8 @@ const POSPanel = () => {
     const fetchMenu = async () => {
         setPosRefreshing(true);
         try {
-            const res = await fetch(`${API_URL}/api/menu?all=true`);
-            const data = await res.json();
+            const res = await api.get('/api/menu?all=true');
+            const data = res.data;
             console.log('POS Menu Data:', data);
             if (data.success) {
                 setMenuItems(data.data);

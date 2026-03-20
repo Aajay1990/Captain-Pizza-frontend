@@ -9,14 +9,21 @@ export const api = axios.create({
     withCredentials: true
 });
 
-// Auto-attach admin token to every request
+// Auto-attach any available admin/user token to every request (supporting legacy keys)
 api.interceptors.request.use((config) => {
-    const stored = sessionStorage.getItem('captain_pizza_user') || localStorage.getItem('captain_pizza_user');
-    if (stored) {
-        try {
-            const user = JSON.parse(stored);
-            if (user?.token) config.headers['Authorization'] = `Bearer ${user.token}`;
-        } catch {}
+    let token = null;
+    try {
+        const stored = sessionStorage.getItem('captain_pizza_user') || localStorage.getItem('captain_pizza_user');
+        if (stored) token = JSON.parse(stored)?.token;
+    } catch {}
+    
+    // Fallback search for loose tokens from previous versions
+    if (!token) {
+        token = localStorage.getItem('adminToken') || localStorage.getItem('token') || sessionStorage.getItem('token');
+    }
+
+    if (token) {
+        config.headers['Authorization'] = `Bearer ${token}`;
     }
     return config;
 });

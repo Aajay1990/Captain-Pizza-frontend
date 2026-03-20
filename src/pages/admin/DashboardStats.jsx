@@ -21,7 +21,8 @@ const DashboardStats = () => {
         if (isRefresh) setRefreshing(true); else setLoading(true);
         try {
             const res = await fetch(`${API_URL}/api/admin/dashboard`, {
-                headers: { 'Authorization': `Bearer ${token}` }
+                credentials: 'include',
+                headers: { 'Authorization': `Bearer ${token || localStorage.getItem('adminToken') || localStorage.getItem('token')}` }
             });
             const data = await res.json();
             if (data.success) setStats(data.data);

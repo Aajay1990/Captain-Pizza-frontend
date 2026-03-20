@@ -1,5 +1,5 @@
-import API_URL from '../../apiConfig';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
+import { AuthContext, api } from '../../context/AuthContext';
 
 const MenuManager = () => {
     const [items, setItems] = useState([]);
@@ -33,33 +33,24 @@ const MenuManager = () => {
         setRefreshing(true);
         try {
             const [memRes, offRes] = await Promise.all([
-                fetch(`${API_URL}/api/menu?all=true`),
-                fetch(`${API_URL}/api/admin/offers`, {
-                    headers: { 'Authorization': `Bearer ${localStorage.getItem('adminToken')}` }
-                }).catch(() => null)
+                api.get('/api/menu?all=true'),
+                api.get('/api/admin/offers').catch(() => ({ data: { success: false } }))
             ]);
 
             let combined = [];
-            
-            if (memRes && memRes.ok) {
-                const result = await memRes.json();
-                if (result.success) combined = [...result.data];
-            }
+            if (memRes.data?.success) combined = [...memRes.data.data];
 
-            if (offRes && offRes.ok) {
-                 const offersResult = await offRes.json();
-                 if (offersResult.success) {
-                      const formattedOffers = offersResult.data.map(o => ({
-                          _id: o._id,
-                          name: '⭐ [Offer] ' + o.title,
-                          category: 'Seasonal Offer',
-                          price: o.discountValue,
-                          isAvailable: o.isActive,
-                          image: o.bannerImage,
-                          isSeasonalModel: true
-                      }));
-                      combined = [...combined, ...formattedOffers];
-                 }
+            if (offRes.data?.success) {
+                const formattedOffers = offRes.data.data.map(o => ({
+                    _id: o._id,
+                    name: '⭐ [Offer] ' + o.title,
+                    category: 'Seasonal Offer',
+                    price: o.discountValue,
+                    isAvailable: o.isActive,
+                    image: o.bannerImage,
+                    isSeasonalModel: true
+                }));
+                combined = [...combined, ...formattedOffers];
             }
 
             setItems(combined);
@@ -73,13 +64,8 @@ const MenuManager = () => {
     const handleRenameCategory = async (e) => {
         e.preventDefault();
         try {
-            const res = await fetch(`${API_URL}/api/menu/category-rename`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(catRenameData)
-            });
-            const data = await res.json();
-            if (data.success) {
+            const res = await api.put('/api/menu/category-rename', catRenameData);
+            if (res.data.success) {
                 alert(data.message);
                 setIsRenamingCategory(false);
                 fetchMenu();
@@ -125,56 +111,28 @@ const MenuManager = () => {
         finally { setUploadingImage(false); }
     };
 
-    const getToken = () => {
-        try {
-            const s = sessionStorage.getItem('captain_pizza_user') || localStorage.getItem('captain_pizza_user');
-            if (s) {
-                const parsed = JSON.parse(s);
-                if (parsed?.token) return parsed.token;
-            }
-        } catch (_) {}
-        return localStorage.getItem('adminToken') || localStorage.getItem('token') || sessionStorage.getItem('token') || null;
-    };
-
     const handleSave = async (e) => {
         e.preventDefault();
-        const method = currentItem ? 'PUT' : 'POST';
-        const url = currentItem ? `${API_URL}/api/menu/${currentItem._id}` : `${API_URL}/api/menu`;
+        const method = currentItem ? 'put' : 'post';
+        const url = currentItem ? `/api/menu/${currentItem._id}` : `/api/menu`;
         
         const payload = { ...formData };
         if (payload.category === 'pizza' && !payload.subCategory) {
             payload.subCategory = 'Deluxe Veg';
         }
 
-        const token = getToken();
-
         try {
-            const res = await fetch(url, {
-                method,
-                credentials: 'include',
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-                },
-                body: JSON.stringify(payload)
-            });
-            const result = await res.json();
-            if (result.success) { fetchMenu(); setIsEditing(false); alert('Saved!'); }
-            else alert('Save failed: ' + (result.message || result.error || 'Unknown error'));
+            const res = await api[method](url, payload);
+            if (res.data.success) { fetchMenu(); setIsEditing(false); alert('Saved!'); }
+            else alert('Save failed: ' + (res.data.message || 'Unknown error'));
         } catch (err) { alert('Network error saving: ' + err.message); }
     };
 
     const confirmDelete = async () => {
         try {
-            const token = getToken();
-            const res = await fetch(`${API_URL}/api/menu/${itemToDelete._id}`, {
-                method: 'DELETE',
-                credentials: 'include',
-                headers: { ...(token ? { 'Authorization': `Bearer ${token}` } : {}) }
-            });
-            const result = await res.json();
-            if (result.success) { alert('Item deleted!'); fetchMenu(); }
-            else alert('Delete failed: ' + (result.message || 'Unknown error'));
+            const res = await api.delete(`/api/menu/${itemToDelete._id}`);
+            if (res.data.success) { alert('Item deleted!'); fetchMenu(); }
+            else alert('Delete failed: ' + (res.data.message || 'Unknown error'));
         } catch (err) { alert("Error deleting: " + err.message); }
         finally { setItemToDelete(null); }
     };

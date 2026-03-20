@@ -1,5 +1,5 @@
-import API_URL from '../../apiConfig';
 import React, { useState, useEffect } from 'react';
+import { api } from '../../context/AuthContext';
 
 const CouponManager = () => {
     const [coupons, setCoupons] = useState([]);
@@ -20,10 +20,9 @@ const CouponManager = () => {
     const fetchCoupons = async () => {
         setRefreshing(true);
         try {
-            const res = await fetch(`${API_URL}/api/admin/coupons`);
-            const data = await res.json();
-            if (data.success) {
-                setCoupons(data.data);
+            const res = await api.get('/api/admin/coupons');
+            if (res.data.success) {
+                setCoupons(res.data.data);
             }
         } catch (error) {
             console.error(error);
@@ -61,41 +60,19 @@ const CouponManager = () => {
         setCurrentCoupon(null);
     };
 
-    const getToken = () => {
-        try {
-            const s = sessionStorage.getItem('captain_pizza_user') || localStorage.getItem('captain_pizza_user');
-            if (s) {
-                const parsed = JSON.parse(s);
-                if (parsed?.token) return parsed.token;
-            }
-        } catch (_) {}
-        return localStorage.getItem('adminToken') || localStorage.getItem('token') || sessionStorage.getItem('token') || null;
-    };
-
     const handleSave = async (e) => {
         e.preventDefault();
 
-        const method = currentCoupon ? 'PUT' : 'POST';
-        const url = currentCoupon ? `${API_URL}/api/admin/coupons/${currentCoupon._id}` : `${API_URL}/api/admin/coupons`;
-        const token = getToken();
+        const method = currentCoupon ? 'put' : 'post';
+        const url = currentCoupon ? `/api/admin/coupons/${currentCoupon._id}` : `/api/admin/coupons`;
 
         try {
-            const res = await fetch(url, {
-                method,
-                credentials: 'include',
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-                },
-                body: JSON.stringify(formData)
-            });
-            const result = await res.json();
-
-            if (result.success) {
+            const res = await api[method](url, formData);
+            if (res.data.success) {
                 fetchCoupons();
                 closeEditor();
             } else {
-                alert(result.message || 'Save failed');
+                alert(res.data.message || 'Save failed');
             }
         } catch (error) {
             console.error(error);
@@ -105,16 +82,10 @@ const CouponManager = () => {
 
     const handleDelete = async (id) => {
         if (!window.confirm("Delete this coupon permanently?")) return;
-        const token = getToken();
         try {
-            const res = await fetch(`${API_URL}/api/admin/coupons/${id}`, {
-                method: 'DELETE',
-                credentials: 'include',
-                headers: { ...(token ? { 'Authorization': `Bearer ${token}` } : {}) }
-            });
-            const data = await res.json();
-            if (data.success) { alert('Coupon deleted!'); fetchCoupons(); }
-            else alert('Delete failed: ' + (data.message || 'Unknown error'));
+            const res = await api.delete(`/api/admin/coupons/${id}`);
+            if (res.data.success) { alert('Coupon deleted!'); fetchCoupons(); }
+            else alert('Delete failed: ' + (res.data.message || 'Unknown error'));
         } catch (error) {
             console.error(error);
             alert('Error deleting coupon');

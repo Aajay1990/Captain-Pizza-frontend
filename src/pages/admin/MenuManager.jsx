@@ -16,9 +16,13 @@ const MenuManager = () => {
     const getImgSrc = (img) => {
         if (!img) return 'https://images.unsplash.com/photo-1541745537411-b8046f4d5092?w=100';
         if (typeof img !== 'string') return img;
-        if (img.startsWith('http') || img.startsWith('data:')) return img;
-        if (img.startsWith('/uploads')) return `${API_URL}${img}`;
-        return img.startsWith('/') ? img : `/images/menu/${img}`;
+        
+        let normalizedImg = img.replace(/\\/g, '/');
+        if (normalizedImg.startsWith('uploads/')) normalizedImg = '/' + normalizedImg;
+        if (normalizedImg.startsWith('http') || normalizedImg.startsWith('data:')) return normalizedImg;
+        if (normalizedImg.startsWith('/uploads')) return `${API_URL}${normalizedImg}`;
+        
+        return normalizedImg.startsWith('/') ? normalizedImg : `/images/menu/${normalizedImg}`;
     };
 
     useEffect(() => {
@@ -28,9 +32,37 @@ const MenuManager = () => {
     const fetchMenu = async () => {
         setRefreshing(true);
         try {
-            const res = await fetch(`${API_URL}/api/menu?all=true`);
-            const result = await res.json();
-            if (result.success) setItems(result.data);
+            const [memRes, offRes] = await Promise.all([
+                fetch(`${API_URL}/api/menu?all=true`),
+                fetch(`${API_URL}/api/admin/offers`, {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('adminToken')}` }
+                }).catch(() => null)
+            ]);
+
+            let combined = [];
+            
+            if (memRes && memRes.ok) {
+                const result = await memRes.json();
+                if (result.success) combined = [...result.data];
+            }
+
+            if (offRes && offRes.ok) {
+                 const offersResult = await offRes.json();
+                 if (offersResult.success) {
+                      const formattedOffers = offersResult.data.map(o => ({
+                          _id: o._id,
+                          name: '⭐ [Offer] ' + o.title,
+                          category: 'Seasonal Offer',
+                          price: o.discountValue,
+                          isAvailable: o.isActive,
+                          image: o.bannerImage,
+                          isSeasonalModel: true
+                      }));
+                      combined = [...combined, ...formattedOffers];
+                 }
+            }
+
+            setItems(combined);
         } catch (error) {
             console.error(error);
         } finally {
@@ -81,10 +113,15 @@ const MenuManager = () => {
         fd.append('image', file);
         setUploadingImage(true);
         try {
-            const res = await fetch(`${API_URL}/api/upload`, { method: 'POST', body: fd });
+            const IMGBB_KEY = 'ef4d521dda2415ee1aa0b75fcaa275c6';
+            const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_KEY}`, { method: 'POST', body: fd });
             const result = await res.json();
-            if (result.success) setFormData(prev => ({ ...prev, image: result.image }));
-        } catch (err) { alert('Upload failed'); }
+            if (result.success) {
+                setFormData(prev => ({ ...prev, image: result.data.url }));
+            } else {
+                alert('Upload Failed: ' + (result.error?.message || 'Unknown error'));
+            }
+        } catch (err) { alert('Upload network error. Please try again.'); }
         finally { setUploadingImage(false); }
     };
 
@@ -92,23 +129,45 @@ const MenuManager = () => {
         e.preventDefault();
         const method = currentItem ? 'PUT' : 'POST';
         const url = currentItem ? `${API_URL}/api/menu/${currentItem._id}` : `${API_URL}/api/menu`;
+        
+        const payload = { ...formData };
+        if (payload.category === 'pizza' && !payload.subCategory) {
+            payload.subCategory = 'Deluxe Veg';
+        }
+
+        const token = (() => {
+            try {
+                const s = sessionStorage.getItem('captain_pizza_user') || localStorage.getItem('captain_pizza_user');
+                return s ? JSON.parse(s)?.token : null;
+            } catch { return null; }
+        })();
+
         try {
             const res = await fetch(url, {
-                method, headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(formData)
+                method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                },
+                body: JSON.stringify(payload)
             });
             const result = await res.json();
-            if (result.success) { fetchMenu(); setIsEditing(false); }
-            else alert(result.message);
-        } catch (err) { alert("Error saving"); }
+            if (result.success) { fetchMenu(); setIsEditing(false); alert('Saved!'); }
+            else alert('Save failed: ' + (result.message || result.error || 'Unknown error'));
+        } catch (err) { alert('Network error saving: ' + err.message); }
     };
 
     const confirmDelete = async () => {
         try {
-            const res = await fetch(`${API_URL}/api/menu/${itemToDelete._id}`, { method: 'DELETE' });
+            const token = localStorage.getItem('adminToken') || localStorage.getItem('token');
+            const res = await fetch(`${API_URL}/api/menu/${itemToDelete._id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
             const result = await res.json();
-            if (result.success) fetchMenu();
-        } catch (err) { alert("Error deleting"); }
+            if (result.success) { alert('Item deleted!'); fetchMenu(); }
+            else alert('Delete failed: ' + (result.message || 'Unknown error'));
+        } catch (err) { alert("Error deleting: " + err.message); }
         finally { setItemToDelete(null); }
     };
 
@@ -126,31 +185,43 @@ const MenuManager = () => {
                 </div>
             </div>
 
-            <div className="admin-table-container" style={{ overflowX: 'auto', background: '#fff', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
-                <table className="admin-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <div className="admin-table-container" style={{ overflowX: 'auto', background: '#fff', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', width: '100%' }}>
+                <table className="admin-table" style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+                    <colgroup>
+                        <col style={{ width: '40%' }} />
+                        <col style={{ width: '18%' }} />
+                        <col style={{ width: '14%' }} />
+                        <col style={{ width: '14%' }} />
+                        <col style={{ width: '14%' }} />
+                    </colgroup>
                     <thead style={{ background: '#f8f9fa', textAlign: 'left' }}>
                         <tr>
-                            <th style={{ padding: '15px' }}>Item</th>
-                            <th>Category</th>
-                            <th>Price</th>
-                            <th>Status</th>
-                            <th>Actions</th>
+                            <th style={{ padding: '12px 15px', fontWeight: 700, fontSize: '0.85rem', color: '#555' }}>Item Name</th>
+                            <th style={{ padding: '12px 8px', fontWeight: 700, fontSize: '0.85rem', color: '#555' }}>Category</th>
+                            <th style={{ padding: '12px 8px', fontWeight: 700, fontSize: '0.85rem', color: '#555' }}>Price</th>
+                            <th style={{ padding: '12px 8px', fontWeight: 700, fontSize: '0.85rem', color: '#555' }}>Status</th>
+                            <th style={{ padding: '12px 8px', fontWeight: 700, fontSize: '0.85rem', color: '#555' }}>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {loading ? <tr><td colSpan="5" style={{ textAlign: 'center', padding: '40px' }}>Loading...</td></tr> : 
+                        {loading ? <tr><td colSpan="5" style={{ textAlign: 'center', padding: '40px' }}>Loading...</td></tr> :
                         items.map(item => (
                             <tr key={item._id} style={{ borderTop: '1px solid #eee' }}>
-                                <td style={{ padding: '15px', display: 'flex', alignItems: 'center', gap: '15px' }}>
-                                    <img src={getImgSrc(item.image)} alt={item.name} style={{ width: '50px', height: '50px', borderRadius: '8px', objectFit: 'cover' }} />
-                                    <strong>{item.name}</strong>
+                                <td style={{ padding: '12px 15px', fontWeight: 600, fontSize: '0.9rem', wordBreak: 'break-word', overflow: 'hidden' }}>
+                                    {item.name}
                                 </td>
-                                <td>{item.category}</td>
-                                <td>₹{item.category === 'pizza' ? (item.prices?.medium || item.price) : item.price}</td>
-                                <td>{item.isAvailable ? '✅ In Stock' : '❌ Out'}</td>
-                                <td style={{ display: 'flex', gap: '10px', padding: '15px' }}>
-                                    <button onClick={() => openEditor(item)} style={{ background: '#e3f2fd', color: '#1976d2', border: 'none', padding: '8px', borderRadius: '4px', cursor: 'pointer' }}><i className="fas fa-edit"></i></button>
-                                    <button onClick={() => setItemToDelete(item)} style={{ background: '#ffebee', color: '#c62828', border: 'none', padding: '8px', borderRadius: '4px', cursor: 'pointer' }}><i className="fas fa-trash"></i></button>
+                                <td style={{ padding: '12px 8px', fontSize: '0.85rem', color: '#555', textTransform: 'capitalize' }}>{item.category}</td>
+                                <td style={{ padding: '12px 8px', fontSize: '0.85rem', fontWeight: 700 }}>₹{item.category === 'pizza' ? (item.prices?.medium || item.price) : item.price}</td>
+                                <td style={{ padding: '12px 8px', fontSize: '0.82rem' }}>{item.isAvailable ? '✅ Stock' : '❌ Out'}</td>
+                                <td style={{ padding: '12px 8px' }}>
+                                    {item.isSeasonalModel ? (
+                                        <span style={{ fontSize: '0.75rem', color: '#999', fontStyle: 'italic' }}>Offers Panel</span>
+                                    ) : (
+                                        <div style={{ display: 'flex', gap: '8px' }}>
+                                            <button onClick={() => openEditor(item)} style={{ background: '#e3f2fd', color: '#1976d2', border: 'none', padding: '7px 10px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem' }}><i className="fas fa-edit"></i></button>
+                                            <button onClick={() => setItemToDelete(item)} style={{ background: '#ffebee', color: '#c62828', border: 'none', padding: '7px 10px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem' }}><i className="fas fa-trash"></i></button>
+                                        </div>
+                                    )}
                                 </td>
                             </tr>
                         ))}
@@ -197,7 +268,11 @@ const MenuManager = () => {
                             <div className="form-group" style={{ marginBottom: '15px' }}>
                                 <label>Image</label>
                                 <div onClick={() => document.getElementById('file-up').click()} style={{ border: '2px dashed #ddd', padding: '20px', textAlign: 'center', borderRadius: '12px', cursor: 'pointer', background: '#fcfcfc' }}>
-                                    {uploadingImage ? 'Uploading...' : formData.image ? <img src={getImgSrc(formData.image)} style={{ height: '100px', borderRadius: '8px' }} /> : 'Click to upload image'}
+                                    {uploadingImage ? 'Uploading...' : formData.image ? <img 
+                                        src={getImgSrc(formData.image)} 
+                                        style={{ height: '100px', borderRadius: '8px' }} 
+                                        onError={(e) => { e.target.onerror = null; e.target.src = 'https://images.unsplash.com/photo-1541745537411-b8046f4d5092?w=100'; }}
+                                    /> : 'Click to upload image'}
                                     <input type="file" id="file-up" style={{ display: 'none' }} onChange={handleImageUpload} />
                                 </div>
                                 <input type="text" value={formData.image} onChange={e => setFormData({...formData, image: e.target.value})} placeholder="Or enter URL/path here" style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #eee', marginTop: '8px', fontSize: '0.8rem' }} />

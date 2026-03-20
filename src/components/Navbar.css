@@ -1,14 +1,23 @@
+/* ===================================================
+   NAVBAR
+   Desktop: sticky at TOP (always)
+   Mobile: navbar stays at TOP, but nav-menu DROPDOWN
+           slides up from BOTTOM of screen
+   =================================================== */
+
 .navbar {
     background-color: var(--primary);
-    height: 80px;
+    height: 84px;
     display: flex;
     justify-content: center;
     align-items: center;
-    font-size: 1.1rem;
-    position: sticky;
+    font-size: 1rem;
+    position: fixed;
     top: 0;
+    left: 0;
     z-index: 999;
-    box-shadow: var(--shadow-sm);
+    box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+    width: 100%;
 }
 
 .navbar-container {
@@ -22,171 +31,189 @@
 }
 
 .navbar-logo {
-    color: var(--nav-text);
+    color: #fff;
     display: flex;
     align-items: center;
     text-decoration: none;
-    font-size: 1.5rem;
-    font-weight: 700;
+    font-size: 1.4rem;
+    font-weight: 800;
     letter-spacing: -0.5px;
-    gap: 15px;
-    /* Spacings applied via flex wrapper */
+    gap: 12px;
 }
 
 .logo-img {
-    height: 75px;
+    height: 60px;
     width: auto;
     object-fit: contain;
     display: block;
 }
 
+/* Global back button — shows on all non-home pages in navbar */
+.nav-back-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    color: #fff;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    font-size: 1.25rem;
+    cursor: pointer;
+    font-family: inherit;
+    margin-right: 5px;
+    flex-shrink: 0;
+    transition: background 0.2s, transform 0.15s;
+    line-height: 1;
+}
+
+.nav-back-btn:hover {
+    background: rgba(255,255,255,0.15);
+    transform: translateX(-4px);
+}
+
+/* Desktop nav list */
 .nav-menu {
     display: flex;
     list-style: none;
     align-items: center;
+    gap: 0;
+    margin: 0;
+    padding: 0;
 }
 
 .nav-item {
-    margin-left: 30px;
+    margin-left: 28px;
 }
 
 .nav-link {
-    color: #ffffff;
+    color: #fff;
     text-decoration: none;
-    transition: var(--transition);
     font-weight: 600;
+    font-size: 0.95rem;
     position: relative;
+    transition: opacity 0.2s;
 }
 
-.nav-link:hover {
-    color: var(--primary);
-}
+.nav-link:hover { opacity: 0.8; }
 
-.nav-link:not(.btn-primary)::after {
+.nav-link:not(.logout-btn)::after {
     content: '';
     position: absolute;
     width: 0;
     height: 2px;
-    bottom: -6px;
+    bottom: -5px;
     left: 0;
-    background-color: #ffffff;
-    transition: width 0.3s ease;
+    background: rgba(255,255,255,0.8);
+    transition: width 0.25s ease;
 }
 
-.nav-link:not(.btn-primary):hover::after {
-    width: 100%;
+.nav-link:not(.logout-btn):hover::after { width: 100%; }
+
+/* Logout button (admin only) */
+.logout-btn {
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.25);
+    color: #fff;
+    border-radius: 8px;
+    padding: 8px 18px;
+    font-weight: 700;
+    font-size: 0.88rem;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.2s;
 }
 
-.cart-link {
-    display: flex;
-    align-items: center;
-}
+.logout-btn:hover { background: rgba(255,255,255,0.22); }
 
-.cart-icon-wrapper {
-    position: relative;
-    width: 45px;
-    height: 45px;
-    background: linear-gradient(135deg, #FF7B3B, #F25022);
-    /* Smooth orange */
-    border-radius: 50%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    transition: transform 0.2s ease;
-    box-shadow: 0 4px 8px rgba(242, 80, 34, 0.3);
-}
-
-.cart-svg {
-    width: 20px;
-    height: 20px;
-    color: white;
-    margin-right: 2px;
-}
-
-.cart-link:hover .cart-icon-wrapper {
-    transform: scale(1.1);
-}
-
-.custom-cart-badge {
-    position: absolute;
-    top: -6px;
-    right: -6px;
-    background-color: #E83E8C;
-    /* Pink badge */
-    color: white;
-    font-weight: 800;
-    font-size: 0.8rem;
-    min-width: 22px;
-    height: 22px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    border-radius: 50%;
-    border: 3px solid #343741;
-    /* Border matching nav background to look like cutout, simulating white in light theme */
-}
-
+/* Hamburger — hidden on desktop */
 .menu-icon {
     display: none;
-    color: var(--nav-text);
-    font-size: 1.8rem;
+    color: #fff;
+    font-size: 1.6rem;
     cursor: pointer;
+    padding: 5px;
+    line-height: 1;
 }
 
-@media screen and (max-width: 960px) {
-    .nav-menu {
-        display: flex;
-        flex-direction: column;
-        width: 100%;
-        position: absolute;
-        top: 80px;
-        left: -100%;
-        opacity: 0;
-        transition: all 0.5s ease;
-        background-color: var(--primary);
-        padding-bottom: 20px;
-        box-shadow: var(--shadow-lg);
-    }
-
-    .nav-menu.active {
-        background-color: var(--primary);
-        left: 0;
-        opacity: 1;
-        transition: all 0.5s ease;
-        z-index: 1;
-    }
-
-    .nav-item {
-        margin: 20px 0;
-    }
-
-    .menu-icon {
-        display: block;
-    }
-}
-
+/* Cart animation */
 .animate-vibrate {
-    animation: vibrateCart 0.3s cubic-bezier(.36, .07, .19, .97) both;
+    animation: vibrateCart 0.3s cubic-bezier(.36,.07,.19,.97) both;
 }
 
 @keyframes vibrateCart {
-    0% {
-        transform: scale(1);
+    0%   { transform: scale(1); }
+    25%  { transform: scale(1.1) rotate(5deg); }
+    50%  { transform: scale(1.1) rotate(-5deg); }
+    75%  { transform: scale(1.1) rotate(5deg); }
+    100% { transform: scale(1) rotate(0deg); }
+}
+
+/* Bottom Navbar (hidden on desktop) */
+.bottom-navbar {
+    display: none;
+}
+
+/* ===================================================
+   MOBILE ≤ 960px
+   Navbar stays at TOP.
+   No hamburger menu.
+   New floating Bottom Navigation Bar.
+   =================================================== */
+@media screen and (max-width: 960px) {
+
+    /* Navbar: stays fixed at top */
+    .navbar {
+        height: 84px;
     }
 
-    25% {
-        transform: scale(1.1) rotate(5deg);
+    /* Hide hamburger and desktop nav-menu entirely */
+    .menu-icon { display: none !important; }
+    .nav-menu { display: none !important; }
+
+    /* Bottom Navbar active on mobile */
+    .bottom-navbar {
+        display: flex;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        background: #fff;
+        box-shadow: 0 -4px 20px rgba(0,0,0,0.1);
+        z-index: 1000;
+        justify-content: space-around;
+        align-items: center;
+        height: 75px;
+        border-top-left-radius: 20px;
+        border-top-right-radius: 20px;
+        padding-bottom: env(safe-area-inset-bottom); /* iOS support */
     }
 
-    50% {
-        transform: scale(1.1) rotate(-5deg);
+    .bottom-nav-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        color: #888;
+        text-decoration: none;
+        font-size: 0.75rem;
+        font-weight: 700;
+        gap: 6px;
+        flex: 1;
+        -webkit-tap-highlight-color: transparent;
+        transition: color 0.2s, transform 0.2s;
     }
 
-    75% {
-        transform: scale(1.1) rotate(5deg);
+    .bottom-nav-item i {
+        font-size: 1.4rem;
+        transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     }
 
-    100% {
-        transform: scale(1) rotate(0deg);
+    .bottom-nav-item.active {
+        color: #e50000;
+    }
+
+    .bottom-nav-item.active i {
+        transform: scale(1.15) translateY(-2px);
     }
 }

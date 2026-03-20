@@ -325,83 +325,96 @@
 
 /* ── Size-based addon ── */
 .cd-size-addon {
-    background: #fff;
-    border-radius: 10px;
+    background: #ffffff;
+    border-radius: 16px;
     border: 1px solid #EBEBEB;
-    padding: 10px 12px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.03);
+    padding: 16px;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 14px;
+    transition: box-shadow 0.3s ease, border-color 0.3s ease;
+}
+
+.cd-size-addon:hover {
+    border-color: #f7d4d4;
+    box-shadow: 0 10px 25px rgba(219, 40, 40, 0.08);
 }
 
 .cd-addon-row-title {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    font-size: 0.85rem;
-    font-weight: 700;
-    color: #1A1A1A;
+    font-size: 0.95rem;
+    font-weight: 900;
+    color: #1a1a1a;
+    letter-spacing: -0.2px;
 }
 
 .cd-addon-selected-tag {
-    font-size: 0.75rem;
-    font-weight: 700;
-    color: #B71C1C;
-    background: rgba(183, 28, 28, 0.08);
-    padding: 2px 8px;
+    font-size: 0.8rem;
+    font-weight: 800;
+    background: #FEE2E2;
+    color: #DB2828;
+    padding: 4px 10px;
     border-radius: 20px;
+    box-shadow: 0 2px 4px rgba(219, 40, 40, 0.1);
 }
 
 .cd-size-cards {
     display: flex;
-    gap: 7px;
+    background: #f1f1f1;
+    border-radius: 30px;
+    padding: 4px;
+    position: relative;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.04);
 }
 
 .cd-size-card {
     flex: 1;
-    padding: 9px 6px;
-    border-radius: 10px;
-    border: 2px solid #E8E8E8;
-    background: #F9F9F9;
+    padding: 10px 4px;
+    border-radius: 26px;
+    background: transparent;
     cursor: pointer;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 3px;
+    gap: 2px;
     font-family: inherit;
-    transition: all 0.15s;
-    color: #333;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    color: #666;
+    border: none;
+    position: relative;
+    z-index: 1;
 }
 
 .cd-size-label {
-    font-size: 0.85rem;
+    font-size: 0.9rem;
     font-weight: 800;
 }
 
 .cd-size-price {
-    font-size: 0.72rem;
-    color: #999;
-    font-weight: 600;
+    font-size: 0.75rem;
+    color: #888;
+    font-weight: 700;
 }
 
 .cd-size-card:hover {
-    border-color: #B71C1C;
-    background: #FFF5F5;
-}
-
-.cd-size-card:hover .cd-size-price {
-    color: #B71C1C;
+    color: #444;
 }
 
 .cd-size-card.active {
-    border-color: #B71C1C;
-    background: #B71C1C;
-    box-shadow: 0 3px 10px rgba(183, 28, 28, 0.3);
+    background: #ffffff;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+    transform: scale(1);
 }
 
-.cd-size-card.active .cd-size-label,
+.cd-size-card.active .cd-size-label {
+    color: #DB2828; /* Domino's green style */
+}
+
 .cd-size-card.active .cd-size-price {
-    color: #fff !important;
+    color: #DB2828;
 }
 
 /* ── Item bottom: qty + price ── */

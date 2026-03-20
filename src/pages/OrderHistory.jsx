@@ -30,9 +30,8 @@ const OrderHistory = () => {
     const [trackError, setTrackError] = useState('');
     
     // Auth context (stored phone or device ID)
-    const userPhone = localStorage.getItem('cp_order_phone');
-    const deviceId = localStorage.getItem('cp_device_id');
-    const lookupId = userPhone || deviceId;
+    const guestId = localStorage.getItem('cp_guest_id');
+    const lookupId = guestId;
     
     // Polling Ref
     const pollingRef = useRef(null);
@@ -45,7 +44,6 @@ const OrderHistory = () => {
 
         const activeTrackId = localStorage.getItem('cp_active_track_id');
         if (activeTrackId) {
-            setTrackIdInput(activeTrackId.slice(-6).toUpperCase());
             resumeTracking(activeTrackId);
         }
     }, [lookupId]);
@@ -81,10 +79,14 @@ const OrderHistory = () => {
     const fetchPreviousOrders = async (ph) => {
         setPrevLoading(true);
         try {
+            // Fetch by device ID (guest ID)
             const res = await fetch(`${API}/api/orders/by-phone/${ph}`);
             const data = await res.json();
             if (data.success) {
-                setPrevOrders(data.orders || []);
+                // Filter orders from the last 24 hours
+                const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+                const recentOrders = (data.orders || []).filter(o => new Date(o.createdAt) > oneDayAgo);
+                setPrevOrders(recentOrders);
             }
         } catch (e) {
             console.error("Error fetching history", e);
@@ -226,9 +228,9 @@ const OrderHistory = () => {
 
             <div className="oh-v2-container">
                 {/* 1. PREVIOUS ORDERS SECTION */}
-                <section className="oh-v2-section">
+                <section className="oh-v2-section premium-table-section">
                     <h2 className="oh-v2-section-title">
-                        <i className="fas fa-history"></i> Previous Orders
+                        <i className="fas fa-history"></i> Your Orders (Last 24 Hours)
                     </h2>
                     
                     {prevLoading ? (
@@ -237,14 +239,66 @@ const OrderHistory = () => {
                             <p>Fetching your history...</p>
                         </div>
                     ) : prevOrders.length > 0 ? (
-                        <div className="oh-v2-grid">
-                            {prevOrders.map(order => renderOrderCard(order))}
+                        <div className="oh-v2-table-wrapper">
+                            <table className="oh-v3-table">
+                                <thead>
+                                    <tr>
+                                        <th>Order ID & Time</th>
+                                        <th>Customer Info</th>
+                                        <th>Items Passed</th>
+                                        <th>Amount Paid</th>
+                                        <th>Status</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {prevOrders.map(order => {
+                                        const shortId = order._id.slice(-6).toUpperCase();
+                                        const time = new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                                        const date = new Date(order.createdAt).toLocaleDateString([], { day: 'numeric', month: 'short' });
+                                        
+                                        return (
+                                            <tr key={order._id}>
+                                                <td data-label="Order ID & Time">
+                                                    <div className="td-id">#{shortId}</div>
+                                                    <div className="td-time">{date}, {time}</div>
+                                                </td>
+                                                <td data-label="Customer Info">
+                                                    <div className="td-name">{order.customerInfo?.name}</div>
+                                                    <div className="td-phone">{order.customerInfo?.phone}</div>
+                                                </td>
+                                                <td data-label="Items Passed">
+                                                    <div className="td-items">
+                                                        {order.orderItems?.map(it => `${it.name} x${it.quantity}`).join(', ')}
+                                                    </div>
+                                                </td>
+                                                <td data-label="Amount Paid">
+                                                    <div className="td-price">₹{order.totalAmount}</div>
+                                                    <div className="td-pay-mode">{order.paymentMethod === 'online' ? 'Online' : 'Cash'}</div>
+                                                </td>
+                                                <td data-label="Status">
+                                                    <span className={`oh-v2-badge status-${order.status}`}>
+                                                        {order.status}
+                                                    </span>
+                                                </td>
+                                                <td data-label="Action">
+                                                    <button className="oh-v3-mini-track-btn" onClick={() => {
+                                                        setTrackIdInput(shortId);
+                                                        setTrackedOrder(order);
+                                                        document.getElementById('track-section')?.scrollIntoView({ behavior: 'smooth' });
+                                                    }}>Track</button>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
                         </div>
                     ) : (
                         <div className="oh-v2-empty">
                             <div className="oh-v2-empty-icon">🍕</div>
-                            <h3>No previous orders found</h3>
-                            <p>When you place an order, it will appear here.</p>
+                            <h3>No active orders found</h3>
+                            <p>Previous orders are only visible for 24 hours.</p>
                             <Link to="/menu" className="oh-v2-cta">Start Ordering</Link>
                         </div>
                     )}
@@ -280,8 +334,16 @@ const OrderHistory = () => {
                         <div id="track-result" className="oh-v2-result-card animate-slide-up">
                             <div className="oh-v2-result-head">
                                 <h3>Order Details</h3>
-                                <div className={`oh-v2-status-banner status-${trackedOrder.status}`}>
-                                    {trackedOrder.status.toUpperCase()}
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                                    <div className={`oh-v2-status-banner status-${trackedOrder.status}`}>
+                                        {trackedOrder.status.toUpperCase()}
+                                    </div>
+                                    <button 
+                                        className="track-close-btn"
+                                        onClick={() => setTrackedOrder(null)}
+                                    >
+                                        <i className="fas fa-times"></i> Close
+                                    </button>
                                 </div>
                             </div>
                             

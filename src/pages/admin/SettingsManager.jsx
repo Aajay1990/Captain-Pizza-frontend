@@ -102,110 +102,6 @@ const SettingsManager = () => {
             )}
 
             <div className="settings-grid">
-                {/* Seasonal Offer Setup */}
-                <div className="settings-section-card offer-card">
-                    <div className="section-card-header">
-                        <i className="fas fa-gift"></i> Seasonal Offer Setup
-                    </div>
-
-                    <div className="setting-row">
-                        <div className="setting-info">
-                            <strong>Offer Status</strong>
-                            <p>Toggle store-wide promotional banners.</p>
-                        </div>
-                        <div className="toggle-switch-wrapper">
-                            <select
-                                className="premium-select"
-                                value={getSettingValue('seasonal_offer_enabled', 'false')}
-                                onChange={(e) => handleUpdate('seasonal_offer_enabled', e.target.value)}
-                            >
-                                <option value="true">Active (Live)</option>
-                                <option value="false">Inactive (Off)</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div className="setting-row">
-                        <div className="setting-info">
-                            <strong>Offer Heading</strong>
-                            <p>e.g. "Diwali Special" or "IPL Dhamaka".</p>
-                        </div>
-                        <input
-                            className="premium-input-text"
-                            placeholder="e.g. Summer Bonanza"
-                            defaultValue={getSettingValue('seasonal_offer_title', 'Special Offer')}
-                            onBlur={(e) => handleUpdate('seasonal_offer_title', e.target.value)}
-                        />
-                    </div>
-
-                    <div className="setting-row">
-                        <div className="setting-info">
-                            <strong>Offer Description</strong>
-                            <p>Details like "Flat 50% Off" or "Buy 1 Get 1".</p>
-                        </div>
-                        <input
-                            className="premium-input-text"
-                            placeholder="e.g. Buy 1 Get 1 on all pizzas"
-                            defaultValue={getSettingValue('seasonal_offer_desc', 'Grab your favorite pizzas!')}
-                            onBlur={(e) => handleUpdate('seasonal_offer_desc', e.target.value)}
-                        />
-                    </div>
-
-                    <div className="setting-row">
-                        <div className="setting-info">
-                            <strong>Offer Coupon Code</strong>
-                            <p>Coupon code that will activate this seasonal offer.</p>
-                        </div>
-                        <input
-                            className="premium-input-text"
-                            placeholder="e.g. SUMMER50"
-                            style={{ textTransform: 'uppercase' }}
-                            defaultValue={getSettingValue('seasonal_offer_coupon', 'SPECIAL15')}
-                            onBlur={(e) => handleUpdate('seasonal_offer_coupon', e.target.value.toUpperCase())}
-                        />
-                    </div>
-
-                    <div className="setting-row">
-                        <div className="setting-info">
-                            <strong>Offer Discount</strong>
-                            <p>Discount value & type (e.g. 15% or ₹100).</p>
-                        </div>
-                        <div style={{ display: 'flex', gap: '8px' }}>
-                            <input
-                                type="number"
-                                className="premium-input-number"
-                                defaultValue={getSettingValue('seasonal_offer_discount', 15)}
-                                onBlur={(e) => handleUpdate('seasonal_offer_discount', Number(e.target.value))}
-                            />
-                            <select
-                                className="premium-select"
-                                style={{ minWidth: '80px' }}
-                                value={getSettingValue('seasonal_offer_discount_type', 'PERCENT')}
-                                onChange={(e) => handleUpdate('seasonal_offer_discount_type', e.target.value)}
-                            >
-                                <option value="PERCENT">%</option>
-                                <option value="AMOUNT">₹</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div className="setting-row">
-                        <div className="setting-info">
-                            <strong>Min Order for Offer</strong>
-                            <p>Min amount required to use this coupon.</p>
-                        </div>
-                        <div className="input-with-symbol">
-                            <span className="symbol">₹</span>
-                            <input
-                                type="number"
-                                className="premium-input-number"
-                                defaultValue={getSettingValue('seasonal_offer_min_order', 500)}
-                                onBlur={(e) => handleUpdate('seasonal_offer_min_order', Number(e.target.value))}
-                            />
-                        </div>
-                    </div>
-                </div>
-
                 {/* Logistics & Charges */}
                 <div className="settings-section-card logistics-card">
                     <div className="section-card-header">
@@ -218,7 +114,7 @@ const SettingsManager = () => {
                             <p>Flat fee for low-value orders.</p>
                         </div>
                         <div className="input-with-symbol">
-                            <span className="symbol">₹</span>
+                            <span className="symbol">Rs.</span>
                             <input
                                 type="number"
                                 className="premium-input-number"
@@ -231,14 +127,14 @@ const SettingsManager = () => {
                     <div className="setting-row">
                         <div className="setting-info">
                             <strong>Free Delivery Threshold</strong>
-                            <p>Min order for ₹0 Delivery (Rule: ₹300+).</p>
+                            <p>Min order for free delivery.</p>
                         </div>
                         <div className="input-with-symbol">
-                            <span className="symbol">₹</span>
+                            <span className="symbol">Rs.</span>
                             <input
                                 type="number"
                                 className="premium-input-number"
-                                defaultValue={getSettingValue('free_delivery_min_order', 300)}
+                                defaultValue={getSettingValue('free_delivery_min_order', 1000)}
                                 onBlur={(e) => handleUpdate('free_delivery_min_order', Number(e.target.value))}
                             />
                         </div>
@@ -246,43 +142,45 @@ const SettingsManager = () => {
 
                     <div className="setting-row">
                         <div className="setting-info">
-                            <strong>Free Delivery Radius (KM)</strong>
-                            <p>Max distance for free delivery eligibility.</p>
+                            <strong>Delivery Marquee Text</strong>
+                            <p>Scrolling text banner on the homepage.</p>
                         </div>
-                        <div className="input-with-symbol">
-                            <input
-                                type="number"
-                                className="premium-input-number"
-                                defaultValue={getSettingValue('delivery_max_distance_km', 3)}
-                                onBlur={(e) => handleUpdate('delivery_max_distance_km', Number(e.target.value))}
-                            />
-                            <span className="symbol-right">KM</span>
-                        </div>
-                    </div>
-                </div>
-
-                {/* UI Experience */}
-                <div className="settings-section-card ui-card">
-                    <div className="section-card-header">
-                        <i className="fas fa-eye"></i> Visual Experience
+                        <input
+                            className="premium-input-text w-full"
+                            style={{ maxWidth: '280px' }}
+                            placeholder="e.g. 🎉 SPECIAL OFFER: 3 KM FREE..."
+                            defaultValue={getSettingValue('delivery_marquee_text', '🎉 SPECIAL OFFER: 3 KM FREE DELIVERY')}
+                            onBlur={(e) => handleUpdate('delivery_marquee_text', e.target.value)}
+                        />
                     </div>
 
                     <div className="setting-row">
                         <div className="setting-info">
-                            <strong>Welcome Discount %</strong>
-                            <p>Coupon CODE: <strong style={{ color: 'var(--primary)' }}>WELCOME{getSettingValue('new_user_discount', 20)}</strong></p>
+                            <strong>Banner Heading</strong>
+                            <p>Main text on the blue delivery banner.</p>
                         </div>
-                        <div className="input-with-symbol">
-                            <input
-                                type="number"
-                                className="premium-input-number"
-                                defaultValue={getSettingValue('new_user_discount', 20)}
-                                onBlur={(e) => handleUpdate('new_user_discount', Number(e.target.value))}
-                            />
-                            <span className="symbol-right">%</span>
-                        </div>
+                        <input
+                            className="premium-input-text w-full"
+                            style={{ maxWidth: '280px' }}
+                            placeholder="e.g. Free Home Delivery"
+                            defaultValue={getSettingValue('banner_heading', 'Free Home Delivery')}
+                            onBlur={(e) => handleUpdate('banner_heading', e.target.value)}
+                        />
                     </div>
 
+                    <div className="setting-row">
+                        <div className="setting-info">
+                            <strong>Banner Subheading</strong>
+                            <p>Secondary text on the delivery banner.</p>
+                        </div>
+                        <input
+                            className="premium-input-text w-full"
+                            style={{ maxWidth: '280px' }}
+                            placeholder="e.g. Within 3KM on all orders..."
+                            defaultValue={getSettingValue('banner_subheading', 'Within 3KM on all orders above ₹')}
+                            onBlur={(e) => handleUpdate('banner_subheading', e.target.value)}
+                        />
+                    </div>
                 </div>
 
                 {/* Contact & Support */}
@@ -294,10 +192,10 @@ const SettingsManager = () => {
                     <div className="setting-row">
                         <div className="setting-info">
                             <strong>Admin WhatsApp Number</strong>
-                            <p>Order details will be sent here (Format: 91XXXXXXXXXX).</p>
+                            <p>Format: 91XXXXXXXXXX.</p>
                         </div>
                         <input
-                            className="premium-input-text"
+                            className="premium-input-text w-full"
                             placeholder="e.g. 919220367325"
                             defaultValue={getSettingValue('admin_whatsapp_number', '919220367325')}
                             onBlur={(e) => handleUpdate('admin_whatsapp_number', e.target.value.replace(/\D/g, ''))}
@@ -307,14 +205,67 @@ const SettingsManager = () => {
                     <div className="setting-row">
                         <div className="setting-info">
                             <strong>Store Contact Email</strong>
-                            <p>Used for support and order notifications.</p>
+                            <p>For support notifications.</p>
                         </div>
                         <input
-                            className="premium-input-text"
+                            className="premium-input-text w-full"
                             type="email"
-                            placeholder="e.g. support@captainpizza.com"
-                            defaultValue={getSettingValue('store_contact_email', 'admin@captainpizza.com')}
+                            placeholder="e.g. captainpizzadayalpur@gm..."
+                            defaultValue={getSettingValue('store_contact_email', 'captainpizzadayalpur@gmail.com')}
                             onBlur={(e) => handleUpdate('store_contact_email', e.target.value)}
+                        />
+                    </div>
+
+                    <div className="setting-row">
+                        <div className="setting-info">
+                            <strong>Phone Number 1</strong>
+                            <p>Primary contact number for Contact Us page.</p>
+                        </div>
+                        <input
+                            className="premium-input-text w-full"
+                            placeholder="+91 9220367325"
+                            defaultValue={getSettingValue('phone_number_1', '+91 9220367325')}
+                            onBlur={(e) => handleUpdate('phone_number_1', e.target.value)}
+                        />
+                    </div>
+
+                    <div className="setting-row">
+                        <div className="setting-info">
+                            <strong>Phone Number 2</strong>
+                            <p>Secondary contact number (optional).</p>
+                        </div>
+                        <input
+                            className="premium-input-text w-full"
+                            placeholder="+91 9220367425"
+                            defaultValue={getSettingValue('phone_number_2', '+91 9220367425')}
+                            onBlur={(e) => handleUpdate('phone_number_2', e.target.value)}
+                        />
+                    </div>
+
+                    <div className="setting-row">
+                        <div className="setting-info">
+                            <strong>Store Address</strong>
+                            <p>Full physical address shown on Contact page.</p>
+                        </div>
+                        <textarea
+                            className="premium-input-text w-full"
+                            rows={3}
+                            placeholder="Store full address..."
+                            defaultValue={getSettingValue('store_address', 'F-11 Main Road Dayalpur, Opposite Rajmandir Hypermarket')}
+                            onBlur={(e) => handleUpdate('store_address', e.target.value)}
+                        />
+                    </div>
+
+                    <div className="setting-row">
+                        <div className="setting-info">
+                            <strong>Business Hours</strong>
+                            <p>E.g. Monday to Sunday, 11:00 AM to 11:00 PM</p>
+                        </div>
+                        <input
+                            className="premium-input-text w-full"
+                            placeholder="e.g. Monday to Sunday, 11:00 AM to 11:00 PM"
+                            defaultValue={getSettingValue('business_hours', 'Monday to Sunday, 11:00 AM to 11:00 PM')}
+                            onBlur={(e) => handleUpdate('business_hours', e.target.value)}
                         />
                     </div>
                 </div>

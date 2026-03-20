@@ -9,8 +9,9 @@ const CouponManager = () => {
     const [currentCoupon, setCurrentCoupon] = useState(null);
 
     // Form State
-    const defaultFormState = { code: '', discountType: 'AMOUNT', discountValue: '', minOrderAmount: 0, isActive: true };
+    const defaultFormState = { code: '', discountType: 'AMOUNT', discountValue: '', minOrderAmount: 0, isActive: true, expiryDate: '', validDays: [], validStartTime: '', validEndTime: '' };
     const [formData, setFormData] = useState(defaultFormState);
+    const DAYS_OF_WEEK = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
     useEffect(() => {
         fetchCoupons();
@@ -41,7 +42,11 @@ const CouponManager = () => {
                 discountType: coupon.discountType,
                 discountValue: coupon.discountValue,
                 minOrderAmount: coupon.minOrderAmount,
-                isActive: coupon.isActive
+                isActive: coupon.isActive,
+                expiryDate: coupon.expiryDate ? coupon.expiryDate.split('T')[0] : '',
+                validDays: coupon.validDays || [],
+                validStartTime: coupon.validStartTime || '',
+                validEndTime: coupon.validEndTime || ''
             });
             setCurrentCoupon(coupon);
         } else {
@@ -56,16 +61,27 @@ const CouponManager = () => {
         setCurrentCoupon(null);
     };
 
+    const getToken = () => {
+        try {
+            const s = sessionStorage.getItem('captain_pizza_user') || localStorage.getItem('captain_pizza_user');
+            return s ? JSON.parse(s)?.token : null;
+        } catch { return null; }
+    };
+
     const handleSave = async (e) => {
         e.preventDefault();
 
         const method = currentCoupon ? 'PUT' : 'POST';
         const url = currentCoupon ? `${API_URL}/api/admin/coupons/${currentCoupon._id}` : `${API_URL}/api/admin/coupons`;
+        const token = getToken();
 
         try {
             const res = await fetch(url, {
                 method,
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                },
                 body: JSON.stringify(formData)
             });
             const result = await res.json();
@@ -74,7 +90,7 @@ const CouponManager = () => {
                 fetchCoupons();
                 closeEditor();
             } else {
-                alert(result.message);
+                alert(result.message || 'Save failed');
             }
         } catch (error) {
             console.error(error);
@@ -84,13 +100,34 @@ const CouponManager = () => {
 
     const handleDelete = async (id) => {
         if (!window.confirm("Delete this coupon permanently?")) return;
+        const token = getToken();
         try {
-            const res = await fetch(`${API_URL}/api/admin/coupons/${id}`, { method: 'DELETE' });
+            const res = await fetch(`${API_URL}/api/admin/coupons/${id}`, {
+                method: 'DELETE',
+                credentials: 'omit', // Keep matching other files but add omit or include if backend responds. Let's use omit to match OfferManager or include for session
+                headers: { ...(token ? { 'Authorization': `Bearer ${token}` } : {}) }
+            });
+            const data = await res.json();
+            if (data.success) { alert('Coupon deleted!'); fetchCoupons(); }
+            else alert('Delete failed: ' + (data.message || 'Unknown error'));
+        } catch (error) {
+            console.error(error);
+            alert('Error deleting coupon');
+        }
+    };
+
+    const handleToggleActive = async (coupon) => {
+        try {
+            const res = await fetch(`${API_URL}/api/admin/coupons/${coupon._id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ isActive: !coupon.isActive })
+            });
             if ((await res.json()).success) {
                 fetchCoupons();
             }
         } catch (error) {
-            console.error(error);
+            console.error("Error toggling coupon status", error);
         }
     };
 
@@ -138,6 +175,13 @@ const CouponManager = () => {
                                     {coupon.isActive ? <span style={{ color: 'green', fontWeight: 'bold' }}>Active</span> : <span style={{ color: 'red' }}>Disabled</span>}
                                 </td>
                                 <td style={{ display: 'flex', gap: '15px' }}>
+                                    <button 
+                                        className="action-btn" 
+                                        onClick={() => handleToggleActive(coupon)} 
+                                        style={{ background: coupon.isActive ? '#fff3cd' : '#d4edda', color: coupon.isActive ? '#856404' : '#155724', border: 'none', padding: '6px 12px', borderRadius: '6px', fontWeight: '600', cursor: 'pointer', fontSize: '0.8rem' }}
+                                    >
+                                        {coupon.isActive ? 'Deactivate' : 'Activate'}
+                                    </button>
                                     <button className="action-btn edit" onClick={() => openEditor(coupon)}><i className="fas fa-edit"></i></button>
                                     <button className="action-btn delete" onClick={() => handleDelete(coupon._id)}><i className="fas fa-trash"></i></button>
                                 </td>
@@ -172,9 +216,46 @@ const CouponManager = () => {
                                 </div>
                             </div>
 
-                            <div className="form-group">
-                                <label>Minimum Cart Amount Required (₹)</label>
-                                <input type="number" min="0" value={formData.minOrderAmount} onChange={(e) => setFormData({ ...formData, minOrderAmount: e.target.value })} required />
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                                <div className="form-group">
+                                    <label>Minimum Cart Amount Required (₹)</label>
+                                    <input type="number" min="0" value={formData.minOrderAmount} onChange={(e) => setFormData({ ...formData, minOrderAmount: e.target.value })} required />
+                                </div>
+                                <div className="form-group">
+                                    <label>Expiry Date (Optional)</label>
+                                    <input type="date" value={formData.expiryDate} onChange={(e) => setFormData({ ...formData, expiryDate: e.target.value })} />
+                                </div>
+                            </div>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginTop: '15px' }}>
+                                <div className="form-group">
+                                    <label>Valid Start Time</label>
+                                    <input type="time" value={formData.validStartTime} onChange={(e) => setFormData({ ...formData, validStartTime: e.target.value })} />
+                                </div>
+                                <div className="form-group">
+                                    <label>Valid End Time</label>
+                                    <input type="time" value={formData.validEndTime} onChange={(e) => setFormData({ ...formData, validEndTime: e.target.value })} />
+                                </div>
+                            </div>
+
+                            <div className="form-group" style={{ marginTop: '15px' }}>
+                                <label>Valid Days (Leave empty for all days)</label>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginTop: '5px' }}>
+                                    {DAYS_OF_WEEK.map(day => (
+                                        <label key={day} style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.85rem' }}>
+                                            <input 
+                                                type="checkbox" 
+                                                checked={formData.validDays.includes(day)}
+                                                onChange={(e) => {
+                                                    const newDays = e.target.checked 
+                                                        ? [...formData.validDays, day] 
+                                                        : formData.validDays.filter(d => d !== day);
+                                                    setFormData({ ...formData, validDays: newDays });
+                                                }}
+                                            /> {day.substring(0, 3)}
+                                        </label>
+                                    ))}
+                                </div>
                             </div>
 
                             <div className="form-group">

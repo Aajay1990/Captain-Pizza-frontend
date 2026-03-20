@@ -6,6 +6,7 @@ import CartDrawer from './components/CartDrawer';
 import Home from './pages/Home';
 import Menu from './pages/Menu';
 import Order from './pages/Order';
+import OrderHistory from './pages/OrderHistory';
 import Login from './pages/Login';
 import ForgotPassword from './pages/ForgotPassword';
 import VerifyEmail from './pages/VerifyEmail';
@@ -17,7 +18,7 @@ import ContactUs from './pages/ContactUs';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import TermsConditions from './pages/TermsConditions';
 import RefundPolicy from './pages/RefundPolicy';
-import OfferPopup from './components/OfferPopup';
+
 import FloatingActions from './components/FloatingActions';
 import ProtectedRoute from './components/ProtectedRoute';
 import './App.css';
@@ -28,9 +29,15 @@ function App() {
   const isPosRoute = location.pathname.startsWith('/pos');
   const hideHeaderFooter = isAdminRoute || isPosRoute;
 
+  React.useEffect(() => {
+    if (!localStorage.getItem('cp_guest_id')) {
+      const gId = 'guest_' + Math.random().toString(36).substring(2, 9) + Date.now().toString(36);
+      localStorage.setItem('cp_guest_id', gId);
+    }
+  }, []);
+
   return (
     <div className="app-container">
-      <OfferPopup />
       <FloatingActions />
       <CartDrawer />
 
@@ -42,6 +49,7 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/menu" element={<Menu />} />
           <Route path="/order" element={<Order />} />
+          <Route path="/order-history" element={<OrderHistory />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/verify-email" element={<VerifyEmail />} />
           <Route path="/about" element={<AboutUs />} />
@@ -50,20 +58,12 @@ function App() {
           <Route path="/terms" element={<TermsConditions />} />
           <Route path="/refund-policy" element={<RefundPolicy />} />
 
-          {/* ── Login Routes ──────────────────────────────────────── */}
-          {/* Customer + general login */}
-          <Route path="/login" element={<Login />} />
+          {/* Hidden admin login URL — NOT shown in navbar */}
           {/* Hidden admin login URL — NOT shown in navbar */}
           <Route path="/admin-login" element={<Login adminOnly />} />
           {/* Hidden staff/POS login URL */}
           <Route path="/staff-login" element={<Login staffOnly />} />
 
-          {/* ── Protected Customer Routes ─────────────────────────── */}
-          <Route path="/profile" element={
-            <ProtectedRoute allowedRoles={['customer', 'user']}>
-              <UserProfile />
-            </ProtectedRoute>
-          } />
 
           {/* ── Protected Admin Routes ────────────────────────────── */}
           {/* Admin accesses panel via /admin or /admin-login */}

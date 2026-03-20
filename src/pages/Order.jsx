@@ -152,11 +152,7 @@ const Order = () => {
         setOrderPlacing(true);
         const snapshotItems = [...cartItems];
         
-        let deviceId = localStorage.getItem('cp_device_id');
-        if (!deviceId) {
-            deviceId = `DEV-${Math.random().toString(36).substr(2, 9)}-${Date.now()}`;
-            localStorage.setItem('cp_device_id', deviceId);
-        }
+        const deviceId = localStorage.getItem('cp_guest_id') || `DEV-${Math.random().toString(36).substr(2, 9)}-${Date.now()}`;
 
         const orderData = {
             userId: user?._id || null,

@@ -2,6 +2,13 @@
   flex: 1;
   display: flex;
   flex-direction: column;
+  padding-top: 84px; /* Accounts for fixed navbar (84px height) */
+}
+
+@media (max-width: 960px) {
+  .main-content {
+    padding-bottom: 80px; /* Accounts for bottom navbar */
+  }
 }
 
 /* Global Floating Buttons Styles */

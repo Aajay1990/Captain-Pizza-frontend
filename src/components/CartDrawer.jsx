@@ -201,10 +201,12 @@ const CartDrawer = () => {
                         })).json();
                         if (vd.success) {
                             if (user) refreshUser({ ...user, hasUsedWelcomeOffer: true });
-                            clearCart(); setIsCartOpen(false);
+                            localStorage.setItem('cp_guest_id', phone); // Enable Order Tracking functionality
+                            clearCart(); 
+                            setIsCartOpen(false);
                             alert(`🎉 Order Placed! ID: ${vd.data._id}`);
                             notifyWhatsApp(vd.data, response.razorpay_payment_id);
-                            navigate('/');
+                            navigate('/order-history'); // Also immediately take them to history instead of home!
                         } else alert('Payment verification failed. Contact support.');
                     } catch { alert('Verification error. Contact support.'); }
                     finally { setOrderPlacing(false); }

@@ -9,6 +9,18 @@ export const api = axios.create({
     withCredentials: true
 });
 
+// Auto-attach admin token to every request
+api.interceptors.request.use((config) => {
+    const stored = sessionStorage.getItem('captain_pizza_user') || localStorage.getItem('captain_pizza_user');
+    if (stored) {
+        try {
+            const user = JSON.parse(stored);
+            if (user?.token) config.headers['Authorization'] = `Bearer ${user.token}`;
+        } catch {}
+    }
+    return config;
+});
+
 export const AuthContext = createContext();
 
 // ─── Storage Strategy ────────────────────────────────────────────────────────
@@ -19,6 +31,12 @@ export const AuthContext = createContext();
 const STORAGE_KEY = 'captain_pizza_user';
 
 const readUserFromStorage = () => {
+    // Priority: session (Admin/Staff tab-specific)
+    const sessionUser = sessionStorage.getItem(STORAGE_KEY);
+    if (sessionUser) {
+        try { return JSON.parse(sessionUser); } catch { return null; }
+    }
+    // Fallback: local (Customers - though we removed public login, keeping it generic)
     const localUser = localStorage.getItem(STORAGE_KEY);
     if (localUser) {
         try { return JSON.parse(localUser); } catch { return null; }
@@ -27,11 +45,20 @@ const readUserFromStorage = () => {
 };
 
 const saveUserToStorage = (userData) => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(userData));
+    if (!userData) return;
+    if (userData.role === 'admin' || userData.role === 'staff' || userData.role === 'pos') {
+        // Force session storage for admins to prevent multi-tab session leakage
+        sessionStorage.setItem(STORAGE_KEY, JSON.stringify(userData));
+        localStorage.removeItem(STORAGE_KEY);
+    } else {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(userData));
+        sessionStorage.removeItem(STORAGE_KEY);
+    }
 };
 
 const clearAllStorage = () => {
     localStorage.removeItem(STORAGE_KEY);
+    sessionStorage.removeItem(STORAGE_KEY);
 };
 
 export const AuthProvider = ({ children }) => {

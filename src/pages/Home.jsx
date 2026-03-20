@@ -28,11 +28,12 @@ const Home = () => {
     const navigate = useNavigate();
     const { addToCart, cartCount, setIsCartOpen } = useContext(CartContext);
     const [dbItems, setDbItems] = useState([]);
+    const [timeLeft, setTimeLeft] = useState(24 * 60 * 60); 
     const [isLoading, setIsLoading] = useState(true);
-    const [seasonalOffer, setSeasonalOffer] = useState({ enabled: 'false', title: '', desc: '', coupon: '', new_user_discount: 20, badge_text: 'HOT DEAL', badge_visible: 'true' });
+    const [seasonalOffer, setSeasonalOffer] = useState({ enabled: 'false', title: '', desc: '', image: '', coupon: '', new_user_discount: 20, badge_text: 'HOT DEAL', badge_visible: 'true' });
     const [deliveryInfo, setDeliveryInfo] = useState({ 
         charge: 40, threshold: 500, 
-        marquee_text: '🎉 SPECIAL OFFER: 3 KM FREE DELIVERY ON MINIMUM ORDER OF ₹500 only! 🚚 ORDER NOW!',
+        marquee_text: '🎉 Use coupon HOLI50: 3 KM FREE DELIVERY ON MINIMUM ORDER OF ₹500 only! 🚚 ORDER NOW!',
         banner_heading: 'Free Home Delivery',
         banner_subheading: 'Within 3KM on all orders above ₹500'
     });
@@ -41,17 +42,26 @@ const Home = () => {
     const sliderRef = useRef(null);
 
     const getImgSrc = (img, staticFallback = null) => {
-        if (!img) return staticFallback || 'https://images.unsplash.com/photo-1541745537411-b8046f4d5092?w=500';
+        if (!img) return staticFallback || 'https://images.unsplash.com/photo-1541745537411-b8046f4d5092?w=300';
         if (typeof img !== 'string') return img; 
-        if (img.startsWith('http') || img.startsWith('data:')) return img;
-        if (img.startsWith('/uploads')) return `${API_URL}${img}`;
         
-        if (!img.includes('/') && !img.includes('\\') && staticFallback) {
+        let normalizedImg = img.replace(/\\/g, '/');
+        if (normalizedImg.startsWith('uploads/')) normalizedImg = '/' + normalizedImg;
+        if (normalizedImg.startsWith('http') || normalizedImg.startsWith('data:')) return normalizedImg;
+        if (normalizedImg.startsWith('/uploads')) return `${API_URL}${normalizedImg}`;
+        
+        if (!normalizedImg.includes('/') && staticFallback) {
             return staticFallback;
         }
-        
-        return img;
+        return normalizedImg;
     };
+
+    useEffect(() => {
+        const timer = setInterval(() => {
+            setTimeLeft(prev => (prev > 0 ? prev - 1 : 0));
+        }, 1000);
+        return () => clearInterval(timer);
+    }, []);
 
     useEffect(() => {
         const loadingTimer = setTimeout(() => {
@@ -73,18 +83,40 @@ const Home = () => {
 
     const handleMouseDown = (e) => {
         setIsDragging(true);
-        setStartX(e.pageX - sliderRef.current.offsetLeft);
-        setScrollLeft(sliderRef.current.scrollLeft);
+        if (sliderRef.current) {
+            setStartX(e.pageX - sliderRef.current.offsetLeft);
+            setScrollLeft(sliderRef.current.scrollLeft);
+        }
     };
-    const handleMouseLeave = () => setIsDragging(false);
+    
+    const handleMouseLeave = () => {
+        setIsDragging(false);
+    };
+    
     const handleMouseUp = () => setIsDragging(false);
+    
     const handleMouseMove = (e) => {
-        if (!isDragging) return;
+        if (!isDragging || !sliderRef.current) return;
         e.preventDefault();
         const x = e.pageX - sliderRef.current.offsetLeft;
         const walk = (x - startX) * 2; 
         sliderRef.current.scrollLeft = scrollLeft - walk;
     };
+
+    const autoScrollRef = useRef(null);
+    useEffect(() => {
+        const scrollTrack = () => {
+             if (sliderRef.current && !isDragging) {
+                 sliderRef.current.scrollLeft += 1;
+                 if (sliderRef.current.scrollLeft >= sliderRef.current.scrollWidth / 2) {
+                     sliderRef.current.scrollLeft = 0;
+                 }
+             }
+             autoScrollRef.current = requestAnimationFrame(scrollTrack);
+        };
+        autoScrollRef.current = requestAnimationFrame(scrollTrack);
+        return () => cancelAnimationFrame(autoScrollRef.current);
+    }, [isDragging]);
     const [bogoSel, setBogoSel] = useState({ category: null, size: 'medium', pizza1: null, pizza2: null });
 
     const bogoPizzasByCategory = React.useMemo(() => {
@@ -99,7 +131,9 @@ const Home = () => {
                     ...staticItem,
                     name: live?.name || staticItem.name,
                     price: live?.prices || live?.price || staticItem.price,
-                    image: live?.image ? getImgSrc(live.image, staticItem.image) : staticItem.image
+                    image: live?.image && (live.image.startsWith('/uploads') || live.image.startsWith('http')) 
+                        ? getImgSrc(live.image) 
+                        : staticItem.image
                 };
             });
         };
@@ -126,7 +160,7 @@ const Home = () => {
             name: `🎁 BOGO (${bogoSel.category}): ${bogoSel.pizza1.name} + ${bogoSel.pizza2.name}`,
             desc: `Buy 1 Get 1 — ${bogoSel.size} size`,
             price: finalPrice,
-            image: getImgSrc(bogoSel.pizza1.image, pizzaImg1),
+            image: getImgSrc(bogoSel.pizza1.image),
             cartId: `bogo-${Date.now()}`,
             selectedSize: bogoSel.size,
         });
@@ -135,48 +169,43 @@ const Home = () => {
     };
 
     const marqueeOffers = React.useMemo(() => {
-        const staticOffers = [
-            { id: 'friends', type: 'action', title: 'Super Value Friends Meal', desc: 'Burger + Fries + Coke', image: offer2, badge: 'TOP 10', price: 100, item: { id: 'combo1', name: 'Friends Meal', price: 100, image: offer2 } },
-            { id: 'family', type: 'action', title: 'Family Combo Special', desc: 'Pizza + Burgers + Coke', image: offer3, badge: 'TOP 10', price: 340, item: { id: 'combo2', name: 'Family Combo', price: 340, image: offer3 } },
-            { id: 'welcome', type: 'welcome', title: 'First Order Magic', desc: 'Get 20% OFF instantly • Code: WELCOME20', image: pizzaImg1, badge: 'TOP 10', price: 150, item: { id: 'welcome', name: 'First Order Magic', price: 150, image: pizzaImg1 } },
-            { id: 'bogo', type: 'bogo', title: 'Buy 1 Get 1 FREE', desc: 'On Medium & Large Pizzas', image: offer1, badge: 'TOP 10', price: 150, isBogo: true }
+        let loadedStatic = [
+            { id: 'bogo', type: 'bogo', title: 'Buy 1 Get 1 FREE', desc: 'On Medium & Large Pizzas', image: offer1, badge: 'TIME_LEFT', isBogo: true },
+            { id: 'friends', type: 'action', title: 'Super Value Friends Meal', desc: 'Burger + Fries + Coke', image: offer2, badge: 'Limited Deal', badgeClass: 'limit', price: 100, item: { id: 'combo1', name: 'Friends Meal', price: 100, image: offer2 } },
+            { id: 'family', type: 'action', title: 'Family Combo Special', desc: 'Pizza + Burgers + Coke', image: offer3, badge: 'Best Seller', badgeClass: 'highlight', price: 340, item: { id: 'combo2', name: 'Family Combo', price: 340, image: offer3 } }
         ];
-        const dynamic = (activeOffers || []).map((o, idx) => ({
-            id: o._id || `db-off-${idx}`, type: 'promo', title: o.title, desc: o.description, image: getImgSrc(o.bannerImage, offer1), badge: 'TOP 10', price: o.discountValue, item: { id: o._id, name: o.title, price: o.discountValue || 100, image: getImgSrc(o.bannerImage, offer1) }
-        }));
-        const full = [...staticOffers, ...dynamic];
-        return [...full, ...full, ...full]; // Duplicated for marquee smoothness
-    }, [seasonalOffer, activeOffers]); 
 
-    useEffect(() => {
-        if (isDragging) return;
-        const interval = setInterval(() => {
-            if (sliderRef.current) {
-                const maxScroll = sliderRef.current.scrollWidth - sliderRef.current.clientWidth;
-                if (sliderRef.current.scrollLeft >= maxScroll - 50) {
-                    sliderRef.current.scrollTo({ left: 0, behavior: 'auto' });
-                } else {
-                    sliderRef.current.scrollBy({ left: 300, behavior: 'smooth' }); 
-                }
+        try {
+            const saved = localStorage.getItem('visible_strip_items');
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                loadedStatic = loadedStatic.filter(st => parsed.some(p => p._id === st.id));
             }
-        }, 4000);
-        return () => clearInterval(interval);
-    }, [isDragging]);
+        } catch(e) {}
+
+        const dynamic = (activeOffers || []).map((o, idx) => ({
+            id: o._id || `db-off-${idx}`, type: 'promo', title: o.title, desc: o.description, image: getImgSrc(o.bannerImage), badge: 'DEAL', badgeClass: 'highlight', price: o.discountValue, item: { id: o._id, name: o.title, price: o.discountValue || 100, image: getImgSrc(o.bannerImage) }
+        }));
+        const full = [...loadedStatic, ...dynamic];
+        return [...full, ...full, ...full];
+    }, [activeOffers, seasonalOffer]);
 
     useEffect(() => {
         const fetchHomeSettings = async () => {
             try {
                 const res = await fetch(`${API_URL}/api/admin/settings`);
                 const data = await res.json();
-                const offerRes = await fetch(`${API_URL}/api/offers/active`);
-                const offerData = await offerRes.json();
-                if (offerData.success && offerData.data.length > 0) {
-                    setActiveOffers(offerData.data);
-                }
+                
+                try {
+                    const offerRes = await fetch(`${API_URL}/api/offers/active`);
+                    const offerData = await offerRes.json();
+                    if (offerData.success && offerData.data.length > 0) {
+                        setActiveOffers(offerData.data);
+                    }
+                } catch(_) {}
 
                 if (data.success) {
                     const findVal = (key, def) => data.data.find(s => s.key === key)?.value || def;
-
                     setSeasonalOffer({
                         enabled: findVal('seasonal_offer_enabled', 'false'),
                         title: findVal('seasonal_offer_title', 'Special Offer'),
@@ -184,17 +213,20 @@ const Home = () => {
                         new_user_discount: findVal('new_user_discount', 20),
                         badge_text: findVal('hot_deal_badge_text', 'HOT DEAL'),
                         badge_visible: findVal('hot_deal_badge_visible', 'true'),
-                        badge_color: findVal('hot_deal_badge_color', '#B71C1C')
+                        badge_display: findVal('hot_deal_badge_display', 'inline-block'),
+                        badge_color: findVal('hot_deal_badge_color', '#B71C1C'),
+                        image: findVal('seasonal_offer_image', '')
                     });
                     setDeliveryInfo({
                         charge: findVal('delivery_charge', 40),
                         threshold: findVal('free_delivery_min_order', 500),
-                        marquee_text: findVal('delivery_marquee_text', '🎉 SPECIAL OFFER: 3 KM FREE DELIVERY ON MINIMUM ORDER OF ₹500 only! 🚚 ORDER NOW!'),
+                        radius: findVal('delivery_max_distance_km', 3),
+                        marquee_text: findVal('delivery_marquee_text', '🎉 Use coupon HOLI50: 3 KM FREE DELIVERY ON MINIMUM ORDER OF ₹500 only! 🚚 ORDER NOW!'),
                         banner_heading: findVal('delivery_banner_heading', 'Free Home Delivery'),
                         banner_subheading: findVal('delivery_banner_subheading', 'Within 3KM on all orders above ₹500')
                     });
                 }
-            } catch (e) { console.error("Error fetching home configs:", e); }
+            } catch (e) { console.error('Error fetching home configs:', e); }
         };
         fetchHomeSettings();
     }, []);
@@ -214,8 +246,8 @@ const Home = () => {
 
             <div className={`home-container ${!isLoading ? 'page-fade-in-smooth' : 'hidden-initially'}`}>
 
-                <div className="delivery-marquee" style={{ background: '#6a0dad', color: 'white', padding: '10px 0', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-                    <div className="marquee-content" style={{ display: 'inline-block', fontWeight: '800', fontSize: '1.1rem', letterSpacing: '0.5px' }}>
+                <div className="delivery-marquee" style={{ background: '#6a0dad', color: 'white', padding: '8px 0', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                    <div style={{ display: 'inline-block', animation: 'marquee 15s linear infinite', fontWeight: 'bold', fontSize: '1rem' }}>
                         {deliveryInfo.marquee_text}
                     </div>
                 </div>
@@ -226,17 +258,37 @@ const Home = () => {
 
                     <div className="hero-left animate-fade-in">
                         {seasonalOffer.badge_visible === 'true' && (
-                            <div className="hot-deal-badge animate-bounce-soft">
+                            <div className="hot-deal-badge animate-bounce-soft" style={{
+                                background: seasonalOffer.badge_color === '#B71C1C' ? 'linear-gradient(135deg, #fff3cd, #ffe8a1)' : seasonalOffer.badge_color,
+                                color: seasonalOffer.badge_color === '#B71C1C' ? '#856404' : '#fff'
+                            }}>
                                 🔥 <span>{seasonalOffer.badge_text}</span>
                             </div>
                         )}
-                        <h1 className="hero-h1">
-                            <span className="hero-h1-accent">Hot &amp; Fresh</span><br />
-                            Pizza<br />
-                            <span className="hero-h1-sub">Delivered Fast.</span>
-                        </h1>
+                        {seasonalOffer.enabled === 'true' ? (
+                            <div className="hero-h1-custom" style={{ fontFamily: "'Inter', sans-serif", fontWeight: '900', lineHeight: '0.95', margin: '20px 0 20px 0', display: 'flex', flexDirection: 'column' }}>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center' }}>
+                                    <span style={{ color: '#FA7268', fontSize: '4rem', letterSpacing: '-2px', textShadow: '2px 2px 4px rgba(0,0,0,0.1)' }}>Hot</span>
+                                    <span style={{ color: '#FCD34D', fontSize: '4rem', letterSpacing: '-2px' }}>&amp;</span>
+                                    <span style={{ color: '#FCD34D', fontSize: '4rem', letterSpacing: '-2px' }}>Fresh</span>
+                                </div>
+                                <div style={{ color: '#FFFFFF', fontSize: '4.5rem', letterSpacing: '-2px', textTransform: 'none', marginTop: '-5px' }}>Pizza</div>
+                                <div style={{ color: '#E5E7EB', fontSize: '2.6rem', fontWeight: '800', marginTop: '12px', letterSpacing: '-1px' }}>Delivered Fast.</div>
+                            </div>
+                        ) : (
+                            <div className="hero-h1-custom" style={{ fontFamily: "'Inter', sans-serif", fontWeight: '900', lineHeight: '0.95', margin: '20px 0 20px 0', display: 'flex', flexDirection: 'column' }}>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center' }}>
+                                    <span style={{ color: '#FA7268', fontSize: '4rem', letterSpacing: '-2px', textShadow: '2px 2px 4px rgba(0,0,0,0.1)' }}>Hot</span>
+                                    <span style={{ color: '#FCD34D', fontSize: '4rem', letterSpacing: '-2px' }}>&amp;</span>
+                                    <span style={{ color: '#FCD34D', fontSize: '4rem', letterSpacing: '-2px' }}>Fresh</span>
+                                </div>
+                                <div style={{ color: '#FFFFFF', fontSize: '4.5rem', letterSpacing: '-2px', textTransform: 'none', marginTop: '-5px' }}>Pizza</div>
+                                <div style={{ color: '#E5E7EB', fontSize: '2.6rem', fontWeight: '800', marginTop: '12px', letterSpacing: '-1px' }}>Delivered Fast.</div>
+                            </div>
+                        )}
+
                         <p className="hero-para">
-                            Premium ingredients. Wood-fired taste. Straight to your door in under 30 minutes.
+                            {seasonalOffer.enabled === 'true' ? "Special deal for our valued customers. Limited time offer!" : "Premium ingredients. Wood-fired taste. Straight to your door in under 30 minutes."}
                         </p>
                         <div className="hero-cta-row">
                             <Link to="/menu" className="hero-btn-primary">Order Now 🍕</Link>
@@ -251,7 +303,11 @@ const Home = () => {
 
                     <div className="hero-right">
                         <div className="hero-pizza-glow"></div>
-                        <img src={heroPizza} alt="Captain Pizza" className="hero-pizza-img" />
+                        <img 
+                            src={heroPizza} 
+                            alt="Captain Pizza" 
+                            className="hero-pizza-img" 
+                        />
                     </div>
                 </section>
 
@@ -271,95 +327,102 @@ const Home = () => {
                         <p className="section-subtitle">Grab these limited time offers before they're gone!</p>
                     </div>
 
-                    <div 
-                        className={`css-marquee-root ${isDragging ? 'active' : ''}`} 
-                        ref={sliderRef}
-                        onMouseDown={handleMouseDown}
-                        onMouseLeave={handleMouseLeave}
-                        onMouseUp={handleMouseUp}
-                        onMouseMove={handleMouseMove}
-                    >
-                        <div className="css-marquee-track">
-                            {marqueeOffers.map((off, idx) => (
-                                <div key={`m-${off.id}-${idx}`} className="premium-slider-card">
-                                    <img src={getImgSrc(off.image)} className="offer-bg-img" alt={off.title} />
-                                    <div className="offer-gradient-overlay"></div>
-                                    <div className="top-10-tag">Captain's <span>TOP 10</span></div>
-                                    
-                                    <div className="offer-card-content">
-                                        <div className="diet-icon-mini"></div>
-                                        <h3 className="offer-title-overlay">{off.title}</h3>
-                                        <p className="offer-desc-overlay">{off.desc}</p>
-                                        
-                                        <div className="offer-footer-overlay">
-                                            <div className="offer-price-overlay">₹{off.price || 150}</div>
-                                            <div className="offer-actions-overlay">
-                                                {off.isBogo ? (
-                                                    <button onClick={() => setBogoOpen(true)} className="add-btn-red">Add +</button>
-                                                ) : (
-                                                    <button className="add-btn-red" onClick={() => addToCart(off.item || { id: off.id, name: off.title, price: off.price, image: off.image })}>Add +</button>
-                                                )}
+                    <div className="captains-strip">
+                        <div className="cs-header">
+                            <span className="cs-badge">Captain's TOP 10</span>
+                            <span className="cs-subtext">🔥 Most ordered this week</span>
+                        </div>
+                            <div className="cs-track-wrapper">
+                                <div 
+                                    className="cs-track cs-auto-track"
+                                    ref={sliderRef}
+                                    onMouseDown={handleMouseDown}
+                                    onMouseLeave={handleMouseLeave}
+                                    onMouseUp={handleMouseUp}
+                                    onMouseMove={handleMouseMove}
+                                    onTouchStart={(e) => {
+                                        setIsDragging(true);
+                                        setStartX(e.touches[0].pageX - sliderRef.current.offsetLeft);
+                                        setScrollLeft(sliderRef.current.scrollLeft);
+                                    }}
+                                    onTouchEnd={() => setIsDragging(false)}
+                                    onTouchMove={(e) => {
+                                        if (!isDragging) return;
+                                        const x = e.touches[0].pageX - sliderRef.current.offsetLeft;
+                                        sliderRef.current.scrollLeft = scrollLeft - (x - startX) * 2;
+                                    }}
+                                >
+                                    {[...marqueeOffers, ...marqueeOffers].map((off, idx) => (
+                                        <div key={(off.id || idx) + '-' + idx} className="cs-card" onDragStart={e => e.preventDefault()}>
+                                            <span className="cs-top10-badge">Captain's<br/>TOP 10</span>
+                                            {off.image ? (
+                                                <img src={off.image} alt={off.title} className="cs-img"
+                                                    draggable="false"
+                                                    onError={e => { e.target.onerror = null; e.target.style.display='none'; e.target.nextSibling && (e.target.nextSibling.style.display='flex'); }} />
+                                            ) : null}
+                                            {!off.image && (
+                                                <div className="cs-img" style={{ display:'flex', alignItems:'center', justifyContent:'center', fontSize:'3rem', background:'linear-gradient(135deg,#fff5f5,#FFE4E4)' }}>
+                                                    {off.emoji || '🍕'}
+                                                </div>
+                                            )}
+                                            <div className="cs-card-body" draggable="false">
+                                                <div className="cs-card-name">{off.title}</div>
+                                                {off.desc && <div className="cs-card-desc">{off.desc}</div>}
+                                                <div className="cs-card-footer">
+                                                    {off.price && !off.isBogo && <span className="cs-price">₹{off.price}</span>}
+                                                    <button className="cs-add-btn" onClick={() => off.isBogo ? setBogoOpen(true) : (off.item && addToCart(off.item))}>
+                                                        {off.isBogo ? 'Select +' : 'Add +'}
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
-                                        <div className="customise-link">Regular | New Hand Tossed <i className="fas fa-chevron-right"></i></div>
-                                    </div>
+                                    ))}
                                 </div>
-                            ))}
-                        </div>
+                            </div>
                     </div>
                 </section>
 
                 <section className="trending-section">
-                    <div className="section-header-left">
-                        <h2 className="section-title-left">Trending 🔥</h2>
-                        <div className="section-line"></div>
-                    </div>
-                    
-                    <div className="trending-grid">
-                        <div className="trending-card-new">
-                            <div className="trending-img-container">
-                                <img src={pizzaImg1} alt="Margherita" />
-                            </div>
-                            <div className="trending-content-new">
-                                <div className="trending-header-new">
+                    <h2 className="section-title">Trending 🔥</h2>
+                    <div className="trending-slider">
+                        <div className="trending-card">
+                            <img src={pizzaImg1} alt="Margherita" className="trending-img" />
+                            <div className="trending-info">
+                                <div className="trending-title-row">
                                     <h4>Margherita Pizza</h4>
-                                    <span className="rating-tag">⭐ 4.8</span>
+                                    <span className="trending-rating">⭐ 4.8</span>
                                 </div>
-                                <div className="trending-footer-new">
-                                    <span className="price-tag">₹150</span>
-                                    <button className="add-btn-circle" onClick={() => addToCart({ id: 'p1', name: 'Margherita Pizza', price: 150, image: pizzaImg1, selectedSize: 'medium' })}>+</button>
+                                <div className="trending-action">
+                                    <span className="trending-price">₹150</span>
+                                    <button className="add-quick-btn" onClick={() => addToCart({ id: 'p1', name: 'Margherita Pizza', price: 150, image: pizzaImg1, selectedSize: 'medium' })}>+</button>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="trending-card-new">
-                            <div className="trending-img-container">
-                                <img src={pizzaImg2} alt="Farm House" />
-                            </div>
-                            <div className="trending-content-new">
-                                <div className="trending-header-new">
+                        <div className="trending-card">
+                            <img src={pizzaImg2} alt="Farm House" className="trending-img" />
+                            <div className="trending-info">
+                                <div className="trending-title-row">
                                     <h4>Farm House Pizza</h4>
-                                    <span className="rating-tag">⭐ 4.9</span>
+                                    <span className="trending-rating">⭐ 4.9</span>
                                 </div>
-                                <div className="trending-footer-new">
-                                    <span className="price-tag">₹220</span>
-                                    <button className="add-btn-circle" onClick={() => addToCart({ id: 'p2', name: 'Farm House Pizza', price: 220, image: pizzaImg2, selectedSize: 'medium' })}>+</button>
+                                <div className="trending-action">
+                                    <span className="trending-price">₹220</span>
+                                    <button className="add-quick-btn" onClick={() => addToCart({ id: 'p2', name: 'Farm House Pizza', price: 220, image: pizzaImg2, selectedSize: 'medium' })}>+</button>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="trending-card-new">
-                            <div className="trending-img-container">
-                                <img src={pizzaImg3} alt="Onion & Jalapeno" />
-                            </div>
-                            <div className="trending-content-new">
-                                <div className="trending-header-new">
+                        <div className="trending-card">
+                            <img src={pizzaImg3} alt="Onion & Jalapeno" className="trending-img" />
+                            <div className="trending-info">
+                                <div className="trending-title-row">
                                     <h4>Onion & Jalapeno</h4>
-                                    <span className="rating-tag">⭐ 4.7</span>
+                                    <span className="trending-rating">⭐ 4.7</span>
                                 </div>
-                                <div className="trending-footer-new">
-                                    <span className="price-tag">₹180</span>
-                                    <button className="add-btn-circle" onClick={() => addToCart({ id: 'p3', name: 'Onion & Jalapeno', price: 180, image: pizzaImg3, selectedSize: 'medium' })}>+</button>
+                                <div className="trending-action">
+                                    <span className="trending-price">₹180</span>
+                                    <button className="add-quick-btn" onClick={() => addToCart({ id: 'p3', name: 'Onion & Jalapeno', price: 180, image: pizzaImg3, selectedSize: 'medium' })}>+</button>
                                 </div>
                             </div>
                         </div>
@@ -367,11 +430,8 @@ const Home = () => {
                 </section>
 
                 <section className="cravings-section">
-                    <div className="section-header-left">
-                        <h2 className="section-title-left">Craving Something Delicious?</h2>
-                        <div className="section-line"></div>
-                    </div>
-                    <div className="cravings-circles-grid">
+                    <h2 className="section-title" style={{ fontSize: '1.8rem', textAlign: 'left', padding: '0 20px', marginBottom: '20px' }}>Craving Something Delicious?</h2>
+                    <div className="cravings-grid">
                         {[
                             { id: 'deluxe-veg', name: 'Deluxe Veg Pizzas', img: pizzaImg1 },
                             { id: 'burgers', name: 'Burgers', img: burgerImg },
@@ -380,35 +440,43 @@ const Home = () => {
                             { id: 'sides', name: 'Garlic Breads', img: sideImg },
                             { id: 'beverages', name: 'Shakes', img: shakeImg },
                         ].map(cat => (
-                            <div key={cat.id} className="craving-circle-item" onClick={() => navigate('/menu', { state: { scrollTo: cat.id } })}>
-                                <div className="circle-img-wrapper">
+                            <div key={cat.id} className="craving-item" onClick={() => navigate('/menu', { state: { scrollTo: cat.id } })} style={{ cursor: 'pointer' }}>
+                                <div className="category-img">
                                     <img src={cat.img} alt={cat.name} />
                                 </div>
-                                <span className="circle-name">{cat.name}</span>
+                                <span className="craving-name">{cat.name}</span>
                             </div>
                         ))}
                     </div>
                 </section>
 
-                <section className="delivery-banner-premium">
-                    <div className="delivery-banner-content">
+                <section className="delivery-banner premium-delivery-banner">
+                    <div className="delivery-blur-bg"></div>
+                    <div className="delivery-content" style={{ zIndex: 2, position: 'relative' }}>
                         <div className="delivery-badges">
-                            <span className="badge-pill">🚀 Lighting Fast</span>
-                            <span className="badge-pill">📦 Safe Packaging</span>
+                            <span className="badge-item"><i className="fas fa-motorcycle"></i> Lighting Fast</span>
+                            <span className="badge-item"><i className="fas fa-box"></i> Safe Packaging</span>
                         </div>
-                        <h2 className="banner-h2">{deliveryInfo.banner_heading}</h2>
-                        <p className="banner-p">{deliveryInfo.banner_subheading}</p>
-                        <div className="banner-contact">
-                            <a href="tel:9220367325" className="call-btn-red"><i className="fas fa-phone-alt"></i> 9220367325</a>
+                        <h2 className="delivery-heading">{deliveryInfo.banner_heading}</h2>
+                        <p className="delivery-subheading">{deliveryInfo.banner_subheading}</p>
+                        <div className="contact-info">
+                            <a href="tel:9220367325" className="contact-pill"><i className="fas fa-phone-alt"></i> 9220367325</a>
                         </div>
                     </div>
-                    <div className="delivery-banner-qr">
-                        <div className="qr-box">
-                            <img src={qrCode} alt="Scan Location" />
+                    <div className="delivery-qr-container" style={{ zIndex: 2, position: 'relative' }}>
+                        <div className="qr-wrapper">
+                            <img src={qrCode} alt="Scan for Location" className="premium-qr" />
                         </div>
-                        <p className="qr-loc"><i className="fas fa-map-marker-alt"></i> F-11 Main Road Dayalpur, Delhi</p>
+                        <p className="qr-text" style={{ fontSize: '0.9rem', marginTop: '15px' }}>
+                            <i className="fas fa-map-marker-alt" style={{ color: 'var(--primary)' }}></i> F-11 Main Road Dayalpur, Delhi
+                        </p>
                     </div>
                 </section>
+
+                <div className="mobile-sticky-bar">
+                    <Link to="/menu" className="mobile-order-btn">Start Ordering Now 🍕</Link>
+                </div>
+
             </div>
 
             {bogoOpen && (() => {
@@ -426,64 +494,84 @@ const Home = () => {
                 const oP = Math.max(Number(p1P), Number(p2P));
 
                 return (
-                    <div style={{ position: 'fixed', inset: 0, zIndex: 99999, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }} onClick={() => setBogoOpen(false)}>
-                        <div style={{ width: '100%', maxWidth: '750px', maxHeight: '90vh', background: '#fff', borderRadius: '28px', overflow: 'hidden', display: 'flex', flexDirection: 'column', animation: 'popIn 0.3s' }} onClick={e => e.stopPropagation()}>
-                            <div style={{ background: grad, padding: '20px 28px', color: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ position: 'fixed', inset: 0, zIndex: 99999, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '10px 15px', paddingTop: '88px' }} onClick={() => setBogoOpen(false)}>
+                        <div style={{ width: '100%', maxWidth: '780px', maxHeight: '88vh', background: '#fff', borderRadius: '24px', overflow: 'hidden', display: 'flex', flexDirection: 'column', animation: 'popIn 0.3s' }} onClick={e => e.stopPropagation()}>
+
+                            <div style={{ background: grad, padding: '18px 24px', color: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <div>
-                                    <h2 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 900 }}>🎁 Buy 1 Get 1 FREE</h2>
-                                    <p style={{ margin: '4px 0 0', opacity: 0.9, fontSize: '0.9rem' }}>Choose 2 pizzas • Pay only for the higher-priced one</p>
+                                    <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 900 }}>🎁 Buy 1 Get 1 FREE</h2>
+                                    <p style={{ margin: '4px 0 0', opacity: 0.9, fontSize: '0.82rem' }}>Choose 2 pizzas • Pay only for the higher-priced one</p>
                                 </div>
-                                <button onClick={() => setBogoOpen(false)} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', color: '#fff', width: '36px', height: '36px', borderRadius: '50%', cursor: 'pointer', fontSize: '1.4rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
+                                <button onClick={() => setBogoOpen(false)} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', color: '#fff', width: '34px', height: '34px', borderRadius: '50%', cursor: 'pointer', fontSize: '1.3rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
                             </div>
-                            <div style={{ padding: '24px', overflowY: 'auto', flex: 1 }}>
-                                <div style={{ marginBottom: '24px' }}>
-                                    <div style={{ fontWeight: 800, fontSize: '0.8rem', color: '#999', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '12px' }}>Step 1 — Choose Category</div>
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+
+                            <div style={{ padding: '20px', overflowY: 'auto', flex: 1 }}>
+                                <div style={{ marginBottom: '20px' }}>
+                                    <div style={{ fontWeight: 800, fontSize: '0.75rem', color: '#888', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '10px' }}>
+                                        Step 1 — Choose Pizza Category
+                                    </div>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                                         {['Deluxe Veg', 'Supreme Veg'].map(c => (
                                             <button key={c} onClick={() => setBogoSel(p => ({ ...p, category: c, pizza1: null, pizza2: null }))}
-                                                style={{ padding: '18px 12px', borderRadius: '18px', cursor: 'pointer', fontWeight: 900, border: `2.5px solid ${bogoSel.category === c ? primaryColor : '#EEE'}`, background: bogoSel.category === c ? bg : '#FAFAFA', color: bogoSel.category === c ? primaryColor : '#666', transition: 'all 0.2s', fontFamily: 'inherit' }}>
+                                                style={{
+                                                    padding: '16px 12px', borderRadius: '16px', cursor: 'pointer', fontWeight: 800, fontSize: '0.95rem',
+                                                    border: `2.5px solid ${bogoSel.category === c ? primaryColor : '#DDD'}`,
+                                                    background: bogoSel.category === c ? bg : '#FAFAFA',
+                                                    color: bogoSel.category === c ? primaryColor : '#666',
+                                                    transition: 'all 0.2s', fontFamily: 'inherit'
+                                                }}>
                                                 {c === 'Deluxe Veg' ? '⭐ Deluxe Veg' : '👑 Supreme Veg'}
                                             </button>
                                         ))}
                                     </div>
                                 </div>
+
                                 {cat && (
-                                    <div style={{ marginBottom: '24px' }}>
-                                        <div style={{ fontWeight: 800, fontSize: '0.8rem', color: '#999', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '12px' }}>Step 2 — Choose Size</div>
-                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                                    <div style={{ marginBottom: '20px' }}>
+                                        <div style={{ fontWeight: 800, fontSize: '0.75rem', color: '#888', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '10px' }}>
+                                            Step 2 — Choose Size
+                                        </div>
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                                             {['medium', 'large'].map(sz => (
                                                 <button key={sz} onClick={() => setBogoSel(p => ({ ...p, size: sz, pizza1: null, pizza2: null }))}
-                                                    style={{ padding: '16px', border: `2px solid ${bogoSel.size === sz ? primaryColor : '#EEE'}`, background: bogoSel.size === sz ? bg : '#f9f9f9', borderRadius: '16px', fontWeight: 900, cursor: 'pointer', transition: 'all 0.2s', fontFamily: 'inherit' }}>
+                                                    style={{ padding: '14px', border: `2px solid ${bogoSel.size === sz ? primaryColor : '#EEE'}`, background: bogoSel.size === sz ? bg : '#f9f9f9', borderRadius: '14px', fontWeight: 800, cursor: 'pointer', fontSize: '0.95rem', transition: 'all 0.2s', fontFamily: 'inherit' }}>
                                                     {sz === 'medium' ? '🔵 Medium' : '🔴 Large'}
                                                 </button>
                                             ))}
                                         </div>
                                     </div>
                                 )}
+
                                 {cat && (
                                     <div>
-                                        <div style={{ fontWeight: 800, fontSize: '0.8rem', color: '#999', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '12px' }}>Step 3 — Pick 2 Pizzas</div>
-                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '12px' }}>
+                                        <div style={{ fontWeight: 800, fontSize: '0.75rem', color: '#888', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '10px' }}>
+                                            Step 3 — Pick 2 Pizzas
+                                        </div>
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '10px' }}>
                                             {pizzaPool.map(pz => {
-                                                const isS1 = bogoSel.pizza1?.name === pz.name;
-                                                const isS2 = bogoSel.pizza2?.name === pz.name;
-                                                const isSel = isS1 || isS2;
+                                                const s1 = bogoSel.pizza1?.name === pz.name;
+                                                const s2 = bogoSel.pizza2?.name === pz.name;
+                                                const isSel = s1 || s2;
                                                 const pP = pz.price?.[bogoSel.size] || getDisplayPrice(pz.price);
+
                                                 return (
                                                     <div key={pz.name} onClick={() => {
                                                         if (isSel) {
-                                                            if (isS1) setBogoSel(p => ({ ...p, pizza1: null }));
-                                                            if (isS2) setBogoSel(p => ({ ...p, pizza2: null }));
+                                                            if (s1) setBogoSel(p => ({ ...p, pizza1: null }));
+                                                            if (s2) setBogoSel(p => ({ ...p, pizza2: null }));
                                                         } else {
                                                             if (!bogoSel.pizza1) setBogoSel(p => ({ ...p, pizza1: pz }));
                                                             else if (!bogoSel.pizza2) setBogoSel(p => ({ ...p, pizza2: pz }));
                                                         }
                                                     }}
-                                                        style={{ border: `2px solid ${isSel ? primaryColor : '#EEE'}`, borderRadius: '20px', padding: '12px', background: isSel ? bg : '#FFF', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', transition: 'all 0.2s', position: 'relative' }}>
-                                                        {isSel && <div style={{ position: 'absolute', top: '8px', right: '8px', background: primaryColor, color: '#fff', width: '24px', height: '24px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '0.8rem' }}>✓</div>}
-                                                        <img src={getImgSrc(pz.image)} alt={pz.name} style={{ width: '80px', height: '80px', objectFit: 'contain', marginBottom: '10px' }} />
-                                                        <span style={{ fontSize: '0.9rem', fontWeight: 900, textAlign: 'center', color: '#222' }}>{pz.name}</span>
-                                                        <span style={{ fontSize: '0.85rem', fontWeight: 900, color: '#B71C1C', marginTop: '4px' }}>₹{pP}</span>
+                                                        style={{
+                                                            border: `2px solid ${isSel ? primaryColor : '#E0E0E0'}`, borderRadius: '16px', padding: '10px',
+                                                            background: isSel ? bg : '#FFF', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', transition: 'all 0.2s', position: 'relative'
+                                                        }}>
+                                                        {isSel && <div style={{ position: 'absolute', top: '-8px', right: '-8px', background: primaryColor, color: '#fff', width: '24px', height: '24px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '0.8rem', boxShadow: '0 2px 5px rgba(0,0,0,0.2)' }}>✓</div>}
+                                                        <img src={getImgSrc(pz.image)} alt={pz.name} style={{ width: '70px', height: '70px', objectFit: 'contain', marginBottom: '8px' }} />
+                                                        <span style={{ fontSize: '0.85rem', fontWeight: 800, textAlign: 'center', lineHeight: '1.2', marginBottom: '4px', color: '#333' }}>{pz.name}</span>
+                                                        <span style={{ fontSize: '0.8rem', fontWeight: 800, color: '#FF5722' }}>Rs.{pP}</span>
                                                     </div>
                                                 );
                                             })}
@@ -491,14 +579,20 @@ const Home = () => {
                                     </div>
                                 )}
                             </div>
-                            <div style={{ padding: '20px 28px', borderTop: '1px solid #EEE', background: '#FAFAFA' }}>
+
+                            <div style={{ padding: '16px 20px', borderTop: '1px solid #EEE', background: '#FAFAFA' }}>
                                 {bogoSel.pizza1 && bogoSel.pizza2 ? (
-                                    <button onClick={handleBogoAddToCart} style={{ width: '100%', padding: '18px', border: 'none', borderRadius: '18px', background: grad, color: '#fff', fontWeight: 900, fontSize: '1.1rem', cursor: 'pointer', boxShadow: '0 8px 20px rgba(0,0,0,0.2)' }}>
-                                        🎁 Add BOGO Deal — Pay ₹{oP}
-                                    </button>
+                                    <div>
+                                        <div style={{ fontSize: '0.8rem', color: '#666', marginBottom: '10px', textAlign: 'center' }}>
+                                            {bogoSel.pizza1.name} + {bogoSel.pizza2.name} ({bogoSel.size}) • Pay only <strong style={{ color: primaryColor }}>Rs.{oP}</strong>
+                                        </div>
+                                        <button onClick={handleBogoAddToCart} style={{ width: '100%', padding: '15px', border: 'none', borderRadius: '14px', background: grad, color: '#fff', fontWeight: 900, fontSize: '1rem', cursor: 'pointer' }}>
+                                            🎉 Add BOGO Deal — Pay Rs.{oP}
+                                        </button>
+                                    </div>
                                 ) : (
-                                    <p style={{ margin: 0, fontWeight: 800, color: '#999', textAlign: 'center' }}>
-                                        {!cat ? 'Select category & pizzas →' : (bogoSel.pizza1 ? 'Now select Pizza 2 →' : 'Select Pizza 1 →')}
+                                    <p style={{ margin: 0, fontWeight: 700, color: '#aaa', fontSize: '0.88rem', textAlign: 'center' }}>
+                                        {!cat ? 'Select category & pizzas to continue →' : (bogoSel.pizza1 ? 'Now select Pizza 2 →' : 'Select Pizza 1 to continue →')}
                                     </p>
                                 )}
                             </div>
@@ -506,6 +600,7 @@ const Home = () => {
                     </div>
                 );
             })()}
+
         </>
     );
 };

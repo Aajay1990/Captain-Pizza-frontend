@@ -92,8 +92,12 @@ const OfferManager = () => {
     const getToken = () => {
         try {
             const s = sessionStorage.getItem('captain_pizza_user') || localStorage.getItem('captain_pizza_user');
-            return s ? JSON.parse(s)?.token : null;
-        } catch { return null; }
+            if (s) {
+                const parsed = JSON.parse(s);
+                if (parsed?.token) return parsed.token;
+            }
+        } catch (_) {}
+        return localStorage.getItem('adminToken') || localStorage.getItem('token') || sessionStorage.getItem('token') || null;
     };
 
     const handleSave = async (e) => {

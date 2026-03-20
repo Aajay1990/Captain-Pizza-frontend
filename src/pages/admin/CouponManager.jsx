@@ -64,8 +64,12 @@ const CouponManager = () => {
     const getToken = () => {
         try {
             const s = sessionStorage.getItem('captain_pizza_user') || localStorage.getItem('captain_pizza_user');
-            return s ? JSON.parse(s)?.token : null;
-        } catch { return null; }
+            if (s) {
+                const parsed = JSON.parse(s);
+                if (parsed?.token) return parsed.token;
+            }
+        } catch (_) {}
+        return localStorage.getItem('adminToken') || localStorage.getItem('token') || sessionStorage.getItem('token') || null;
     };
 
     const handleSave = async (e) => {
@@ -78,6 +82,7 @@ const CouponManager = () => {
         try {
             const res = await fetch(url, {
                 method,
+                credentials: 'include',
                 headers: {
                     'Content-Type': 'application/json',
                     ...(token ? { 'Authorization': `Bearer ${token}` } : {})
@@ -118,9 +123,14 @@ const CouponManager = () => {
 
     const handleToggleActive = async (coupon) => {
         try {
+            const token = getToken();
             const res = await fetch(`${API_URL}/api/admin/coupons/${coupon._id}`, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                },
                 body: JSON.stringify({ isActive: !coupon.isActive })
             });
             if ((await res.json()).success) {
